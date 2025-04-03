@@ -49,5 +49,6 @@ func ConnectToRedis(cfg configs.Config) (*redis.Client, RedisInterface, error) {
 		log.Printf("Redis-Ping error %v", err)
 		return nil, nil, err
 	}
+	log.Println("RedisManagement: Successful connect to Redis-Client!")
 	return client, redisInterface, nil
 }

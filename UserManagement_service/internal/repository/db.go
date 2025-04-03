@@ -87,5 +87,6 @@ func ConnectToDb(cfg configs.Config) (*sql.DB, DBInterface, error) {
 
 		return nil, nil, err
 	}
+	log.Println("UserManagement: Successful connect to Postgre-Client!")
 	return db, dbInterface, nil
 }
