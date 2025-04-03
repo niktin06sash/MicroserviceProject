@@ -29,7 +29,7 @@ func main() {
 
 	projectRoot := filepath.Dir(filepath.Dir(cmdDir))
 
-	configDir := filepath.Join(projectRoot, "configs")
+	configDir := filepath.Join(projectRoot, "SessionManagement_service/internal/configs")
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yml")
@@ -74,7 +74,6 @@ func main() {
 	if port == "" {
 		port = "50051"
 	}
-	fmt.Printf("Starting auth-server on port: %s\n", port)
 	serverError := make(chan error, 1)
 	go func() {
 		if err := srv.Run(port); err != nil {

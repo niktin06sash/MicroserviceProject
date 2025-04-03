@@ -27,7 +27,7 @@ func (s *GrpcServer) Run(port string) error {
 	s.server = grpc.NewServer()
 	pb.RegisterSessionServiceServer(s.server, s.service)
 
-	log.Println("Starting gRPC server on port" + port)
+	log.Println("Starting gRPC server on port: " + port)
 	if err := s.server.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 		return err

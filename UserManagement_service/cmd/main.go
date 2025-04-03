@@ -32,7 +32,7 @@ func main() {
 
 	projectRoot := filepath.Dir(filepath.Dir(cmdDir))
 
-	configDir := filepath.Join(projectRoot, "configs")
+	configDir := filepath.Join(projectRoot, "UserManagement_service/internal/configs")
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yml")
@@ -78,7 +78,6 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	fmt.Printf("Starting user-server on port: %s\n", port)
 	serverError := make(chan error, 1)
 	go func() {
 
