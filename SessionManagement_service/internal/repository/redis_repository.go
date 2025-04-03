@@ -22,6 +22,10 @@ type AuthRedis struct {
 }
 
 func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Session) *RepositoryResponse {
+	if ctx.Err() != nil {
+		log.Printf("Context Error:%v", ctx.Err())
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
+	}
 	err := redisrepo.Client.HSet(ctx, session.SessionID, map[string]interface{}{
 		"UserID":         session.UserID,
 		"ExpirationTime": session.ExpirationTime.Format(time.RFC3339),
@@ -37,15 +41,22 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 		log.Printf("Expire error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSetSession}
 	}
-
+	if ctx.Err() != nil {
+		log.Printf("Context Error:%v", ctx.Err())
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
+	}
 	log.Printf("Successful session id = %v installation!", session)
 	return &RepositoryResponse{Success: true, SessionId: session.SessionID, ExpirationTime: session.ExpirationTime}
 }
 
 func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
+	if ctx.Err() != nil {
+		log.Printf("Context Error:%v", ctx.Err())
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
+	}
 	result, err := redisrepo.Client.HGetAll(ctx, sessionID).Result()
 	if err != nil {
-		log.Printf("HGetAll error: %v", err)
+		log.Printf("HGetAll error:%v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorGetSession}
 	}
 
@@ -74,15 +85,26 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 		log.Printf("UUID-parse error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
-
+	if ctx.Err() != nil {
+		log.Printf("Context Error:%v", ctx.Err())
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
+	}
 	log.Printf("Successful session id = %v receiving!", sessionID)
 	return &RepositoryResponse{Success: true, UserID: userID.String(), ExpirationTime: expirationTime}
 }
 func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
+	if ctx.Err() != nil {
+		log.Printf("Context Error:%v", ctx.Err())
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
+	}
 	err := redisrepo.Client.Del(ctx, sessionID).Err()
 	if err != nil {
 		log.Printf("Error deleting session %s: %v", sessionID, err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorInternalServer}
+	}
+	if ctx.Err() != nil {
+		log.Printf("Context Error:%v", ctx.Err())
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
 	}
 	log.Printf("Session %s deleted successfully", sessionID)
 	return &RepositoryResponse{Success: true}
