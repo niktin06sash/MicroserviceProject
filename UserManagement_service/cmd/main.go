@@ -78,7 +78,7 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	fmt.Printf("Starting auth-server on port: %s\n", port)
+	fmt.Printf("Starting user-server on port: %s\n", port)
 	serverError := make(chan error, 1)
 	go func() {
 
