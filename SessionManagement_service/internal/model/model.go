@@ -2,12 +2,10 @@ package model
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type Session struct {
 	SessionID      string
-	UserID         uuid.UUID
+	UserID         string
 	ExpirationTime time.Time
 }
