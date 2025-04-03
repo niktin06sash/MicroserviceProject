@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package session;
+option go_package = "SessionManagement_service/proto";
+service SessionService {
+  rpc CreateSession (CreateSessionRequest) returns (CreateSessionResponse) {};
+  rpc ValidateSession (ValidateSessionRequest) returns (ValidateSessionResponse) {};
+  rpc DeleteSession (DeleteSessionRequest) returns (DeleteSessionResponse) {};
+}
+
+message CreateSessionRequest {
+  string userID = 1;  // Только userID от User Management
+}
+
+message CreateSessionResponse {
+  bool success = 1;
+  string sessionID = 2;  // Session Management создает и возвращает sessionID
+  int64 expiryTime = 3; // Время истечения сессии (Unix timestamp)
+}
+
+message ValidateSessionRequest {
+  string sessionID = 1; // Только sessionID от API Gateway
+}
+
+message ValidateSessionResponse {
+  bool success = 1;
+  string userID = 2; // Session Management возвращает userID, связанный с sessionID
+}
+message DeleteSessionRequest {
+  string sessionID = 1;
+}
+
+message DeleteSessionResponse {
+  bool success = 1;
+}

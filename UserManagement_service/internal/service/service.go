@@ -5,6 +5,7 @@ import (
 	"UserManagement_service/internal/model"
 	"UserManagement_service/internal/repository"
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -20,9 +21,11 @@ type Service struct {
 	UserAuthentication
 }
 type ServiceResponse struct {
-	Success bool
-	UserId  uuid.UUID
-	Errors  map[string]error
+	Success       bool
+	UserId        uuid.UUID
+	SessionId     string
+	ExpireSession time.Time
+	Errors        map[string]error
 }
 
 func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducer) *Service {

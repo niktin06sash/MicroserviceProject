@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"UserManagement_service/internal/service"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -15,9 +16,11 @@ type Handler struct {
 	services *service.Service
 }
 type HTTPResponse struct {
-	Success bool              `json:"success"`
-	Errors  map[string]string `json:"errors"`
-	UserID  uuid.UUID         `json:"data"`
+	Success       bool              `json:"success"`
+	Errors        map[string]string `json:"errors"`
+	SessionId     string            `json:"sessionid"`
+	ExpireSession time.Time         `json:"expiresession"`
+	UserID        uuid.UUID         `json:"data"`
 }
 
 func NewHandler(services *service.Service) *Handler {
