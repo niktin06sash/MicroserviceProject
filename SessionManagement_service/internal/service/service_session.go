@@ -22,6 +22,9 @@ func NewSessionService(repo repository.RedisSessionRepos) *SessionService {
 }
 
 func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
+	if ctx.Err() != nil {
+		return nil, status.Errorf(codes.DeadlineExceeded, "request timed out")
+	}
 	if req.UserID == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "userID is required")
 	}
@@ -50,6 +53,9 @@ func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessio
 	}, nil
 }
 func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
+	if ctx.Err() != nil {
+		return nil, status.Errorf(codes.DeadlineExceeded, "request timed out")
+	}
 	if req.SessionID == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "sessionID is required")
 	}
@@ -64,6 +70,9 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 	}, nil
 }
 func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
+	if ctx.Err() != nil {
+		return nil, status.Errorf(codes.DeadlineExceeded, "request timed out")
+	}
 	if req.SessionID == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "sessionID is required")
 	}
