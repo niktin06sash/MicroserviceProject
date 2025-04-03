@@ -129,55 +129,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(jsonResponse))
 
 }
-func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	maparesponse := make(map[string]string)
-	userID, ok := getUserIDFromRequestContext(r)
-	if !ok {
-		log.Println("Error getting the UserId from the request context")
-		maparesponse["UserId"] = erro.ErrorGetUserId.Error()
-		badResponse(w, maparesponse, http.StatusInternalServerError)
-		return
-	}
-	if r.Method != http.MethodPost {
-		log.Printf("Invalid request method(expected Post but it was sent %v)", r.Method)
-		maparesponse["Method"] = erro.ErrorNotPost.Error()
-		badResponse(w, maparesponse, http.StatusMethodNotAllowed)
 
-		return
-	}
-	cookie, err := r.Cookie("session_id")
-	if err != nil {
-		log.Printf("Unexpected error getting session cookie (should have been validated by middleware): %v", err)
-	}
-	sessionID := cookie.Value
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-	response := h.services.Logout(ctx, sessionID, userID)
-	if !response.Success {
-		stringMap := convertErrorToString(response)
-
-		badResponse(w, stringMap, http.StatusInternalServerError)
-
-		return
-	}
-
-	w.Header().Set("Content-Type", jsonResponseType)
-	w.WriteHeader(http.StatusOK)
-	sucresponse := HTTPResponse{
-		Success: true,
-	}
-	jsonResponse, err := json.Marshal(sucresponse)
-	if err != nil {
-		log.Printf("Marshal Error: %v", err)
-		maparesponse["Marshal"] = erro.ErrorMarshal.Error()
-		badResponse(w, maparesponse, http.StatusInternalServerError)
-
-		return
-	}
-	log.Printf("Person with id: %v has successfully logged out", userID)
-	fmt.Fprint(w, string(jsonResponse))
-
-}
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
 	userID, ok := getUserIDFromRequestContext(r)

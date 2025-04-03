@@ -30,7 +30,6 @@ func (h *Handler) InitRoutes() *mux.Router {
 	m := mux.NewRouter()
 	m.HandleFunc("/reg", h.Registration).Methods("POST")
 	m.HandleFunc("/auth", h.Authentication).Methods("POST")
-	m.HandleFunc("/logout", h.Logout).Methods("POST")
 	m.HandleFunc("/delete", h.Delete).Methods("POST")
 	return m
 }
