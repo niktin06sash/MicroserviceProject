@@ -269,44 +269,6 @@ type UserLogoutEvent struct {
 	LastUpdate time.Time `json:"last_update"`
 }
 
-/*func (as *AuthService) Logout(ctx context.Context, sessionID string, userId uuid.UUID) *ServiceResponse {
-	logoutMap := make(map[string]error)
-	select {
-	case <-ctx.Done():
-		log.Printf("Logout: Context cancelled before DeleteSession: %v", ctx.Err())
-		logoutMap["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: logoutMap}
-	default:
-		repoResponse := as.redisrepo.DeleteSession(ctx, sessionID)
-		if !repoResponse.Success {
-			log.Printf("Error during session deletion from Redis: %v", repoResponse.Errors)
-			logoutMap["DelSessionError"] = repoResponse.Errors
-			return &ServiceResponse{Success: false, Errors: logoutMap}
-		}
-		log.Println("The session was successfully accepted and deleted")
-		event := UserAuthenticateEvent{
-			UserID:     userId,
-			LastUpdate: time.Now(),
-		}
-		eventBytes, errv := json.Marshal(event)
-		if errv != nil {
-			logoutMap["MarshalError"] = erro.ErrorMarshal
-			log.Printf("Error marshaling event to JSON: %v", errv)
-			return &ServiceResponse{Success: false, Errors: logoutMap}
-		}
-		errv = as.kafkaProducer.SendMessage("user-logged-out-topic", userId.String(), eventBytes)
-		if errv != nil {
-			logoutMap["SendMessage"] = erro.ErrorSendKafkaMessage
-			log.Printf("Error marshaling event to JSON: %v", errv)
-			return &ServiceResponse{Success: false, Errors: logoutMap}
-		}
-		log.Println("Messages have been successfully delivered to the broker")
-		return &ServiceResponse{
-			Success: true,
-		}
-	}
-}*/
-
 type UserDeleteEvent struct {
 	UserID     uuid.UUID `json:"user_id"`
 	LastUpdate time.Time `json:"last_update"`

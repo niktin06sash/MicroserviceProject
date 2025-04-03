@@ -14,8 +14,7 @@ import (
 type UserAuthentication interface {
 	RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
 	AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
-	//Logout(ctx context.Context, sessionID string, userId uuid.UUID) *ServiceResponse
-	//DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse
+	DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse
 }
 type Service struct {
 	UserAuthentication
