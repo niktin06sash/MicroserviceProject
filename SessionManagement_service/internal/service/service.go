@@ -11,7 +11,6 @@ type Service struct {
 	sessionService *SessionService
 }
 
-// NewService создает новый экземпляр Service.
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
 		sessionService: NewSessionService(repos.RedisSessionRepos),
