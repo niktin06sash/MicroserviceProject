@@ -162,13 +162,9 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		log.Printf("Error marshaling event to JSON: %v", errv)
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
-	log.Println("Messages have been successfully delivered to the broker")
-	return &ServiceResponse{
-		Success:        true,
-		UserId:         dbData.UserId,
-		SessionId:      redisData.SessionId,
-		ExpirationTime: redisData.ExpirationTime,
-	}*/
+	log.Println("Messages have been successfully delivered to the broker")*/
+	return &ServiceResponse{}
+
 }
 
 type UserAuthenticateEvent struct {
@@ -254,14 +250,9 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 			authenticateMap["SendMessage"] = erro.ErrorSendKafkaMessage
 			log.Printf("Error marshaling event to JSON: %v", errv)
 			return &ServiceResponse{Success: false, Errors: authenticateMap}
-		}
-		log.Println("Messages have been successfully delivered to the broker")
-		return &ServiceResponse{
-			Success:        true,
-			UserId:         dbData.UserId,
-			SessionId:      redisData.SessionId,
-			ExpirationTime: redisData.ExpirationTime,
 		}*/
+	log.Println("Messages have been successfully delivered to the broker")
+	return &ServiceResponse{}
 }
 
 type UserLogoutEvent struct {
@@ -354,10 +345,10 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		log.Printf("Error marshaling event to JSON: %v", errv)
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
-	log.Println("Messages have been successfully delivered to the broker")
+	log.Println("Messages have been successfully delivered to the broker")*/
 	return &ServiceResponse{
 		Success: true,
-	}*/
+	}
 }
 
 func validatePerson(as *AuthService, user *model.Person, flag bool) map[string]error {
