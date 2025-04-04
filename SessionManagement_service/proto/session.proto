@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package session;
-option go_package = "SessionManagement_service/proto";
+option go_package = "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto";
 service SessionService {
   rpc CreateSession (CreateSessionRequest) returns (CreateSessionResponse) {};
   rpc ValidateSession (ValidateSessionRequest) returns (ValidateSessionResponse) {};

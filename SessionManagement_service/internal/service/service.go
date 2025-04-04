@@ -1,9 +1,10 @@
 package service
 
 import (
-	"SessionManagement_service/internal/repository"
-	pb "SessionManagement_service/proto"
 	"context"
+
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
+	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 )
 
 type Service struct {

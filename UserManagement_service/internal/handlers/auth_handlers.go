@@ -1,9 +1,6 @@
 package handlers
 
 import (
-	"UserManagement_service/internal/erro"
-	"UserManagement_service/internal/model"
-	"UserManagement_service/internal/service"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +8,10 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 
 	"github.com/google/uuid"
 )

@@ -1,10 +1,6 @@
 package main
 
 import (
-	"SessionManagement_service/internal/configs"
-	"SessionManagement_service/internal/repository"
-	"SessionManagement_service/internal/server"
-	"SessionManagement_service/internal/service"
 	"context"
 	"fmt"
 	"log"
@@ -14,6 +10,11 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/server"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/service"
 
 	"github.com/spf13/viper"
 )

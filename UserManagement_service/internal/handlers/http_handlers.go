@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"UserManagement_service/internal/service"
 	"time"
+
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"

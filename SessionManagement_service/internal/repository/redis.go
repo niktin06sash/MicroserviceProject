@@ -1,10 +1,11 @@
 package repository
 
 import (
-	"SessionManagement_service/internal/configs"
 	"context"
 	"fmt"
 	"log"
+
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/configs"
 
 	"github.com/redis/go-redis/v9"
 )

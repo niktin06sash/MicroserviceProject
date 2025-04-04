@@ -1,11 +1,12 @@
 package service
 
 import (
-	"UserManagement_service/internal/kafka"
-	"UserManagement_service/internal/model"
-	"UserManagement_service/internal/repository"
 	"context"
 	"time"
+
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 
 	"github.com/google/uuid"
 )

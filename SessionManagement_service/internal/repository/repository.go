@@ -1,9 +1,10 @@
 package repository
 
 import (
-	"SessionManagement_service/internal/model"
 	"context"
 	"time"
+
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 
 	"github.com/redis/go-redis/v9"
 )

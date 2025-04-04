@@ -1,12 +1,13 @@
 package service
 
 import (
-	"SessionManagement_service/internal/model"
-	"SessionManagement_service/internal/repository"
-	pb "SessionManagement_service/proto"
 	"context"
 	"log"
 	"time"
+
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
+	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"

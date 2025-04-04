@@ -1,15 +1,16 @@
 package service
 
 import (
-	"UserManagement_service/internal/erro"
-	"UserManagement_service/internal/kafka"
-	"UserManagement_service/internal/model"
-	"UserManagement_service/internal/repository"
 	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
