@@ -1,10 +1,11 @@
 package server
 
 import (
-	pb "SessionManagement_service/proto"
 	"context"
 	"log"
 	"net"
+
+	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 
 	"google.golang.org/grpc"
 )

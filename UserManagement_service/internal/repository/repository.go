@@ -1,9 +1,10 @@
 package repository
 
 import (
-	"UserManagement_service/internal/model"
 	"context"
 	"database/sql"
+
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 
 	"github.com/google/uuid"
 )

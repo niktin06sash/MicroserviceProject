@@ -1,10 +1,11 @@
 package repository
 
 import (
-	"UserManagement_service/internal/configs"
 	"database/sql"
 	"fmt"
 	"log"
+
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/configs"
 
 	_ "github.com/lib/pq"
 )

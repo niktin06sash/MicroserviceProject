@@ -1,12 +1,13 @@
 package repository
 
 import (
-	"UserManagement_service/internal/erro"
-	"UserManagement_service/internal/model"
 	"context"
 	"database/sql"
 	"errors"
 	"log"
+
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

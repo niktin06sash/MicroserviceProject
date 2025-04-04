@@ -1,12 +1,6 @@
 package main
 
 import (
-	"UserManagement_service/internal/configs"
-	"UserManagement_service/internal/handlers"
-	"UserManagement_service/internal/kafka"
-	"UserManagement_service/internal/repository"
-	"UserManagement_service/internal/server"
-	"UserManagement_service/internal/service"
 	"context"
 	"fmt"
 	"log"
@@ -17,6 +11,13 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/server"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 
 	"github.com/spf13/viper"
 )
