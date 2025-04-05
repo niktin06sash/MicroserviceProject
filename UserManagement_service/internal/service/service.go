@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
@@ -28,10 +29,10 @@ type ServiceResponse struct {
 	Errors        map[string]error
 }
 
-func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducer) *Service {
+func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducer, clientgrpc *client.GrpcClient) *Service {
 
 	return &Service{
 
-		UserAuthentication: NewAuthService(repos.DBAuthenticateRepos, kafkaProd),
+		UserAuthentication: NewAuthService(repos.DBAuthenticateRepos, kafkaProd, clientgrpc),
 	}
 }

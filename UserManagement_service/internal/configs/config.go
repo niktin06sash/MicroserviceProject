@@ -1,9 +1,10 @@
 package configs
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Kafka    KafkaConfig    `mapstructure:"kafka"`
+	Server         ServerConfig         `mapstructure:"server"`
+	Database       DatabaseConfig       `mapstructure:"database"`
+	Kafka          KafkaConfig          `mapstructure:"kafka"`
+	SessionService SessionServiceConfig `mapstructure:"session_service"`
 }
 
 type ServerConfig struct {
@@ -30,4 +31,7 @@ type KafkaTopics struct {
 	UserRegistered  string `mapstructure:"user_registered"`
 	UserLoggedOut   string `mapstructure:"user_logged_out"`
 	UserDeleteTopic string `mapstructure:"user_delete_topic"`
+}
+type SessionServiceConfig struct {
+	GrpcAddress string `mapstructure:"grpc_address"`
 }

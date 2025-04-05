@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
@@ -70,8 +71,9 @@ func main() {
 	}
 	defer kafkaProducer.Close()
 	repositories := repository.NewRepository(db)
-
-	service := service.NewService(repositories, kafkaProducer)
+	grpcclient := client.NewGrpcServiceClient(config)
+	defer grpcclient.Close()
+	service := service.NewService(repositories, kafkaProducer, grpcclient)
 	handlers := handlers.NewHandler(service)
 	srv := &server.Server{}
 
