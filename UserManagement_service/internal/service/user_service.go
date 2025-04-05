@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
@@ -21,11 +22,12 @@ type AuthService struct {
 	dbrepo        repository.DBAuthenticateRepos
 	kafkaProducer kafka.KafkaProducer
 	validator     *validator.Validate
+	grpcClient    *client.GrpcClient
 }
 
-func NewAuthService(repo repository.DBAuthenticateRepos, kafkaProd kafka.KafkaProducer) *AuthService {
+func NewAuthService(repo repository.DBAuthenticateRepos, kafkaProd kafka.KafkaProducer, grpc *client.GrpcClient) *AuthService {
 	validator := validator.New()
-	return &AuthService{dbrepo: repo, validator: validator, kafkaProducer: kafkaProd}
+	return &AuthService{dbrepo: repo, validator: validator, kafkaProducer: kafkaProd, grpcClient: grpc}
 }
 
 type UserRegistrateEvent struct {
@@ -88,57 +90,13 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		registrateMap["RegistrateError"] = response.Errors
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
-	//придумать логику для отправки запроса на микросервис с сессиями
-
-	/*dbData, ok := response.Data.(repository.DBRepositoryResponseData)
-	if !ok {
-		err = erro.ErrorUnexpectedData
-		log.Printf("Unexpected data type from repository: %T", response.Data)
-		registrateMap["UnexpectedData"] = erro.ErrorUnexpectedData
-		return &ServiceResponse{Success: false, Errors: registrateMap}
-	}
-
-	createdUserID := dbData.UserId
-
-	if ctx.Err() != nil {
-		log.Printf("Context cancelled before SetSession: %v", ctx.Err())
-		err = ctx.Err()
-		registrateMap["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: registrateMap}
-	}
-
-	sessionID := uuid.New().String()
-	expirationTime := time.Now().Add(time.Hour * 24)
-	duration := time.Until(expirationTime)
-	session := model.Session{
-		SessionID:      sessionID,
-		UserID:         createdUserID,
-		ExpirationTime: expirationTime,
-	}
-
-	redisResponse := as.redisrepo.SetSession(ctx, session, duration)
-	if !redisResponse.Success {
-		err = redisResponse.Errors
-		log.Printf("Error when creating a session in Redis: %v", redisResponse.Errors)
-		registrateMap["SetSessionError"] = redisResponse.Errors
-		return &ServiceResponse{Success: false, Errors: registrateMap}
-	}
-
-	redisData, ok := redisResponse.Data.(repository.RedisRepositoryResponseData)
-	if !ok {
-		err = erro.ErrorUnexpectedData
-		log.Printf("Unexpected data type from repository: %T", response.Data)
-		registrateMap["UnexpectedData"] = erro.ErrorUnexpectedData
-		return &ServiceResponse{Success: false, Errors: registrateMap}
-	}
-
 	if ctx.Err() != nil {
 		log.Printf("Context cancelled before CommitTx: %v", ctx.Err())
 		err = ctx.Err()
 		registrateMap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
-
+	grpcdata, err := as.grpcClient.CreateSession(ctx, user.Id.String())
 	err = as.dbrepo.CommitTx(ctx, tx)
 	if err != nil {
 		log.Printf("Transaction commit error: %v", err)
@@ -147,7 +105,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	}
 
 	log.Println("The session was created successfully and the user is registered!")
-	event := UserRegistrateEvent{
+	/*event := UserRegistrateEvent{
 		UserID:     dbData.UserId,
 		LastUpdate: time.Now(),
 	}
@@ -164,8 +122,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
 	log.Println("Messages have been successfully delivered to the broker")*/
-	return &ServiceResponse{}
-
+	return &ServiceResponse{Success: true, UserId: userID, SessionId: grpcdata.SessionID, ExpireSession: grpcdata.ExpiryTime}
 }
 
 type UserAuthenticateEvent struct {
