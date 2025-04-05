@@ -57,8 +57,10 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", jsonResponseType)
 	w.WriteHeader(http.StatusOK)
 	sucresponse := HTTPResponse{
-		Success: true,
-		UserID:  regresponse.UserId,
+		Success:       true,
+		UserID:        regresponse.UserId,
+		SessionId:     regresponse.SessionId,
+		ExpireSession: regresponse.ExpireSession,
 	}
 	jsonResponse, err := json.Marshal(sucresponse)
 	if err != nil {
@@ -114,8 +116,10 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", jsonResponseType)
 	w.WriteHeader(http.StatusOK)
 	sucresponse := HTTPResponse{
-		Success: true,
-		UserID:  auresponse.UserId,
+		Success:       true,
+		UserID:        auresponse.UserId,
+		SessionId:     auresponse.SessionId,
+		ExpireSession: auresponse.ExpireSession,
 	}
 	jsonResponse, err := json.Marshal(sucresponse)
 	if err != nil {
@@ -131,7 +135,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
 	userID, ok := getUserIDFromRequestContext(r)
 	if !ok {
@@ -190,7 +194,6 @@ func badResponse(w http.ResponseWriter, vc map[string]string, statusCode int) {
 	response := HTTPResponse{
 		Success: false,
 		Errors:  vc,
-		UserID:  uuid.Nil,
 	}
 	jsonResponse, err := json.Marshal(response)
 	if err != nil {

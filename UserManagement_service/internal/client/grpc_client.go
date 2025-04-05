@@ -38,3 +38,12 @@ func (g *GrpcClient) CreateSession(ctx context.Context, userd string) (*pb.Creat
 	}
 	return resp, nil
 }
+func (g *GrpcClient) DeleteSession(ctx context.Context, sessionid string) (*pb.DeleteSessionResponse, error) {
+	req := &pb.DeleteSessionRequest{SessionID: sessionid}
+	resp, err := g.client.DeleteSession(ctx, req)
+	if err != nil {
+
+		return nil, err
+	}
+	return resp, nil
+}
