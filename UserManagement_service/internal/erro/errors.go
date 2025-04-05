@@ -22,9 +22,11 @@ const (
 	ErrorStartTransactionConst  = "Transaction creation error"
 	ErrorCommitTransactionConst = "Transaction commit error"
 
-	ErrorGetUserIdConst        = "Error getting the UserId from the request context"
-	ErrorContextTimeoutConst   = "The timeout context has expired"
-	ErrorSendKafkaMessageConst = "Error Kafka Message"
+	ErrorGetUserIdConst          = "Error getting the UserId from the request context"
+	ErrorContextTimeoutConst     = "The timeout context has expired"
+	ErrorSendKafkaMessageConst   = "Error Kafka Message"
+	ErrorRolbackTransactionConst = "Rolback Transaction error"
+	ErrorPanicConst              = "Panic Error"
 )
 
 var (
@@ -48,4 +50,6 @@ var (
 	ErrorGetUserId         = errors.New(ErrorGetUserIdConst)
 	ErrorContextTimeout    = errors.New(ErrorContextTimeoutConst)
 	ErrorSendKafkaMessage  = errors.New(ErrorSendKafkaMessageConst)
+	ErrorPanic             = errors.New(ErrorPanicConst)
+	ErrorRolbackTx         = errors.New(ErrorRolbackTransactionConst)
 )

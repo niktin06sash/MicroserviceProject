@@ -39,42 +39,40 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	registrateMap := make(map[string]error)
 	var tx *sql.Tx
 	var err error
-
 	defer func() {
 		if tx != nil {
 			if err != nil {
 				if rErr := as.dbrepo.RollbackTx(ctx, tx); rErr != nil {
-					log.Printf("Error rolling back transaction: %v", rErr)
+					log.Printf("RegistrateAndLogin: Error rolling back transaction: %v", rErr)
 				}
 			} else {
-
-				fmt.Println("Transaction was successfully committed, no rollback needed")
+				log.Println("RegistrateAndLogin: Transaction was successfully committed, no rollback needed")
 			}
 		}
 	}()
 	errorvalidate := validatePerson(as, user, true)
 	if errorvalidate != nil {
-		log.Printf("Validate error %v", errorvalidate)
+		log.Printf("RegistrateAndLogin: Validate error %v", errorvalidate)
 		return &ServiceResponse{Success: false, Errors: errorvalidate}
 	}
 
 	tx, err = as.dbrepo.BeginTx(ctx)
 	if err != nil {
-		log.Printf("TransactionError %v", err)
+		log.Printf("RegistrateAndLogin: TransactionError %v", err)
 		registrateMap["TransactionError"] = erro.ErrorStartTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
 
 	hashpass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("HashPassError %v", err)
+		log.Printf("RegistrateAndLogin: HashPassError %v", err)
 		registrateMap["HashPassError"] = erro.ErrorHashPass
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
 	user.Password = string(hashpass)
 
 	if ctx.Err() != nil {
-		log.Printf("Context cancelled before CreateUser: %v", ctx.Err())
+		log.Printf("RegistrateAndLogin: Context cancelled before CreateUser: %v", ctx.Err())
 		err = ctx.Err()
 		registrateMap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: registrateMap}
@@ -86,43 +84,31 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 
 	if !response.Success {
 		err = response.Errors
-		log.Printf("Error when creating person in the database %v", response.Errors)
+		log.Printf("RegistrateAndLogin: Error when creating person in the database %v", response.Errors)
 		registrateMap["RegistrateError"] = response.Errors
-		return &ServiceResponse{Success: false, Errors: registrateMap}
+		return &ServiceResponse{Success: response.Success, Errors: registrateMap}
 	}
 	if ctx.Err() != nil {
-		log.Printf("Context cancelled before CommitTx: %v", ctx.Err())
+		log.Printf("RegistrateAndLogin: Context cancelled before CreateSession: %v", ctx.Err())
 		err = ctx.Err()
 		registrateMap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
-	grpcdata, err := as.grpcClient.CreateSession(ctx, user.Id.String())
+	grpcresponse, err := as.grpcClient.CreateSession(ctx, user.Id.String())
+	if err != nil {
+		log.Printf("RegistrateAndLogin: GrpcResponseError %v", err)
+		registrateMap["GrpcResponseError"] = erro.ErrorHashPass
+		return &ServiceResponse{Success: grpcresponse.Success, Errors: registrateMap}
+	}
 	err = as.dbrepo.CommitTx(ctx, tx)
 	if err != nil {
-		log.Printf("Transaction commit error: %v", err)
+		log.Printf("RegistrateAndLogin: Transaction commit error: %v", err)
 		registrateMap["CommitError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
-
-	log.Println("The session was created successfully and the user is registered!")
-	/*event := UserRegistrateEvent{
-		UserID:     dbData.UserId,
-		LastUpdate: time.Now(),
-	}
-	eventBytes, errv := json.Marshal(event)
-	if errv != nil {
-		registrateMap["MarshalError"] = erro.ErrorMarshal
-		log.Printf("Error marshaling event to JSON: %v", errv)
-		return &ServiceResponse{Success: false, Errors: registrateMap}
-	}
-	errv = as.kafkaProducer.SendMessage("user-registered-topic", dbData.UserId.String(), eventBytes)
-	if errv != nil {
-		registrateMap["SendMessage"] = erro.ErrorSendKafkaMessage
-		log.Printf("Error marshaling event to JSON: %v", errv)
-		return &ServiceResponse{Success: false, Errors: registrateMap}
-	}
-	log.Println("Messages have been successfully delivered to the broker")*/
-	return &ServiceResponse{Success: true, UserId: userID, SessionId: grpcdata.SessionID, ExpireSession: grpcdata.ExpiryTime}
+	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
+	log.Println("RegistrateAndLogin: The session was created successfully and the user is registered!")
+	return &ServiceResponse{Success: true, UserId: response.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
 
 type UserAuthenticateEvent struct {
@@ -132,10 +118,9 @@ type UserAuthenticateEvent struct {
 
 func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	authenticateMap := make(map[string]error)
-
 	errorvalidate := validatePerson(as, user, false)
 	if errorvalidate != nil {
-		log.Printf("Validate error %v", errorvalidate)
+		log.Printf("AuthenticateAndLogin: Validate error %v", errorvalidate)
 		return &ServiceResponse{Success: false, Errors: errorvalidate}
 	}
 	if ctx.Err() != nil {
@@ -146,71 +131,24 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 
 	response := as.dbrepo.GetUser(ctx, user.Email, user.Password)
 	if !response.Success {
-		log.Printf("Failed to authenticate user: %v", response.Errors)
+		log.Printf("AuthenticateAndLogin: Failed to authenticate user: %v", response.Errors)
 		authenticateMap["AuthenticateError"] = response.Errors
+		return &ServiceResponse{Success: response.Success, Errors: authenticateMap}
+	}
+	if ctx.Err() != nil {
+		log.Printf("AuthenticateAndLogin: Context cancelled before CreateSession: %v", ctx.Err())
+		authenticateMap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: authenticateMap}
 	}
-	//придумать логику для отправки запроса на микросервис с сессиями
-
-	/*
-		dbData, ok := response.Data.(repository.DBRepositoryResponseData)
-		if !ok {
-			log.Printf("Unexpected data type from repository: %T", response.Data)
-			authenticateMap["UnexpectedData"] = erro.ErrorUnexpectedData
-			return &ServiceResponse{Success: false, Errors: authenticateMap}
-		}
-
-		userID := dbData.UserId
-
-		sessionID := uuid.New().String()
-		expirationTime := time.Now().Add(24 * time.Hour)
-		session := model.Session{
-			SessionID:      sessionID,
-			UserID:         userID,
-			ExpirationTime: expirationTime,
-		}
-
-		duration := time.Until(expirationTime)
-
-		if ctx.Err() != nil {
-			log.Printf("AuthenticateAndLogin: Context cancelled before SetSession: %v", ctx.Err())
-			authenticateMap["ContextError"] = erro.ErrorContextTimeout
-			return &ServiceResponse{Success: false, Errors: authenticateMap}
-		}
-
-		redisResponse := as.redisrepo.SetSession(ctx, session, duration)
-		if !redisResponse.Success {
-			log.Printf("Error when creating a session in Redis: %v", redisResponse.Errors)
-			authenticateMap["SetSessionError"] = redisResponse.Errors
-			return &ServiceResponse{Success: false, Errors: authenticateMap}
-		}
-
-		redisData, ok := redisResponse.Data.(repository.RedisRepositoryResponseData)
-		if !ok {
-			log.Printf("Unexpected data type from repository: %T", redisResponse.Data)
-			authenticateMap["UnexpectedData"] = erro.ErrorUnexpectedData
-			return &ServiceResponse{Success: false, Errors: authenticateMap}
-		}
-
-		log.Println("The session was created successfully and the user is authenticated!")
-		event := UserAuthenticateEvent{
-			UserID:     dbData.UserId,
-			LastUpdate: time.Now(),
-		}
-		eventBytes, errv := json.Marshal(event)
-		if errv != nil {
-			authenticateMap["MarshalError"] = erro.ErrorMarshal
-			log.Printf("Error marshaling event to JSON: %v", errv)
-			return &ServiceResponse{Success: false, Errors: authenticateMap}
-		}
-		errv = as.kafkaProducer.SendMessage("user-authenticate-topic", dbData.UserId.String(), eventBytes)
-		if errv != nil {
-			authenticateMap["SendMessage"] = erro.ErrorSendKafkaMessage
-			log.Printf("Error marshaling event to JSON: %v", errv)
-			return &ServiceResponse{Success: false, Errors: authenticateMap}
-		}*/
-	log.Println("Messages have been successfully delivered to the broker")
-	return &ServiceResponse{}
+	grpcresponse, err := as.grpcClient.CreateSession(ctx, user.Id.String())
+	if err != nil {
+		log.Printf("AuthenticateAndLogin: GrpcResponseError %v", err)
+		authenticateMap["GrpcResponseError"] = erro.ErrorHashPass
+		return &ServiceResponse{Success: false, Errors: authenticateMap}
+	}
+	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
+	log.Println("AuthenticateAndLogin: The session was created successfully and the user is authenticated!")
+	return &ServiceResponse{Success: true, UserId: response.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
 
 type UserLogoutEvent struct {
@@ -227,22 +165,20 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	deletemap := make(map[string]error)
 	var err error
 	var tx *sql.Tx
-
 	defer func() {
 		if tx != nil {
 			if err != nil {
 				if rErr := as.dbrepo.RollbackTx(ctx, tx); rErr != nil {
-					log.Printf("Error rolling back transaction: %v", rErr)
+					log.Printf("DeleteAccount: Error rolling back transaction: %v", rErr)
 				}
 			} else {
-
-				fmt.Println("Transaction was successfully committed, no rollback needed")
+				log.Println("DeleteAccount: Transaction was successfully committed, no rollback needed")
 			}
 		}
 	}()
 	tx, err = as.dbrepo.BeginTx(ctx)
 	if err != nil {
-		log.Printf("TransactionError %v", err)
+		log.Printf("DeleteAccount: TransactionError %v", err)
 		deletemap["TransactionError"] = erro.ErrorStartTransaction
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
@@ -255,57 +191,24 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	response := as.dbrepo.DeleteUser(ctx, userid, password)
 	if !response.Success {
 		err = response.Errors
-		log.Printf("Failed to delete user: %v", response.Errors)
+		log.Printf("DeleteAccount: Failed to delete user: %v", response.Errors)
 		deletemap["DeleteError"] = response.Errors
-		return &ServiceResponse{Success: false, Errors: deletemap}
+		return &ServiceResponse{Success: response.Success, Errors: deletemap}
 	}
 	if ctx.Err() != nil {
 		err = ctx.Err()
-		log.Printf("DeleteAccount: Context cancelled before DeleteUser: %v", ctx.Err())
+		log.Printf("DeleteAccount: Context cancelled before DeleteSession: %v", ctx.Err())
 		deletemap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
-	//придумать логику для отправки запроса на микросервис с сессиями
-
-	/*repoResponse := as.redisrepo.DeleteSession(ctx, sessionID)
-	if !repoResponse.Success {
-		err = repoResponse.Errors
-		log.Printf("Error during session deletion from Redis: %v", repoResponse.Errors)
-		deletemap["DelSessionError"] = repoResponse.Errors
-		return &ServiceResponse{Success: false, Errors: deletemap}
-	}
-	if ctx.Err() != nil {
-		err = ctx.Err()
-		log.Printf("DeleteAccount: Context cancelled before CommitTx: %v", ctx.Err())
-		deletemap["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: deletemap}
-	}
-	err = as.dbrepo.CommitTx(ctx, tx)
+	grpcresponse, err := as.grpcClient.DeleteSession(ctx, sessionID)
 	if err != nil {
-		log.Printf("Transaction commit error: %v", err)
-		deletemap["CommitError"] = erro.ErrorCommitTransaction
-		return &ServiceResponse{Success: false, Errors: deletemap}
+		log.Printf("AuthenticateAndLogin: GrpcResponseError %v", err)
+		deletemap["GrpcResponseError"] = erro.ErrorHashPass
+		return &ServiceResponse{Success: grpcresponse.Success, Errors: deletemap}
 	}
-	log.Println("The account was successfully deleted with all data")
-	event := UserAuthenticateEvent{
-		UserID:     userid,
-		LastUpdate: time.Now(),
-	}
-	eventBytes, errv := json.Marshal(event)
-	if errv != nil {
-		deletemap["MarshalError"] = erro.ErrorMarshal
-		log.Printf("Error marshaling event to JSON: %v", errv)
-		return &ServiceResponse{Success: false, Errors: deletemap}
-	}
-	errv = as.kafkaProducer.SendMessage("user-delete-topic", userid.String(), eventBytes)
-	if errv != nil {
-		deletemap["SendMessage"] = erro.ErrorSendKafkaMessage
-		log.Printf("Error marshaling event to JSON: %v", errv)
-		return &ServiceResponse{Success: false, Errors: deletemap}
-	}
-	log.Println("Messages have been successfully delivered to the broker")*/
 	return &ServiceResponse{
-		Success: true,
+		Success: grpcresponse.Success,
 	}
 }
 
