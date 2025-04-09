@@ -95,7 +95,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
 	grpcresponse, err := as.grpcClient.CreateSession(ctx, user.Id.String())
-	if err != nil {
+	if err != nil || !grpcresponse.Success {
 		log.Printf("RegistrateAndLogin: GrpcResponseError %v", err)
 		registrateMap["GrpcResponseError"] = erro.ErrorHashPass
 		return &ServiceResponse{Success: grpcresponse.Success, Errors: registrateMap}
@@ -141,7 +141,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 		return &ServiceResponse{Success: false, Errors: authenticateMap}
 	}
 	grpcresponse, err := as.grpcClient.CreateSession(ctx, user.Id.String())
-	if err != nil {
+	if err != nil || !grpcresponse.Success {
 		log.Printf("AuthenticateAndLogin: GrpcResponseError %v", err)
 		authenticateMap["GrpcResponseError"] = erro.ErrorHashPass
 		return &ServiceResponse{Success: false, Errors: authenticateMap}
@@ -202,7 +202,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
 	grpcresponse, err := as.grpcClient.DeleteSession(ctx, sessionID)
-	if err != nil {
+	if err != nil || !grpcresponse.Success {
 		log.Printf("AuthenticateAndLogin: GrpcResponseError %v", err)
 		deletemap["GrpcResponseError"] = erro.ErrorHashPass
 		return &ServiceResponse{Success: grpcresponse.Success, Errors: deletemap}
