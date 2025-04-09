@@ -113,9 +113,9 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		registrateMap["RegistrateError"] = response.Errors
 		return &ServiceResponse{Success: response.Success, Errors: registrateMap}
 	}
-	if ctx.Err() == nil {
+	if ctx.Err() != nil {
 		log.Printf("RegistrateAndLogin: Context cancelled before CreateSession: %v", ctx.Err())
-		err = erro.ErrorContextTimeout
+		err = ctx.Err()
 		registrateMap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
