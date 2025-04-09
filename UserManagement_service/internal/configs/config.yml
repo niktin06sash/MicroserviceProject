@@ -17,4 +17,4 @@ kafka:
     user_delete: "user-delete-topic"
   group_id: "auth-service-group"  
 session_service:
-  grpc_address: "localhost:50051"
+  grpc_address: "localhost:50052"
