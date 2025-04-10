@@ -3,21 +3,21 @@ package erro
 import "errors"
 
 const (
-	ErrorGetEnvDBConst         = "DB get environment error"
-	ErrorNotPostConst          = "Method is not POST"
-	ErrorNotGetConst           = "Method is not GET"
-	ErrorNotDeleteConst        = "Method is not DELETE"
-	ErrorReadAllConst          = "ReadAll error"
-	ErrorUnmarshalConst        = "Unmarshal error"
-	ErrorMarshalConst          = "Marshal error"
-	ErrorNotEmailConst         = "This email format is not supported"
-	ErrorUniqueEmailConst      = "This email has already been registered"
-	ErrorHashPassConst         = "Hash-Password error"
-	ErrorInternalServerConst   = "Internal Server Error"
-	ErrorEmailNotRegisterConst = "This email is not registered"
-	ErrorFoundUserConst        = "Person not found"
-	ErrorInvalidPasswordConst  = "Invalid Password"
-
+	ErrorGetEnvDBConst          = "DB get environment error"
+	ErrorNotPostConst           = "Method is not POST"
+	ErrorNotGetConst            = "Method is not GET"
+	ErrorNotDeleteConst         = "Method is not DELETE"
+	ErrorReadAllConst           = "ReadAll error"
+	ErrorUnmarshalConst         = "Unmarshal error"
+	ErrorMarshalConst           = "Marshal error"
+	ErrorNotEmailConst          = "This email format is not supported"
+	ErrorUniqueEmailConst       = "This email has already been registered"
+	ErrorHashPassConst          = "Hash-Password error"
+	ErrorInternalServerConst    = "Internal Server Error"
+	ErrorEmailNotRegisterConst  = "This email is not registered"
+	ErrorFoundUserConst         = "Person not found"
+	ErrorInvalidPasswordConst   = "Invalid Password"
+	ErrorDbRepositoryErrorConst = "DB-Repository Error"
 	ErrorUnexpectedDataConst    = "Unexpected data type"
 	ErrorStartTransactionConst  = "Transaction creation error"
 	ErrorCommitTransactionConst = "Transaction commit error"
@@ -52,4 +52,5 @@ var (
 	ErrorSendKafkaMessage  = errors.New(ErrorSendKafkaMessageConst)
 	ErrorPanic             = errors.New(ErrorPanicConst)
 	ErrorRolbackTx         = errors.New(ErrorRolbackTransactionConst)
+	ErrorDbRepositoryError = errors.New(ErrorDbRepositoryErrorConst)
 )
