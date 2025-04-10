@@ -235,13 +235,11 @@ func TestDeleteUser(t *testing.T) {
 			userid:       fundamentUuid,
 			userpassword: "password123",
 			mockSetup: func(mock sqlmock.Sqlmock) {
-				// Хэшируем пароль
 				hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 				if err != nil {
 					t.Fatalf("failed to hash password: %v", err)
 				}
 
-				// Мок для SELECT
 				mock.ExpectQuery(
 					`(?i)SELECT userpassword FROM userZ WHERE userid = \$1`,
 				).
@@ -251,12 +249,11 @@ func TestDeleteUser(t *testing.T) {
 							AddRow(string(hashedPassword)),
 					)
 
-				// Мок для DELETE
 				mock.ExpectExec(
 					`(?i)DELETE FROM userZ WHERE userId = \$1`,
 				).
 					WithArgs(fundamentUuid).
-					WillReturnResult(sqlmock.NewResult(0, 1)) // 1 затронутая строка
+					WillReturnResult(sqlmock.NewResult(0, 1))
 			},
 			expectedSuccess: true,
 			expectedErrors:  nil,
@@ -266,7 +263,6 @@ func TestDeleteUser(t *testing.T) {
 			userid:       fundamentUuid,
 			userpassword: "password123",
 			mockSetup: func(mock sqlmock.Sqlmock) {
-				// Мок для SELECT
 				mock.ExpectQuery(
 					`(?i)SELECT userpassword FROM userZ WHERE userid = \$1`,
 				).
@@ -281,13 +277,11 @@ func TestDeleteUser(t *testing.T) {
 			userid:       fundamentUuid,
 			userpassword: "wrongpassword",
 			mockSetup: func(mock sqlmock.Sqlmock) {
-				// Хэшируем пароль
 				hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 				if err != nil {
 					t.Fatalf("failed to hash password: %v", err)
 				}
 
-				// Мок для SELECT
 				mock.ExpectQuery(
 					`(?i)SELECT userpassword FROM userZ WHERE userid = \$1`,
 				).
@@ -305,7 +299,6 @@ func TestDeleteUser(t *testing.T) {
 			userid:       fundamentUuid,
 			userpassword: "password123",
 			mockSetup: func(mock sqlmock.Sqlmock) {
-				// Мок для SELECT
 				hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 				if err != nil {
 					t.Fatalf("failed to hash password: %v", err)
@@ -320,7 +313,6 @@ func TestDeleteUser(t *testing.T) {
 							AddRow(string(hashedPassword)),
 					)
 
-				// Мок для DELETE
 				mock.ExpectExec(
 					`(?i)DELETE FROM userZ WHERE userId = \$1`,
 				).
