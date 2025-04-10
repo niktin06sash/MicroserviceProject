@@ -29,7 +29,7 @@ func (repoap *AuthPostgres) CreateUser(ctx context.Context, user *model.Person) 
 		if errors.Is(err, sql.ErrNoRows) {
 			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorUniqueEmail}
 		}
-		return &DBRepositoryResponse{Success: false, Errors: err}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
 	}
 
 	log.Println("Successful create person!")
@@ -46,7 +46,7 @@ func (repoap *AuthPostgres) GetUser(ctx context.Context, useremail, userpassword
 		if errors.Is(err, sql.ErrNoRows) {
 			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorEmailNotRegister}
 		}
-		return &DBRepositoryResponse{Success: false, Errors: err}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(userpassword))
@@ -67,7 +67,7 @@ func (repoap *AuthPostgres) DeleteUser(ctx context.Context, userId uuid.UUID, pa
 		if errors.Is(err, sql.ErrNoRows) {
 			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorFoundUser}
 		}
-		return &DBRepositoryResponse{Success: false, Errors: err}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(password))
 	if err != nil {
@@ -77,7 +77,7 @@ func (repoap *AuthPostgres) DeleteUser(ctx context.Context, userId uuid.UUID, pa
 	_, err = repoap.Db.ExecContext(ctx, "DELETE FROM userZ where userId = $1", userId)
 	if err != nil {
 		log.Printf("Delete Error: %v", err)
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInternalServer}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
 	}
 	return &DBRepositoryResponse{Success: true}
 }
