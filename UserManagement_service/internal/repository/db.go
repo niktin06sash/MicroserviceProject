@@ -6,16 +6,10 @@ import (
 	"log"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 
 	_ "github.com/lib/pq"
 )
-
-type DBInterface interface {
-	Open(driverName, connectionString string) (*sql.DB, error)
-	Ping(db *sql.DB) error
-	Close(db *sql.DB)
-	SetConfig(cfg DBConfig)
-}
 
 type DBConfig struct {
 	Driver   string
@@ -27,19 +21,19 @@ type DBConfig struct {
 	SSLMode  string
 }
 
-type DBObject struct {
-	dbConfig DBConfig
+type DBInterface interface {
+	Open(driverName, connectionString string) (*sql.DB, error)
+	Ping(db *sql.DB) error
+	Close(db *sql.DB)
 }
 
-func (d *DBObject) SetConfig(cfg DBConfig) {
-	d.dbConfig = cfg
-}
+type DBObject struct{}
 
-func (d *DBObject) Open(driverName string, connectionString string) (*sql.DB, error) {
+func (d *DBObject) Open(driverName, connectionString string) (*sql.DB, error) {
 	db, err := sql.Open(driverName, connectionString)
 	if err != nil {
-		log.Printf("Sql-Open error %v", err)
-		return nil, err
+		log.Printf("Sql-Open error: %v", err)
+		return nil, erro.ErrorDbOpen
 	}
 	return db, nil
 }
@@ -47,8 +41,8 @@ func (d *DBObject) Open(driverName string, connectionString string) (*sql.DB, er
 func (d *DBObject) Ping(db *sql.DB) error {
 	err := db.Ping()
 	if err != nil {
-		log.Printf("Sql-Ping error %v", err)
-		return err
+		log.Printf("Sql-Ping error: %v", err)
+		return erro.ErrorDbPing
 	}
 	return nil
 }
@@ -56,38 +50,29 @@ func (d *DBObject) Ping(db *sql.DB) error {
 func (d *DBObject) Close(db *sql.DB) {
 	err := db.Close()
 	if err != nil {
-		log.Printf("Sql-Close error %v", err)
+		log.Printf("Sql-Close error: %v", err)
 	}
 }
 
-func ConnectToDb(cfg configs.Config) (*sql.DB, DBInterface, error) {
-	dbInterface := &DBObject{}
+func BuildConnectionString(cfg configs.DatabaseConfig) string {
+	return fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=%s",
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.SSLMode)
+}
 
-	dbConfig := DBConfig{
-		Driver:   cfg.Database.Driver,
-		Host:     cfg.Database.Host,
-		Port:     cfg.Database.Port,
-		User:     cfg.Database.User,
-		Password: cfg.Database.Password,
-		Name:     cfg.Database.Name,
-		SSLMode:  cfg.Database.SSLMode,
-	}
-	dbInterface.SetConfig(dbConfig)
+func ConnectToDb(cfg configs.Config, dbInterface DBInterface) (*sql.DB, error) {
+	connectionString := BuildConnectionString(cfg.Database)
 
-	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=%s",
-		dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Name, dbConfig.SSLMode)
-
-	db, err := dbInterface.Open(dbConfig.Driver, connectionString)
+	db, err := dbInterface.Open(cfg.Database.Driver, connectionString)
 	if err != nil {
-
-		return nil, nil, err
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
+
 	err = dbInterface.Ping(db)
 	if err != nil {
 		dbInterface.Close(db)
-
-		return nil, nil, err
+		return nil, fmt.Errorf("failed to establish database connection: %w", err)
 	}
+
 	log.Println("UserManagement: Successful connect to Postgre-Client!")
-	return db, dbInterface, nil
+	return db, nil
 }
