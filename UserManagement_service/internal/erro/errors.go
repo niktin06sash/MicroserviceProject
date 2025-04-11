@@ -21,6 +21,8 @@ const (
 	ErrorUnexpectedDataConst    = "Unexpected data type"
 	ErrorStartTransactionConst  = "Transaction creation error"
 	ErrorCommitTransactionConst = "Transaction commit error"
+	ErrorDBOpenConst            = "DB-Open error"
+	ErrorDBPingConst            = "DB-Ping error"
 
 	ErrorGetUserIdConst          = "Error getting the UserId from the request context"
 	ErrorContextTimeoutConst     = "The timeout context has expired"
@@ -53,4 +55,6 @@ var (
 	ErrorPanic             = errors.New(ErrorPanicConst)
 	ErrorRolbackTx         = errors.New(ErrorRolbackTransactionConst)
 	ErrorDbRepositoryError = errors.New(ErrorDbRepositoryErrorConst)
+	ErrorDbOpen            = errors.New(ErrorDBOpenConst)
+	ErrorDbPing            = errors.New(ErrorDBPingConst)
 )
