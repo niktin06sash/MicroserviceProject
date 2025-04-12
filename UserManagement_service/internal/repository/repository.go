@@ -14,12 +14,15 @@ type DBAuthenticateRepos interface {
 	CreateUser(ctx context.Context, user *model.Person) *DBRepositoryResponse
 	GetUser(ctx context.Context, useremail, password string) *DBRepositoryResponse
 	DeleteUser(ctx context.Context, userId uuid.UUID, password string) *DBRepositoryResponse
+}
+type DBTransactionManager interface {
 	BeginTx(ctx context.Context) (*sql.Tx, error)
 	RollbackTx(ctx context.Context, tx *sql.Tx) error
 	CommitTx(ctx context.Context, tx *sql.Tx) error
 }
 type Repository struct {
 	DBAuthenticateRepos
+	DBTransactionManager
 }
 type DBRepositoryResponse struct {
 	Success bool
@@ -29,6 +32,7 @@ type DBRepositoryResponse struct {
 
 func NewRepository(db *sql.DB) *Repository {
 	return &Repository{
-		DBAuthenticateRepos: NewAuthPostgres(db),
+		DBAuthenticateRepos:  NewAuthPostgresRepo(db),
+		DBTransactionManager: NewTxManagerRepo(db),
 	}
 }

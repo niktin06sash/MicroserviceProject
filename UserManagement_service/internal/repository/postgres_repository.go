@@ -13,11 +13,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthPostgres struct {
+type AuthPostgresRepo struct {
 	Db *sql.DB
 }
 
-func (repoap *AuthPostgres) CreateUser(ctx context.Context, user *model.Person) *DBRepositoryResponse {
+func NewAuthPostgresRepo(db *sql.DB) *AuthPostgresRepo {
+	return &AuthPostgresRepo{Db: db}
+}
+
+func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, user *model.Person) *DBRepositoryResponse {
 	var createdUserID uuid.UUID
 
 	err := repoap.Db.QueryRowContext(ctx,
@@ -36,7 +40,7 @@ func (repoap *AuthPostgres) CreateUser(ctx context.Context, user *model.Person) 
 	return &DBRepositoryResponse{Success: true, UserId: createdUserID, Errors: nil}
 }
 
-func (repoap *AuthPostgres) GetUser(ctx context.Context, useremail, userpassword string) *DBRepositoryResponse {
+func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpassword string) *DBRepositoryResponse {
 	var hashpass string
 	var userId uuid.UUID
 	err := repoap.Db.QueryRowContext(ctx, "SELECT userid, userpassword FROM userZ WHERE useremail = $1", useremail).Scan(&userId, &hashpass)
@@ -58,7 +62,7 @@ func (repoap *AuthPostgres) GetUser(ctx context.Context, useremail, userpassword
 	log.Println("Successful get person!")
 	return &DBRepositoryResponse{Success: true, UserId: userId, Errors: nil}
 }
-func (repoap *AuthPostgres) DeleteUser(ctx context.Context, userId uuid.UUID, password string) *DBRepositoryResponse {
+func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, userId uuid.UUID, password string) *DBRepositoryResponse {
 	var hashpass string
 	err := repoap.Db.QueryRowContext(ctx, "SELECT userpassword FROM userZ WHERE userid = $1", userId).Scan(&hashpass)
 
@@ -80,18 +84,4 @@ func (repoap *AuthPostgres) DeleteUser(ctx context.Context, userId uuid.UUID, pa
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
 	}
 	return &DBRepositoryResponse{Success: true}
-}
-func (r *AuthPostgres) BeginTx(ctx context.Context) (*sql.Tx, error) {
-	return r.Db.BeginTx(ctx, nil)
-}
-
-func (r *AuthPostgres) RollbackTx(ctx context.Context, tx *sql.Tx) error {
-	return tx.Rollback()
-}
-
-func (r *AuthPostgres) CommitTx(ctx context.Context, tx *sql.Tx) error {
-	return tx.Commit()
-}
-func NewAuthPostgres(db *sql.DB) *AuthPostgres {
-	return &AuthPostgres{Db: db}
 }

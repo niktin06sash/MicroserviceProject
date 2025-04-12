@@ -88,7 +88,7 @@ func TestCreateUser(t *testing.T) {
 			if tt.mockSetup != nil {
 				tt.mockSetup(mock)
 			}
-			repo := NewAuthPostgres(db)
+			repo := NewAuthPostgresRepo(db)
 			response := repo.CreateUser(context.Background(), tt.user)
 
 			assert.Equal(t, tt.expectedSuccess, response.Success)
@@ -206,7 +206,7 @@ func TestGetUser(t *testing.T) {
 				tt.mockSetup(mock)
 			}
 
-			repo := NewAuthPostgres(db)
+			repo := NewAuthPostgresRepo(db)
 			response := repo.GetUser(context.Background(), tt.useremail, tt.userpassword)
 
 			assert.Equal(t, tt.expectedSuccess, response.Success)
@@ -350,7 +350,7 @@ func TestDeleteUser(t *testing.T) {
 				tt.mockSetup(mock)
 			}
 
-			repo := NewAuthPostgres(db)
+			repo := NewAuthPostgresRepo(db)
 			response := repo.DeleteUser(context.Background(), tt.userid, tt.userpassword)
 
 			assert.Equal(t, tt.expectedSuccess, response.Success)
