@@ -17,8 +17,8 @@ type DBAuthenticateRepos interface {
 }
 type DBTransactionManager interface {
 	BeginTx(ctx context.Context) (*sql.Tx, error)
-	RollbackTx(ctx context.Context, tx *sql.Tx) error
-	CommitTx(ctx context.Context, tx *sql.Tx) error
+	RollbackTx(tx *sql.Tx) error
+	CommitTx(tx *sql.Tx) error
 }
 type Repository struct {
 	DBAuthenticateRepos

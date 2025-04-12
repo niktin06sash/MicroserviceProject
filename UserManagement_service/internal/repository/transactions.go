@@ -17,10 +17,10 @@ func (r *TxManagerRepo) BeginTx(ctx context.Context) (*sql.Tx, error) {
 	return r.Db.BeginTx(ctx, nil)
 }
 
-func (r *TxManagerRepo) RollbackTx(ctx context.Context, tx *sql.Tx) error {
+func (r *TxManagerRepo) RollbackTx(tx *sql.Tx) error {
 	return tx.Rollback()
 }
 
-func (r *TxManagerRepo) CommitTx(ctx context.Context, tx *sql.Tx) error {
+func (r *TxManagerRepo) CommitTx(tx *sql.Tx) error {
 	return tx.Commit()
 }
