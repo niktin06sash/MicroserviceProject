@@ -38,35 +38,6 @@ func (m *MockDBAuthenticateRepos) EXPECT() *MockDBAuthenticateReposMockRecorder 
 	return m.recorder
 }
 
-// BeginTx mocks base method.
-func (m *MockDBAuthenticateRepos) BeginTx(ctx context.Context) (*sql.Tx, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BeginTx", ctx)
-	ret0, _ := ret[0].(*sql.Tx)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// BeginTx indicates an expected call of BeginTx.
-func (mr *MockDBAuthenticateReposMockRecorder) BeginTx(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTx", reflect.TypeOf((*MockDBAuthenticateRepos)(nil).BeginTx), ctx)
-}
-
-// CommitTx mocks base method.
-func (m *MockDBAuthenticateRepos) CommitTx(ctx context.Context, tx *sql.Tx) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CommitTx", ctx, tx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CommitTx indicates an expected call of CommitTx.
-func (mr *MockDBAuthenticateReposMockRecorder) CommitTx(ctx, tx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitTx", reflect.TypeOf((*MockDBAuthenticateRepos)(nil).CommitTx), ctx, tx)
-}
-
 // CreateUser mocks base method.
 func (m *MockDBAuthenticateRepos) CreateUser(ctx context.Context, user *model.Person) *repository.DBRepositoryResponse {
 	m.ctrl.T.Helper()
@@ -109,16 +80,68 @@ func (mr *MockDBAuthenticateReposMockRecorder) GetUser(ctx, useremail, password 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockDBAuthenticateRepos)(nil).GetUser), ctx, useremail, password)
 }
 
-// RollbackTx mocks base method.
-func (m *MockDBAuthenticateRepos) RollbackTx(ctx context.Context, tx *sql.Tx) error {
+// MockDBTransactionManager is a mock of DBTransactionManager interface.
+type MockDBTransactionManager struct {
+	ctrl     *gomock.Controller
+	recorder *MockDBTransactionManagerMockRecorder
+}
+
+// MockDBTransactionManagerMockRecorder is the mock recorder for MockDBTransactionManager.
+type MockDBTransactionManagerMockRecorder struct {
+	mock *MockDBTransactionManager
+}
+
+// NewMockDBTransactionManager creates a new mock instance.
+func NewMockDBTransactionManager(ctrl *gomock.Controller) *MockDBTransactionManager {
+	mock := &MockDBTransactionManager{ctrl: ctrl}
+	mock.recorder = &MockDBTransactionManagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDBTransactionManager) EXPECT() *MockDBTransactionManagerMockRecorder {
+	return m.recorder
+}
+
+// BeginTx mocks base method.
+func (m *MockDBTransactionManager) BeginTx(ctx context.Context) (*sql.Tx, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RollbackTx", ctx, tx)
+	ret := m.ctrl.Call(m, "BeginTx", ctx)
+	ret0, _ := ret[0].(*sql.Tx)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BeginTx indicates an expected call of BeginTx.
+func (mr *MockDBTransactionManagerMockRecorder) BeginTx(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTx", reflect.TypeOf((*MockDBTransactionManager)(nil).BeginTx), ctx)
+}
+
+// CommitTx mocks base method.
+func (m *MockDBTransactionManager) CommitTx(tx *sql.Tx) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CommitTx", tx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CommitTx indicates an expected call of CommitTx.
+func (mr *MockDBTransactionManagerMockRecorder) CommitTx(tx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitTx", reflect.TypeOf((*MockDBTransactionManager)(nil).CommitTx), tx)
+}
+
+// RollbackTx mocks base method.
+func (m *MockDBTransactionManager) RollbackTx(tx *sql.Tx) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RollbackTx", tx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RollbackTx indicates an expected call of RollbackTx.
-func (mr *MockDBAuthenticateReposMockRecorder) RollbackTx(ctx, tx interface{}) *gomock.Call {
+func (mr *MockDBTransactionManagerMockRecorder) RollbackTx(tx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackTx", reflect.TypeOf((*MockDBAuthenticateRepos)(nil).RollbackTx), ctx, tx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackTx", reflect.TypeOf((*MockDBTransactionManager)(nil).RollbackTx), tx)
 }
