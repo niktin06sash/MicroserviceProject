@@ -66,3 +66,29 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 	require.True(t, response.Success)
 	require.Equal(t, "session-id", response.SessionId)
 }
+
+/*func TestNewAuthService(t *testing.T) {
+    // Создаем контроллер для моков
+    ctrl := gomock.NewController(t)
+    defer ctrl.Finish()
+
+    // Создаем моки для зависимостей
+	mockTxManager := mock_repository.NewMockDBTransactionManager(ctrl)
+	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
+	mockGrpc := mock_client.NewMockGrpcClientService(ctrl)
+    mockKafkaProducer := kafka.NewMockKafkaProducer(ctrl)
+    mockGrpcClient := client.NewMockGrpcClient(ctrl)
+
+    // Вызываем конструктор
+    authService := service.NewAuthService(mockDbRepo, mockDbTxManager, mockKafkaProducer, mockGrpcClient)
+
+    // Проверяем, что поля структуры инициализированы правильно
+    require.NotNil(t, authService)
+    require.Equal(t, mockDbRepo, authService.Dbrepo)
+    require.Equal(t, mockDbTxManager, authService.Dbtxmanager)
+    require.Equal(t, mockKafkaProducer, authService.KafkaProducer)
+    require.Equal(t, mockGrpcClient, authService.GrpcClient)
+
+    // Проверяем, что Validator инициализирован
+    require.NotNil(t, authService.Validator)
+}*/
