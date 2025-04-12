@@ -12,43 +12,45 @@ import (
 	proto "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 )
 
-// MockGrpcClientInterface is a mock of GrpcClientInterface interface.
-type MockGrpcClientInterface struct {
+// MockGrpcClientService is a mock of GrpcClientService interface.
+type MockGrpcClientService struct {
 	ctrl     *gomock.Controller
-	recorder *MockGrpcClientInterfaceMockRecorder
+	recorder *MockGrpcClientServiceMockRecorder
 }
 
-// MockGrpcClientInterfaceMockRecorder is the mock recorder for MockGrpcClientInterface.
-type MockGrpcClientInterfaceMockRecorder struct {
-	mock *MockGrpcClientInterface
+// MockGrpcClientServiceMockRecorder is the mock recorder for MockGrpcClientService.
+type MockGrpcClientServiceMockRecorder struct {
+	mock *MockGrpcClientService
 }
 
-// NewMockGrpcClientInterface creates a new mock instance.
-func NewMockGrpcClientInterface(ctrl *gomock.Controller) *MockGrpcClientInterface {
-	mock := &MockGrpcClientInterface{ctrl: ctrl}
-	mock.recorder = &MockGrpcClientInterfaceMockRecorder{mock}
+// NewMockGrpcClientService creates a new mock instance.
+func NewMockGrpcClientService(ctrl *gomock.Controller) *MockGrpcClientService {
+	mock := &MockGrpcClientService{ctrl: ctrl}
+	mock.recorder = &MockGrpcClientServiceMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockGrpcClientInterface) EXPECT() *MockGrpcClientInterfaceMockRecorder {
+func (m *MockGrpcClientService) EXPECT() *MockGrpcClientServiceMockRecorder {
 	return m.recorder
 }
 
 // Close mocks base method.
-func (m *MockGrpcClientInterface) Close() {
+func (m *MockGrpcClientService) Close() error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Close")
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockGrpcClientInterfaceMockRecorder) Close() *gomock.Call {
+func (mr *MockGrpcClientServiceMockRecorder) Close() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockGrpcClientInterface)(nil).Close))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockGrpcClientService)(nil).Close))
 }
 
 // CreateSession mocks base method.
-func (m *MockGrpcClientInterface) CreateSession(ctx context.Context, userID string) (*proto.CreateSessionResponse, error) {
+func (m *MockGrpcClientService) CreateSession(ctx context.Context, userID string) (*proto.CreateSessionResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateSession", ctx, userID)
 	ret0, _ := ret[0].(*proto.CreateSessionResponse)
@@ -57,13 +59,13 @@ func (m *MockGrpcClientInterface) CreateSession(ctx context.Context, userID stri
 }
 
 // CreateSession indicates an expected call of CreateSession.
-func (mr *MockGrpcClientInterfaceMockRecorder) CreateSession(ctx, userID interface{}) *gomock.Call {
+func (mr *MockGrpcClientServiceMockRecorder) CreateSession(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSession", reflect.TypeOf((*MockGrpcClientInterface)(nil).CreateSession), ctx, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSession", reflect.TypeOf((*MockGrpcClientService)(nil).CreateSession), ctx, userID)
 }
 
 // DeleteSession mocks base method.
-func (m *MockGrpcClientInterface) DeleteSession(ctx context.Context, sessionID string) (*proto.DeleteSessionResponse, error) {
+func (m *MockGrpcClientService) DeleteSession(ctx context.Context, sessionID string) (*proto.DeleteSessionResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteSession", ctx, sessionID)
 	ret0, _ := ret[0].(*proto.DeleteSessionResponse)
@@ -72,7 +74,7 @@ func (m *MockGrpcClientInterface) DeleteSession(ctx context.Context, sessionID s
 }
 
 // DeleteSession indicates an expected call of DeleteSession.
-func (mr *MockGrpcClientInterfaceMockRecorder) DeleteSession(ctx, sessionID interface{}) *gomock.Call {
+func (mr *MockGrpcClientServiceMockRecorder) DeleteSession(ctx, sessionID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSession", reflect.TypeOf((*MockGrpcClientInterface)(nil).DeleteSession), ctx, sessionID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSession", reflect.TypeOf((*MockGrpcClientService)(nil).DeleteSession), ctx, sessionID)
 }

@@ -12,17 +12,17 @@ import (
 )
 
 //go:generate mockgen -source=grpc_client.go -destination=mocks/mock.go
-type GrpcClientInterface interface {
+type GrpcClientService interface {
 	CreateSession(ctx context.Context, userID string) (*pb.CreateSessionResponse, error)
 	DeleteSession(ctx context.Context, sessionID string) (*pb.DeleteSessionResponse, error)
-	Close()
+	Close() error
 }
 type GrpcClient struct {
 	client pb.SessionServiceClient
 	conn   *grpc.ClientConn
 }
 
-func NewGrpcServiceClient(cfg configs.Config) *GrpcClient {
+func NewGrpcClient(cfg configs.Config) *GrpcClient {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
