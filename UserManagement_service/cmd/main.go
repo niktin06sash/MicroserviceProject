@@ -72,7 +72,7 @@ func main() {
 	}
 	defer kafkaProducer.Close()
 	repositories := repository.NewRepository(db)
-	grpcclient := client.NewGrpcServiceClient(config)
+	grpcclient := client.NewGrpcClient(config)
 	defer grpcclient.Close()
 	service := service.NewService(repositories, kafkaProducer, grpcclient)
 	handlers := handlers.NewHandler(service)
