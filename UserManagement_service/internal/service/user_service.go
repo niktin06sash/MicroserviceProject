@@ -20,14 +20,15 @@ import (
 
 type AuthService struct {
 	dbrepo        repository.DBAuthenticateRepos
+	dbtxmanager   repository.DBTransactionManager
 	kafkaProducer kafka.KafkaProducer
 	validator     *validator.Validate
 	grpcClient    *client.GrpcClient
 }
 
-func NewAuthService(repo repository.DBAuthenticateRepos, kafkaProd kafka.KafkaProducer, grpc *client.GrpcClient) *AuthService {
+func NewAuthService(dbrepo repository.DBAuthenticateRepos, dbtxmanager repository.DBTransactionManager, kafkaProd kafka.KafkaProducer, grpc *client.GrpcClient) *AuthService {
 	validator := validator.New()
-	return &AuthService{dbrepo: repo, validator: validator, kafkaProducer: kafkaProd, grpcClient: grpc}
+	return &AuthService{dbrepo: dbrepo, dbtxmanager: dbtxmanager, validator: validator, kafkaProducer: kafkaProd, grpcClient: grpc}
 }
 
 type UserRegistrateEvent struct {

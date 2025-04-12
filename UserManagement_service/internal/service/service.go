@@ -33,6 +33,6 @@ func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducer, cli
 
 	return &Service{
 
-		UserAuthentication: NewAuthService(repos.DBAuthenticateRepos, kafkaProd, clientgrpc),
+		UserAuthentication: NewAuthService(repos.DBAuthenticateRepos, repos.DBTransactionManager, kafkaProd, clientgrpc),
 	}
 }
