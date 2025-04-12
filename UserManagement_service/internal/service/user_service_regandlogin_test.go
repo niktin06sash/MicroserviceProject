@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"database/sql"
+	"log"
 	"testing"
 	"time"
 
@@ -60,11 +61,17 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 	})).Return(&pb.CreateSessionResponse{
 		Success:    true,
 		SessionID:  "session-id",
-		ExpiryTime: time.Now().Unix(),
+		ExpiryTime: time.Now().Add(1 * time.Minute).Unix(),
 	}, nil)
+
 	response := as.RegistrateAndLogin(ctx, user)
+	log.Printf("Response: %+v", response)
+
 	require.True(t, response.Success)
 	require.Equal(t, "session-id", response.SessionId)
+	require.NotNil(t, response.ExpireSession)
+	require.True(t, response.ExpireSession.After(time.Now().Add(-1*time.Second)))
+	require.NotEqual(t, "password123", user.Password)
 }
 
 /*func TestNewAuthService(t *testing.T) {
