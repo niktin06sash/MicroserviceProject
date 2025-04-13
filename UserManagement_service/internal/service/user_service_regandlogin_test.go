@@ -44,11 +44,13 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 
 	tx := &sql.Tx{}
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	fixedsessUUID := uuid.MustParse("123e4567-e89b-12d3-a456-42661417100")
+	fixedsessUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614171000")
+
 	mockTxManager.EXPECT().BeginTx(ctx).Return(tx, nil)
 	mockTxManager.EXPECT().CommitTx(tx).Return(nil)
+	mockTxManager.EXPECT().RollbackTx(gomock.Any()).AnyTimes()
 
-	mockRepo.EXPECT().CreateUser(ctx, mock.MatchedBy(func(user *model.Person) bool {
+	mockRepo.EXPECT().CreateUser(ctx, tx, mock.MatchedBy(func(user *model.Person) bool {
 		return user.Name == "John Doe" && user.Email == "john.doe@example.com"
 	})).Return(&repository.DBRepositoryResponse{
 		Success: true,
@@ -68,7 +70,7 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 	log.Printf("Response: %+v", response)
 
 	require.True(t, response.Success)
-	require.Equal(t, "123e4567-e89b-12d3-a456-426614174100", response.SessionId)
+	require.Equal(t, fixedsessUUID.String(), response.SessionId)
 	require.NotNil(t, response.ExpireSession)
 	require.True(t, response.ExpireSession.After(time.Now().Add(-1*time.Second)))
 	require.NotEqual(t, "password123", user.Password)

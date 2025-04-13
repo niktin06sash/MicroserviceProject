@@ -39,31 +39,31 @@ func (m *MockDBAuthenticateRepos) EXPECT() *MockDBAuthenticateReposMockRecorder 
 }
 
 // CreateUser mocks base method.
-func (m *MockDBAuthenticateRepos) CreateUser(ctx context.Context, user *model.Person) *repository.DBRepositoryResponse {
+func (m *MockDBAuthenticateRepos) CreateUser(ctx context.Context, tx *sql.Tx, user *model.Person) *repository.DBRepositoryResponse {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateUser", ctx, user)
+	ret := m.ctrl.Call(m, "CreateUser", ctx, tx, user)
 	ret0, _ := ret[0].(*repository.DBRepositoryResponse)
 	return ret0
 }
 
 // CreateUser indicates an expected call of CreateUser.
-func (mr *MockDBAuthenticateReposMockRecorder) CreateUser(ctx, user interface{}) *gomock.Call {
+func (mr *MockDBAuthenticateReposMockRecorder) CreateUser(ctx, tx, user interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockDBAuthenticateRepos)(nil).CreateUser), ctx, user)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockDBAuthenticateRepos)(nil).CreateUser), ctx, tx, user)
 }
 
 // DeleteUser mocks base method.
-func (m *MockDBAuthenticateRepos) DeleteUser(ctx context.Context, userId uuid.UUID, password string) *repository.DBRepositoryResponse {
+func (m *MockDBAuthenticateRepos) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *repository.DBRepositoryResponse {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteUser", ctx, userId, password)
+	ret := m.ctrl.Call(m, "DeleteUser", ctx, tx, userId, password)
 	ret0, _ := ret[0].(*repository.DBRepositoryResponse)
 	return ret0
 }
 
 // DeleteUser indicates an expected call of DeleteUser.
-func (mr *MockDBAuthenticateReposMockRecorder) DeleteUser(ctx, userId, password interface{}) *gomock.Call {
+func (mr *MockDBAuthenticateReposMockRecorder) DeleteUser(ctx, tx, userId, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUser", reflect.TypeOf((*MockDBAuthenticateRepos)(nil).DeleteUser), ctx, userId, password)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUser", reflect.TypeOf((*MockDBAuthenticateRepos)(nil).DeleteUser), ctx, tx, userId, password)
 }
 
 // GetUser mocks base method.

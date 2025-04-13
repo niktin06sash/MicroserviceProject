@@ -126,7 +126,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		registrateMap["TransactionError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
-
+	isTransactionActive = false
 	log.Println("RegistrateAndLogin: Transaction was successfully committed")
 	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
 	log.Println("RegistrateAndLogin: The session was created successfully and the user is registered!")
@@ -276,6 +276,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		deletemap["TransactionError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
+	isTransactionActive = false
 	log.Println("DeleteAccount:  Transaction was successfully committed")
 	log.Println("DeleteAccount: The user has successfully deleted his account with all data!")
 	return &ServiceResponse{
