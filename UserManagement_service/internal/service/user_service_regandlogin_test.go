@@ -44,7 +44,7 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 
 	tx := &sql.Tx{}
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-
+	fixedsessUUID := uuid.MustParse("123e4567-e89b-12d3-a456-42661417100")
 	mockTxManager.EXPECT().BeginTx(ctx).Return(tx, nil)
 	mockTxManager.EXPECT().CommitTx(tx).Return(nil)
 
@@ -56,11 +56,11 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 	})
 
 	mockGrpc.EXPECT().CreateSession(ctx, mock.MatchedBy(func(userID string) bool {
-		_, err := uuid.Parse(userID)
-		return err == nil
+		parseuserid, err := uuid.Parse(userID)
+		return err == nil && parseuserid == fixedUUID
 	})).Return(&pb.CreateSessionResponse{
 		Success:    true,
-		SessionID:  "session-id",
+		SessionID:  fixedsessUUID.String(),
 		ExpiryTime: time.Now().Add(1 * time.Minute).Unix(),
 	}, nil)
 
@@ -68,7 +68,7 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 	log.Printf("Response: %+v", response)
 
 	require.True(t, response.Success)
-	require.Equal(t, "session-id", response.SessionId)
+	require.Equal(t, "123e4567-e89b-12d3-a456-426614174100", response.SessionId)
 	require.NotNil(t, response.ExpireSession)
 	require.True(t, response.ExpireSession.After(time.Now().Add(-1*time.Second)))
 	require.NotEqual(t, "password123", user.Password)
