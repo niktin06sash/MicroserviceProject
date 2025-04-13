@@ -39,26 +39,34 @@ type UserRegistrateEvent struct {
 func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	registrateMap := make(map[string]error)
 	var tx *sql.Tx
-
 	tx, err := as.Dbtxmanager.BeginTx(ctx)
 	if err != nil {
 		log.Printf("RegistrateAndLogin: TransactionError %v", err)
 		registrateMap["TransactionError"] = erro.ErrorStartTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
-
+	isTransactionActive := true
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("RegistrateAndLogin: Panic occurred: %v", r)
-			rollbackTransaction(as.Dbtxmanager, tx, "panic")
+			if isTransactionActive {
+				rollbackTransaction(as.Dbtxmanager, tx, "panic")
+			}
 			panic(r)
+		}
+
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "failure")
 		}
 	}()
 
 	hashpass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("RegistrateAndLogin: HashPassError %v", err)
-		rollbackTransaction(as.Dbtxmanager, tx, "hash password failure")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "hash password failure")
+			isTransactionActive = false
+		}
 		registrateMap["HashPassError"] = erro.ErrorHashPass
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
@@ -66,33 +74,55 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 
 	if ctx.Err() != nil {
 		log.Printf("RegistrateAndLogin: Context cancelled before CreateUser: %v", ctx.Err())
-		rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
+			isTransactionActive = false
+		}
 		registrateMap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
 
 	userID := uuid.New()
 	user.Id = userID
-	response := as.Dbrepo.CreateUser(ctx, user)
+	response := as.Dbrepo.CreateUser(ctx, tx, user)
 	if !response.Success {
 		log.Printf("RegistrateAndLogin: Error when creating person in the database %v", response.Errors)
-		rollbackTransaction(as.Dbtxmanager, tx, "create user failure")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "create user failure")
+			isTransactionActive = false
+		}
 		registrateMap["RegistrateError"] = response.Errors
 		return &ServiceResponse{Success: response.Success, Errors: registrateMap}
 	}
 	userID = response.UserId
 
 	grpcresponse, err := as.GrpcClient.CreateSession(ctx, userID.String())
-	if err != nil || !grpcresponse.Success {
+	if err != nil {
 		log.Printf("RegistrateAndLogin: GrpcResponseError %v", err)
-		rollbackTransaction(as.Dbtxmanager, tx, "create session failure")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "create session failure")
+			isTransactionActive = false
+		}
 		registrateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
-		return &ServiceResponse{Success: grpcresponse.Success, Errors: registrateMap}
+		return &ServiceResponse{Success: false, Errors: registrateMap}
+	}
+
+	if !grpcresponse.Success {
+		log.Printf("RegistrateAndLogin: GrpcResponseError: session creation failed")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "create session failure")
+			isTransactionActive = false
+		}
+		registrateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
+		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
 
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
 		log.Printf("RegistrateAndLogin: Error committing transaction: %v", err)
-		rollbackTransaction(as.Dbtxmanager, tx, "commit failure")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "commit failure")
+			isTransactionActive = false
+		}
 		registrateMap["TransactionError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
@@ -134,8 +164,13 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 		return &ServiceResponse{Success: false, Errors: authenticateMap}
 	}
 	grpcresponse, err := as.GrpcClient.CreateSession(ctx, userID.String())
-	if err != nil || !grpcresponse.Success {
+	if err != nil {
 		log.Printf("AuthenticateAndLogin: GrpcResponseError %v", err)
+		authenticateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
+		return &ServiceResponse{Success: false, Errors: authenticateMap}
+	}
+	if !grpcresponse.Success {
+		log.Printf("AuthenticateAndLogin: GrpcResponseError: session creation failed")
 		authenticateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: authenticateMap}
 	}
@@ -165,46 +200,78 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
 
+	isTransactionActive := true
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("DeleteAccount: Panic occurred: %v", r)
-			rollbackTransaction(as.Dbtxmanager, tx, "panic")
+			if isTransactionActive {
+				rollbackTransaction(as.Dbtxmanager, tx, "panic")
+			}
 			panic(r)
+		}
+
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "failure")
 		}
 	}()
 
 	if ctx.Err() != nil {
-		rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
+			isTransactionActive = false
+		}
 		log.Printf("DeleteAccount: Context cancelled before DeleteUser: %v", ctx.Err())
 		deletemap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
 
-	response := as.Dbrepo.DeleteUser(ctx, userid, password)
+	response := as.Dbrepo.DeleteUser(ctx, tx, userid, password)
 	if !response.Success {
-		rollbackTransaction(as.Dbtxmanager, tx, "delete user failure")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "delete user failure")
+			isTransactionActive = false
+		}
 		log.Printf("DeleteAccount: Failed to delete user: %v", response.Errors)
 		deletemap["DeleteError"] = response.Errors
 		return &ServiceResponse{Success: response.Success, Errors: deletemap}
 	}
 
 	if ctx.Err() != nil {
-		rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
+			isTransactionActive = false
+		}
 		log.Printf("DeleteAccount: Context cancelled before DeleteSession: %v", ctx.Err())
 		deletemap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
 
-	grpcresponse, gerr := as.GrpcClient.DeleteSession(ctx, sessionID)
-	if gerr != nil || !grpcresponse.Success {
-		rollbackTransaction(as.Dbtxmanager, tx, "delete session failure")
-		log.Printf("DeleteAccount:  GrpcResponseError %v", err)
+	grpcresponse, err := as.GrpcClient.DeleteSession(ctx, sessionID)
+	if err != nil {
+		log.Printf("DeleteAccount: GrpcResponseError %v", err)
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "delete session failure")
+			isTransactionActive = false
+		}
 		deletemap["GrpcResponseError"] = erro.ErrorGrpcResponse
-		return &ServiceResponse{Success: grpcresponse.Success, Errors: deletemap}
+		return &ServiceResponse{Success: false, Errors: deletemap}
+	}
+
+	if !grpcresponse.Success {
+		log.Printf("DeleteAccount: GrpcResponseError: session creation failed")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "delete session failure")
+			isTransactionActive = false
+		}
+		deletemap["GrpcResponseError"] = erro.ErrorGrpcResponse
+		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
 
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
-		rollbackTransaction(as.Dbtxmanager, tx, "commit failure")
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "commit failure")
+			isTransactionActive = false
+		}
 		log.Printf("DeleteAccount: Error committing transaction: %v", err)
 		deletemap["TransactionError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: deletemap}
