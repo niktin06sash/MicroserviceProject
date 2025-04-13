@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"testing"
 
@@ -69,7 +70,7 @@ func TestCreateUser(t *testing.T) {
 			mockSetup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery("INSERT INTO UserZ").
 					WithArgs(sqlmock.AnyArg(), "testuser", "test@example.com", "password123").
-					WillReturnError(sql.ErrConnDone)
+					WillReturnError(errors.New("database connection error"))
 			},
 			expectedSuccess: false,
 			expectedUserId:  uuid.Nil,
@@ -85,11 +86,18 @@ func TestCreateUser(t *testing.T) {
 			}
 			defer db.Close()
 
+			mock.ExpectBegin()
+			tx, err := db.Begin()
+			if err != nil {
+				t.Fatalf("failed to begin transaction: %v", err)
+			}
+
 			if tt.mockSetup != nil {
 				tt.mockSetup(mock)
 			}
+
 			repo := NewAuthPostgresRepo(db)
-			response := repo.CreateUser(context.Background(), tt.user)
+			response := repo.CreateUser(context.Background(), tx, tt.user)
 
 			assert.Equal(t, tt.expectedSuccess, response.Success)
 			assert.Equal(t, tt.expectedUserId, response.UserId)
@@ -101,7 +109,6 @@ func TestCreateUser(t *testing.T) {
 		})
 	}
 }
-
 func TestGetUser(t *testing.T) {
 	var fundamentUuid = uuid.New()
 
@@ -346,12 +353,18 @@ func TestDeleteUser(t *testing.T) {
 			}
 			defer db.Close()
 
+			mock.ExpectBegin()
+			tx, err := db.Begin()
+			if err != nil {
+				t.Fatalf("failed to begin transaction: %v", err)
+			}
+
 			if tt.mockSetup != nil {
 				tt.mockSetup(mock)
 			}
 
 			repo := NewAuthPostgresRepo(db)
-			response := repo.DeleteUser(context.Background(), tt.userid, tt.userpassword)
+			response := repo.DeleteUser(context.Background(), tx, tt.userid, tt.userpassword)
 
 			assert.Equal(t, tt.expectedSuccess, response.Success)
 			assert.Equal(t, tt.expectedErrors, response.Errors)

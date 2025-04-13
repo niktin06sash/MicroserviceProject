@@ -14,7 +14,7 @@ github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repo
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/db.go:71.16,74.3 2 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/db.go:76.2,77.16 2 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:20.56,22.2 1 1
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:24.107,31.16 3 1
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:24.119,31.16 3 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:31.16,33.36 2 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:33.36,35.4 1 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:36.3,36.84 1 1
@@ -26,7 +26,7 @@ github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repo
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:56.2,57.16 2 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:57.16,60.3 2 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:62.2,63.74 2 1
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:65.122,69.16 3 1
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:65.134,69.16 3 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:69.16,71.36 2 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:71.36,73.4 1 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/postgres_repository.go:74.3,74.84 1 1
@@ -38,5 +38,5 @@ github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repo
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/repository.go:33.44,38.2 1 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/transactions.go:12.50,14.2 1 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/transactions.go:16.71,18.2 1 0
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/transactions.go:20.75,22.2 1 0
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/transactions.go:24.73,26.2 1 0
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/transactions.go:20.54,22.2 1 0
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/transactions.go:24.52,26.2 1 0
