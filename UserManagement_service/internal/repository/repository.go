@@ -11,9 +11,9 @@ import (
 
 //go:generate mockgen -source=repository.go -destination=mocks/mock.go
 type DBAuthenticateRepos interface {
-	CreateUser(ctx context.Context, user *model.Person) *DBRepositoryResponse
+	CreateUser(ctx context.Context, tx *sql.Tx, user *model.Person) *DBRepositoryResponse
 	GetUser(ctx context.Context, useremail, password string) *DBRepositoryResponse
-	DeleteUser(ctx context.Context, userId uuid.UUID, password string) *DBRepositoryResponse
+	DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *DBRepositoryResponse
 }
 type DBTransactionManager interface {
 	BeginTx(ctx context.Context) (*sql.Tx, error)

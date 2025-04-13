@@ -21,10 +21,10 @@ func NewAuthPostgresRepo(db *sql.DB) *AuthPostgresRepo {
 	return &AuthPostgresRepo{Db: db}
 }
 
-func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, user *model.Person) *DBRepositoryResponse {
+func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.Person) *DBRepositoryResponse {
 	var createdUserID uuid.UUID
 
-	err := repoap.Db.QueryRowContext(ctx,
+	err := tx.QueryRowContext(ctx,
 		"INSERT INTO UserZ (userid, username, useremail, userpassword) values ($1, $2, $3, $4) ON CONFLICT (useremail) DO NOTHING RETURNING userid;",
 		user.Id, user.Name, user.Email, user.Password).Scan(&createdUserID)
 
@@ -62,9 +62,9 @@ func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 	log.Println("Successful get person!")
 	return &DBRepositoryResponse{Success: true, UserId: userId, Errors: nil}
 }
-func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, userId uuid.UUID, password string) *DBRepositoryResponse {
+func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *DBRepositoryResponse {
 	var hashpass string
-	err := repoap.Db.QueryRowContext(ctx, "SELECT userpassword FROM userZ WHERE userid = $1", userId).Scan(&hashpass)
+	err := tx.QueryRowContext(ctx, "SELECT userpassword FROM userZ WHERE userid = $1", userId).Scan(&hashpass)
 
 	if err != nil {
 		log.Printf("DeleteUser Error: %v", err)
@@ -78,7 +78,7 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, userId uuid.UUID
 		log.Printf("CompareHashAndPassword Error: %v", err)
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword}
 	}
-	_, err = repoap.Db.ExecContext(ctx, "DELETE FROM userZ where userId = $1", userId)
+	_, err = tx.ExecContext(ctx, "DELETE FROM userZ where userId = $1", userId)
 	if err != nil {
 		log.Printf("Delete Error: %v", err)
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
