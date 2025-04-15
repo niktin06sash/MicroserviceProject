@@ -30,6 +30,7 @@ const (
 	ErrorRolbackTransactionConst = "Rolback Transaction error"
 	ErrorPanicConst              = "Panic Error"
 	ErrorGrpcRollbackConst       = "Rollback's error"
+	ErrorMissingCookieConst      = "Error missing cookie from request"
 )
 
 var (
@@ -60,4 +61,5 @@ var (
 	ErrorDbPing            = errors.New(ErrorDBPingConst)
 	ErrorGrpcResponse      = errors.New(ErrorGrpcResponseConst)
 	ErrorGrpcRollback      = errors.New(ErrorGrpcRollbackConst)
+	ErrorMissingCookie     = errors.New(ErrorMissingCookieConst)
 )

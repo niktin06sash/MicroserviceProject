@@ -17,7 +17,6 @@ import (
 )
 
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
-
 	maparesponse := make(map[string]string)
 	if r.Method != http.MethodPost {
 		log.Printf("Invalid request method(expected Post but it was sent %v)", r.Method)
@@ -30,7 +29,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("ReadAll Error: %v", err)
 		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
-		badResponse(w, maparesponse, http.StatusInternalServerError)
+		badResponse(w, maparesponse, http.StatusBadRequest)
 
 		return
 	}
@@ -88,7 +87,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("ReadAll Error: %v", err)
 		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
-		badResponse(w, maparesponse, http.StatusInternalServerError)
+		badResponse(w, maparesponse, http.StatusBadRequest)
 
 		return
 	}
@@ -151,14 +150,25 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		log.Printf("Unexpected error getting session cookie (should have been validated by middleware): %v", err)
+		maparesponse["Cookie"] = erro.ErrorMissingCookie.Error()
+		badResponse(w, maparesponse, http.StatusBadRequest)
+		return
 	}
 	sessionID := cookie.Value
-	password, err := io.ReadAll(r.Body)
+	passwordBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("ReadAll Error: %v", err)
 		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
-		badResponse(w, maparesponse, http.StatusInternalServerError)
+		badResponse(w, maparesponse, http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
 
+	var password string
+	if err := json.Unmarshal(passwordBytes, &password); err != nil || password == "" {
+		log.Printf("Invalid password format or empty password")
+		maparesponse["Password"] = erro.ErrorInvalidPassword.Error()
+		badResponse(w, maparesponse, http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
@@ -215,7 +225,7 @@ func convertErrorToString(mapa *service.ServiceResponse) map[string]string {
 		if err != nil {
 			stringMap[key] = err.Error()
 		} else {
-			stringMap[key] = ""
+			stringMap[key] = "no error"
 		}
 	}
 	return stringMap
@@ -226,7 +236,7 @@ func getUserIDFromRequestContext(r *http.Request) (uuid.UUID, bool) {
 func getUserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 	userID, ok := ctx.Value("userID").(uuid.UUID)
 	if !ok {
-
+		log.Println("UserID not found in request context")
 		return uuid.Nil, false
 	}
 	return userID, true
