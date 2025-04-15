@@ -177,7 +177,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	response := h.services.DeleteAccount(ctx, sessionID, userID, string(password))
 	if !response.Success {
 		stringMap := convertErrorToString(response)
-		badResponse(w, stringMap, http.StatusInternalServerError)
+		badResponse(w, stringMap, http.StatusBadRequest)
 		return
 	}
 
