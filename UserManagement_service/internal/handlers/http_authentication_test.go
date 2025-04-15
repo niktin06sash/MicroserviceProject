@@ -65,6 +65,66 @@ func TestAuthentication(t *testing.T) {
 				},
 			},
 		},
+		{
+			testname:           "UnmarshalError",
+			method:             http.MethodPost,
+			reqbody:            `{"email": "testname@gmail.com", "password": 1234}`,
+			expectedStatuscode: http.StatusInternalServerError,
+			expectedResponseData: HTTPResponse{
+				Success: false,
+				Errors: map[string]string{
+					"Unmarshal": erro.ErrorUnmarshal.Error(),
+				},
+			},
+		},
+		{
+			testname: "InvalidData",
+			method:   http.MethodPost,
+			reqbody:  `{"email": "testname@gmailcom", "password": "qwerty1234"}`,
+			requser: model.Person{
+				Email:    "testname@gmail.com",
+				Password: "qwerty1234",
+			},
+			mockservice: func(r *mock_service.MockUserAuthentication, user model.Person) {
+				r.EXPECT().
+					AuthenticateAndLogin(gomock.Any(), gomock.Any()).
+					Return(&service.ServiceResponse{
+						Success: false,
+						Errors:  map[string]error{"Email": erro.ErrorNotEmail},
+					})
+			},
+			expectedStatuscode: http.StatusBadRequest,
+			expectedResponseData: HTTPResponse{
+				Success: false,
+				Errors: map[string]string{
+					"Email": erro.ErrorNotEmail.Error(),
+				},
+			},
+		},
+		{
+			testname: "InvalidPassword",
+			method:   http.MethodPost,
+			reqbody:  `{"email": "testname@gmail.com", "password": "qwerty1234"}`,
+			requser: model.Person{
+				Email:    "testname@gmail.com",
+				Password: "qwerty1234",
+			},
+			mockservice: func(r *mock_service.MockUserAuthentication, user model.Person) {
+				r.EXPECT().
+					AuthenticateAndLogin(gomock.Any(), gomock.Any()).
+					Return(&service.ServiceResponse{
+						Success: false,
+						Errors:  map[string]error{"AuthenticateError": erro.ErrorInvalidPassword},
+					})
+			},
+			expectedStatuscode: http.StatusBadRequest,
+			expectedResponseData: HTTPResponse{
+				Success: false,
+				Errors: map[string]string{
+					"AuthenticateError": erro.ErrorInvalidPassword.Error(),
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {

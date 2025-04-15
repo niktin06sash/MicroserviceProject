@@ -4,9 +4,9 @@ github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/hand
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:28.2,29.16 2 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:29.16,35.3 4 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:36.2,38.16 3 1
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:38.16,44.3 4 0
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:38.16,44.3 4 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:45.2,48.26 4 1
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:48.26,54.3 4 0
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:48.26,54.3 4 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:56.2,64.16 5 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:64.16,70.3 4 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:71.2,73.37 2 1
@@ -15,14 +15,14 @@ github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/hand
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:86.2,87.16 2 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:87.16,93.3 4 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:94.2,96.16 3 1
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:96.16,102.3 4 0
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:96.16,102.3 4 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:103.2,106.25 4 1
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:106.25,112.3 4 0
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:106.25,112.3 4 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:114.2,122.16 5 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:122.16,128.3 4 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:129.2,131.37 2 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:135.73,138.9 3 1
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:138.9,143.3 4 0
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:138.9,143.3 4 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:144.2,144.35 1 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:144.35,149.3 4 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:150.2,151.16 2 1
@@ -30,7 +30,7 @@ github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/hand
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:157.2,159.16 3 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:159.16,164.3 4 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:165.2,168.83 3 1
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:168.83,173.3 4 1
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:168.83,173.3 4 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:174.2,178.23 5 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:178.23,182.3 3 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:184.2,190.16 5 1
@@ -47,7 +47,7 @@ github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/hand
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:231.2,231.18 1 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:233.69,235.2 1 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:236.66,238.9 2 1
-github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:238.9,241.3 2 0
+github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:238.9,241.3 2 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/auth_handlers.go:242.2,242.21 1 1
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/http_handlers.go:25.53,27.2 1 0
 github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/http_handlers.go:28.44,34.2 5 0

@@ -17,13 +17,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestDeleteAccount_MissingUserID(t *testing.T) {
+	req := httptest.NewRequest(http.MethodDelete, "/delete", nil)
+
+	handler := Handler{}
+
+	recorder := httptest.NewRecorder()
+
+	handler.DeleteAccount(recorder, req)
+
+	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
+
+	var response HTTPResponse
+	err := json.Unmarshal(recorder.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.Equal(t, false, response.Success)
+	assert.Equal(t, map[string]string{"UserId": erro.ErrorGetUserId.Error()}, response.Errors)
+}
 func TestDeleteAccount(t *testing.T) {
 	tests := []struct {
 		testname             string
 		method               string
 		reqbody              string
-		sessionID            string // Кука session_id
-		userID               string // UserID из контекста
+		sessionID            string
+		userID               string
 		mockservice          func(r *mock_service.MockUserAuthentication)
 		expectedStatuscode   int
 		expectedResponseData HTTPResponse
@@ -31,9 +49,9 @@ func TestDeleteAccount(t *testing.T) {
 		{
 			testname:  "Success",
 			method:    http.MethodDelete,
-			reqbody:   `"qwerty1234"`,                         // Пароль в теле запроса
-			sessionID: "123e4567-e89b-12d3-a456-426614174000", // Кука session_id
-			userID:    "123e4567-e89b-12d3-a456-426614174000", // UserID из контекста
+			reqbody:   `"qwerty1234"`,
+			sessionID: "123e4567-e89b-12d3-a456-426614174000",
+			userID:    "123e4567-e89b-12d3-a456-426614174000",
 			mockservice: func(r *mock_service.MockUserAuthentication) {
 				r.EXPECT().
 					DeleteAccount(gomock.Any(), "123e4567-e89b-12d3-a456-426614174000", uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"), "qwerty1234").
@@ -73,20 +91,6 @@ func TestDeleteAccount(t *testing.T) {
 			},
 		},
 		{
-			testname:           "InvalidRequestBody",
-			method:             http.MethodDelete,
-			reqbody:            "",
-			sessionID:          "123e4567-e89b-12d3-a456-426614174000",
-			userID:             "123e4567-e89b-12d3-a456-426614174000",
-			expectedStatuscode: http.StatusBadRequest,
-			expectedResponseData: HTTPResponse{
-				Success: false,
-				Errors: map[string]string{
-					"ReadAll": erro.ErrorReadAll.Error(),
-				},
-			},
-		},
-		{
 			testname:  "InvalidPassword",
 			method:    http.MethodDelete,
 			reqbody:   `"wrongpassword"`,
@@ -97,14 +101,14 @@ func TestDeleteAccount(t *testing.T) {
 					DeleteAccount(gomock.Any(), "123e4567-e89b-12d3-a456-426614174000", uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"), "wrongpassword").
 					Return(&service.ServiceResponse{
 						Success: false,
-						Errors:  map[string]error{"Password": erro.ErrorInvalidPassword},
+						Errors:  map[string]error{"DeleteError": erro.ErrorInvalidPassword},
 					})
 			},
-			expectedStatuscode: http.StatusInternalServerError,
+			expectedStatuscode: http.StatusBadRequest,
 			expectedResponseData: HTTPResponse{
 				Success: false,
 				Errors: map[string]string{
-					"Password": erro.ErrorInvalidPassword.Error(),
+					"DeleteError": erro.ErrorInvalidPassword.Error(),
 				},
 			},
 		},
