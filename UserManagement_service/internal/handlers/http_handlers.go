@@ -5,7 +5,6 @@ import (
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -21,7 +20,6 @@ type HTTPResponse struct {
 	Errors        map[string]string `json:"errors"`
 	SessionId     string            `json:"sessionid"`
 	ExpireSession time.Time         `json:"expiresession"`
-	UserID        uuid.UUID         `json:"userid"`
 }
 
 func NewHandler(services *service.Service) *Handler {

@@ -95,7 +95,15 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		return &ServiceResponse{Success: response.Success, Errors: registrateMap}
 	}
 	userID = response.UserId
-
+	if ctx.Err() != nil {
+		log.Printf("RegistrateAndLogin: Context cancelled before CreateSession: %v", ctx.Err())
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
+			isTransactionActive = false
+		}
+		registrateMap["ContextError"] = erro.ErrorContextTimeout
+		return &ServiceResponse{Success: false, Errors: registrateMap}
+	}
 	grpcresponse, err := as.GrpcClient.CreateSession(ctx, userID.String())
 	if err != nil {
 		log.Printf("RegistrateAndLogin: GrpcResponseError %v", err)
@@ -122,6 +130,12 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, "commit failure")
 			isTransactionActive = false
+		}
+		_, err := as.GrpcClient.DeleteSession(ctx, grpcresponse.SessionID)
+		if err != nil {
+			log.Printf("RegistrateAndLogin: Failed to delete session after commit failure: %v", err)
+			registrateMap["GrpcRollbackError"] = erro.ErrorGrpcRollback
+			return &ServiceResponse{Success: false, Errors: registrateMap}
 		}
 		registrateMap["TransactionError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap}
