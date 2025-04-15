@@ -31,6 +31,7 @@ const (
 	ErrorPanicConst              = "Panic Error"
 	ErrorGrpcRollbackConst       = "Rollback's error"
 	ErrorMissingCookieConst      = "Error missing cookie from request"
+	ErrorMissingRequestIDConst   = "Error missing request ID"
 )
 
 var (
@@ -62,4 +63,5 @@ var (
 	ErrorGrpcResponse      = errors.New(ErrorGrpcResponseConst)
 	ErrorGrpcRollback      = errors.New(ErrorGrpcRollbackConst)
 	ErrorMissingCookie     = errors.New(ErrorMissingCookieConst)
+	ErrorMissingRequestID  = errors.New(ErrorMissingRequestIDConst)
 )

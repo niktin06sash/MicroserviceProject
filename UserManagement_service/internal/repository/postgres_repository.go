@@ -22,31 +22,46 @@ func NewAuthPostgresRepo(db *sql.DB) *AuthPostgresRepo {
 }
 
 func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.Person) *DBRepositoryResponse {
+	requestid, ok := ctx.Value("requestID").(string)
+	if !ok {
+		log.Println("CreateUser Error: Request ID not found in context")
+		return &DBRepositoryResponse{
+			Success: false,
+			Errors:  erro.ErrorMissingRequestID,
+		}
+	}
 	var createdUserID uuid.UUID
-
 	err := tx.QueryRowContext(ctx,
 		"INSERT INTO UserZ (userid, username, useremail, userpassword) values ($1, $2, $3, $4) ON CONFLICT (useremail) DO NOTHING RETURNING userid;",
 		user.Id, user.Name, user.Email, user.Password).Scan(&createdUserID)
 
 	if err != nil {
-		log.Printf("CreateUser Error: %v", err)
+		log.Printf("[RequestID: %s] CreateUser Error: %v", requestid, err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorUniqueEmail}
 		}
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
 	}
 
-	log.Println("Successful create person!")
+	log.Printf("[RequestID: %s] Successful create person!", requestid)
 	return &DBRepositoryResponse{Success: true, UserId: createdUserID, Errors: nil}
 }
 
 func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpassword string) *DBRepositoryResponse {
+	requestid, ok := ctx.Value("requestID").(string)
+	if !ok {
+		log.Println("GetUser Error: Request ID not found in context")
+		return &DBRepositoryResponse{
+			Success: false,
+			Errors:  erro.ErrorMissingRequestID,
+		}
+	}
 	var hashpass string
 	var userId uuid.UUID
 	err := repoap.Db.QueryRowContext(ctx, "SELECT userid, userpassword FROM userZ WHERE useremail = $1", useremail).Scan(&userId, &hashpass)
 
 	if err != nil {
-		log.Printf("GetUser Error: %v", err)
+		log.Printf("[RequestID: %s] GetUser Error: %v", requestid, err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorEmailNotRegister}
 		}
@@ -55,19 +70,27 @@ func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(userpassword))
 	if err != nil {
-		log.Printf("CompareHashAndPassword Error: %v", err)
+		log.Printf("[RequestID: %s] CompareHashAndPassword Error: %v", requestid, err)
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword}
 	}
 
-	log.Println("Successful get person!")
+	log.Printf("[RequestID: %s] Successful get person!", requestid)
 	return &DBRepositoryResponse{Success: true, UserId: userId, Errors: nil}
 }
 func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *DBRepositoryResponse {
+	requestid, ok := ctx.Value("requestID").(string)
+	if !ok {
+		log.Println("DeleteUser Error: Request ID not found in context")
+		return &DBRepositoryResponse{
+			Success: false,
+			Errors:  erro.ErrorMissingRequestID,
+		}
+	}
 	var hashpass string
 	err := tx.QueryRowContext(ctx, "SELECT userpassword FROM userZ WHERE userid = $1", userId).Scan(&hashpass)
 
 	if err != nil {
-		log.Printf("DeleteUser Error: %v", err)
+		log.Printf("[RequestID: %s] DeleteUser Error: %v", requestid, err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorFoundUser}
 		}
@@ -75,13 +98,14 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(password))
 	if err != nil {
-		log.Printf("CompareHashAndPassword Error: %v", err)
+		log.Printf("[RequestID: %s] CompareHashAndPassword Error: %v", requestid, err)
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword}
 	}
 	_, err = tx.ExecContext(ctx, "DELETE FROM userZ where userId = $1", userId)
 	if err != nil {
-		log.Printf("Delete Error: %v", err)
+		log.Printf("[RequestID: %s] Delete Error: %v", requestid, err)
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
 	}
+	log.Printf("[RequestID: %s] Successful delete person!", requestid)
 	return &DBRepositoryResponse{Success: true}
 }

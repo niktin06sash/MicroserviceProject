@@ -91,13 +91,14 @@ func TestCreateUser(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to begin transaction: %v", err)
 			}
-
+			requestID := uuid.New().String()
+			ctx := context.WithValue(context.Background(), "requestID", requestID)
 			if tt.mockSetup != nil {
 				tt.mockSetup(mock)
 			}
 
 			repo := NewAuthPostgresRepo(db)
-			response := repo.CreateUser(context.Background(), tx, tt.user)
+			response := repo.CreateUser(ctx, tx, tt.user)
 
 			assert.Equal(t, tt.expectedSuccess, response.Success)
 			assert.Equal(t, tt.expectedUserId, response.UserId)
@@ -208,13 +209,14 @@ func TestGetUser(t *testing.T) {
 				t.Fatalf("failed to open sqlmock database: %v", err)
 			}
 			defer db.Close()
-
+			requestID := uuid.New().String()
+			ctx := context.WithValue(context.Background(), "requestID", requestID)
 			if tt.mockSetup != nil {
 				tt.mockSetup(mock)
 			}
 
 			repo := NewAuthPostgresRepo(db)
-			response := repo.GetUser(context.Background(), tt.useremail, tt.userpassword)
+			response := repo.GetUser(ctx, tt.useremail, tt.userpassword)
 
 			assert.Equal(t, tt.expectedSuccess, response.Success)
 			assert.Equal(t, tt.expectedUserId, response.UserId)
@@ -358,13 +360,14 @@ func TestDeleteUser(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to begin transaction: %v", err)
 			}
-
+			requestID := uuid.New().String()
+			ctx := context.WithValue(context.Background(), "requestID", requestID)
 			if tt.mockSetup != nil {
 				tt.mockSetup(mock)
 			}
 
 			repo := NewAuthPostgresRepo(db)
-			response := repo.DeleteUser(context.Background(), tx, tt.userid, tt.userpassword)
+			response := repo.DeleteUser(ctx, tx, tt.userid, tt.userpassword)
 
 			assert.Equal(t, tt.expectedSuccess, response.Success)
 			assert.Equal(t, tt.expectedErrors, response.Errors)
