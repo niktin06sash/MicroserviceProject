@@ -29,6 +29,7 @@ const (
 	ErrorSendKafkaMessageConst   = "Error Kafka Message"
 	ErrorRolbackTransactionConst = "Rolback Transaction error"
 	ErrorPanicConst              = "Panic Error"
+	ErrorGrpcRollbackConst       = "Rollback's error"
 )
 
 var (
@@ -58,4 +59,5 @@ var (
 	ErrorDbOpen            = errors.New(ErrorDBOpenConst)
 	ErrorDbPing            = errors.New(ErrorDBPingConst)
 	ErrorGrpcResponse      = errors.New(ErrorGrpcResponseConst)
+	ErrorGrpcRollback      = errors.New(ErrorGrpcRollbackConst)
 )

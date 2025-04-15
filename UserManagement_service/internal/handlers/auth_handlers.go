@@ -58,7 +58,6 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	sucresponse := HTTPResponse{
 		Success:       true,
-		UserID:        regresponse.UserId,
 		SessionId:     regresponse.SessionId,
 		ExpireSession: regresponse.ExpireSession,
 	}
@@ -117,7 +116,6 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	sucresponse := HTTPResponse{
 		Success:       true,
-		UserID:        auresponse.UserId,
 		SessionId:     auresponse.SessionId,
 		ExpireSession: auresponse.ExpireSession,
 	}
