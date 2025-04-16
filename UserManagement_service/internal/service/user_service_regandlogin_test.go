@@ -56,9 +56,11 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 			requestID := ctx.Value("requestID")
 			return requestID != nil && requestID.(string) == fixedReqUuid.String()
 		})).Return(tx, nil),
-		mockRepo.EXPECT().CreateUser(ctx, tx, mock.MatchedBy(func(user *model.Person) bool {
+		mockRepo.EXPECT().CreateUser(mock.MatchedBy(func(ctx context.Context) bool {
 			requestID := ctx.Value("requestID")
-			return requestID != nil && requestID.(string) == fixedReqUuid.String() && user.Name == "John Doe" && user.Email == "john.doe@example.com"
+			return requestID != nil && requestID.(string) == fixedReqUuid.String()
+		}), tx, mock.MatchedBy(func(user *model.Person) bool {
+			return user.Name == "John Doe" && user.Email == "john.doe@example.com"
 		})).Return(&repository.DBRepositoryResponse{
 			Success: true,
 			UserId:  fixedUUID,
