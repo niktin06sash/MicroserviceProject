@@ -32,7 +32,7 @@ type DBObject struct{}
 func (d *DBObject) Open(driverName, connectionString string) (*sql.DB, error) {
 	db, err := sql.Open(driverName, connectionString)
 	if err != nil {
-		log.Printf("Sql-Open error: %v", err)
+		log.Printf("UserManagement: Sql-Open error: %v", err)
 		return nil, erro.ErrorDbOpen
 	}
 	return db, nil
@@ -41,7 +41,7 @@ func (d *DBObject) Open(driverName, connectionString string) (*sql.DB, error) {
 func (d *DBObject) Ping(db *sql.DB) error {
 	err := db.Ping()
 	if err != nil {
-		log.Printf("Sql-Ping error: %v", err)
+		log.Printf("UserManagement: Sql-Ping error: %v", err)
 		return erro.ErrorDbPing
 	}
 	return nil
@@ -50,7 +50,7 @@ func (d *DBObject) Ping(db *sql.DB) error {
 func (d *DBObject) Close(db *sql.DB) {
 	err := db.Close()
 	if err != nil {
-		log.Printf("Sql-Close error: %v", err)
+		log.Printf("UserManagement: Sql-Close error: %v", err)
 	}
 }
 
