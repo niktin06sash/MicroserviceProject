@@ -136,7 +136,7 @@ func TestDeleteAccount_BeginTxError(t *testing.T) {
 	require.Contains(t, response.Errors, "TransactionError")
 	require.EqualError(t, response.Errors["TransactionError"], "Transaction creation error")
 }
-func TestDeleteAccount_ContextBeforeCreateUser(t *testing.T) {
+func TestDeleteAccount_ContextBeforeDeleteUser(t *testing.T) {
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
 	fixedReqUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
