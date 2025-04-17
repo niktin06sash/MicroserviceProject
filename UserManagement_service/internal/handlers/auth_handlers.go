@@ -17,9 +17,15 @@ import (
 )
 
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
-	requestID := uuid.New().String()
-	ctx := context.WithValue(r.Context(), "requestID", requestID)
 	maparesponse := make(map[string]string)
+	requestID, ok := r.Context().Value("requestID").(string)
+	if !ok {
+		log.Println("Registration: Request ID not found in context")
+		maparesponse["RequestId"] = erro.ErrorMissingRequestID.Error()
+		badResponse(w, maparesponse, http.StatusInternalServerError)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		log.Printf("[RequestID: %s]: Invalid request method(expected Post but it was sent %v)", requestID, r.Method)
 		maparesponse["Method"] = erro.ErrorNotPost.Error()
@@ -44,7 +50,8 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	///возможно убрать
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	regresponse := h.services.RegistrateAndLogin(ctx, &newperk)
 	if !regresponse.Success {
@@ -75,9 +82,15 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
-	requestID := uuid.New().String()
-	ctx := context.WithValue(r.Context(), "requestID", requestID)
 	maparesponse := make(map[string]string)
+	requestID, ok := r.Context().Value("requestID").(string)
+	if !ok {
+		log.Println("Authentication: Request ID not found in context")
+		maparesponse["RequestId"] = erro.ErrorMissingRequestID.Error()
+		badResponse(w, maparesponse, http.StatusInternalServerError)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		log.Printf("[RequestID: %s]: Invalid request method(expected Post but it was sent %v)", requestID, r.Method)
 		maparesponse["Method"] = erro.ErrorNotPost.Error()
@@ -102,7 +115,8 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	///возможно убрать
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	auresponse := h.services.AuthenticateAndLogin(ctx, &newperk)
 	if !auresponse.Success {
@@ -134,13 +148,27 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
-	requestID := uuid.New().String()
-	ctx := context.WithValue(r.Context(), "requestID", requestID)
+
 	maparesponse := make(map[string]string)
-	userID, ok := getUserIDFromRequestContext(r)
+	requestID, ok := r.Context().Value("requestID").(string)
 	if !ok {
-		log.Printf("[RequestID: %s]: Error getting the UserId from the request context", requestID)
-		maparesponse["UserId"] = erro.ErrorGetUserId.Error()
+		log.Println("DeleteAccount: Request ID not found in context")
+		maparesponse["RequestId"] = erro.ErrorMissingRequestID.Error()
+		badResponse(w, maparesponse, http.StatusInternalServerError)
+		return
+	}
+	sessionID, ok := r.Context().Value("sessionID").(string)
+	if !ok {
+		log.Printf("[RequestID: %s]: Session ID not found in context", requestID)
+		maparesponse["SessionId"] = erro.ErrorMissingSessionID.Error()
+		badResponse(w, maparesponse, http.StatusInternalServerError)
+		return
+	}
+
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		log.Printf("[RequestID: %s]: User ID not found in context", requestID)
+		maparesponse["UserId"] = erro.ErrorMissingUserID.Error()
 		badResponse(w, maparesponse, http.StatusInternalServerError)
 		return
 	}
@@ -150,14 +178,6 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		badResponse(w, maparesponse, http.StatusMethodNotAllowed)
 		return
 	}
-	cookie, err := r.Cookie("session_id")
-	if err != nil {
-		log.Printf("[RequestID: %s]: Unexpected error getting session cookie (should have been validated by middleware): %v", requestID, err)
-		maparesponse["Cookie"] = erro.ErrorMissingCookie.Error()
-		badResponse(w, maparesponse, http.StatusBadRequest)
-		return
-	}
-	sessionID := cookie.Value
 	passwordBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("[RequestID: %s]: ReadAll Error: %v", requestID, err)
@@ -175,7 +195,8 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	///возможно убрать
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	response := h.services.DeleteAccount(ctx, sessionID, userID, string(password))
 	if !response.Success {
