@@ -12,6 +12,7 @@ const (
 	ErrorInvalidSessionConst           = "Error Invalid Session ID"
 	ErrorInternalServerConst           = "Internal Server Error"
 	ErrorContextTimeOutConst           = "Context time is up"
+	ErrorMissingRequestIDConst         = "Error missing request ID"
 )
 
 var (
@@ -24,4 +25,5 @@ var (
 	ErrorInvalidSessionID         = errors.New(ErrorInvalidSessionConst)
 	ErrorInternalServer           = errors.New(ErrorInternalServerConst)
 	ErrorContextTimeOut           = errors.New(ErrorContextTimeOutConst)
+	ErrorMissingRequestID         = errors.New(ErrorMissingRequestIDConst)
 )

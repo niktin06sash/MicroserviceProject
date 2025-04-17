@@ -78,19 +78,6 @@ func TestDeleteAccount(t *testing.T) {
 			},
 		},
 		{
-			testname:           "MissingSessionCookie",
-			method:             http.MethodDelete,
-			userID:             "123e4567-e89b-12d3-a456-426614174000",
-			reqbody:            `"qwerty1234"`,
-			expectedStatuscode: http.StatusBadRequest,
-			expectedResponseData: HTTPResponse{
-				Success: false,
-				Errors: map[string]string{
-					"Cookie": erro.ErrorMissingCookie.Error(),
-				},
-			},
-		},
-		{
 			testname:  "InvalidPassword",
 			method:    http.MethodDelete,
 			reqbody:   `"wrongpassword"`,

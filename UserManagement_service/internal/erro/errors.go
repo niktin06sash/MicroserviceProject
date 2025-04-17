@@ -30,7 +30,8 @@ const (
 	ErrorRolbackTransactionConst = "Rolback Transaction error"
 	ErrorPanicConst              = "Panic Error"
 	ErrorGrpcRollbackConst       = "Rollback's error"
-	ErrorMissingCookieConst      = "Error missing cookie from request"
+	ErrorMissingUserIDConst      = "Error missing user ID"
+	ErrorMissingSessionIDConst   = "Error missing session ID"
 	ErrorMissingRequestIDConst   = "Error missing request ID"
 )
 
@@ -62,6 +63,7 @@ var (
 	ErrorDbPing            = errors.New(ErrorDBPingConst)
 	ErrorGrpcResponse      = errors.New(ErrorGrpcResponseConst)
 	ErrorGrpcRollback      = errors.New(ErrorGrpcRollbackConst)
-	ErrorMissingCookie     = errors.New(ErrorMissingCookieConst)
 	ErrorMissingRequestID  = errors.New(ErrorMissingRequestIDConst)
+	ErrorMissingUserID     = errors.New(ErrorMissingUserIDConst)
+	ErrorMissingSessionID  = errors.New(ErrorMissingSessionIDConst)
 )
