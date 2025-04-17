@@ -18,7 +18,7 @@ type Service struct {
 
 func NewService(repos *repository.Repository, log *logger.SessionLogger) *Service {
 	return &Service{
-		sessionService: NewSessionService(repos.RedisSessionRepos),
+		sessionService: NewSessionService(repos.RedisSessionRepos, log),
 		logger:         log,
 	}
 }
@@ -31,10 +31,6 @@ func (s *Service) CreateSession(ctx context.Context, req *pb.CreateSessionReques
 	}
 	resp, err := s.sessionService.CreateSession(ctx, req)
 	if err != nil {
-		s.logger.Error("ValidateSession Error",
-			zap.String("requestID", requestID),
-			zap.Error(err),
-		)
 		return nil, err
 	}
 	return resp, nil
@@ -48,10 +44,6 @@ func (s *Service) ValidateSession(ctx context.Context, req *pb.ValidateSessionRe
 	}
 	resp, err := s.sessionService.ValidateSession(ctx, req)
 	if err != nil {
-		s.logger.Error("ValidateSession Error",
-			zap.String("requestID", requestID),
-			zap.Error(err),
-		)
 		return nil, err
 	}
 	return resp, nil
@@ -65,10 +57,6 @@ func (s *Service) DeleteSession(ctx context.Context, req *pb.DeleteSessionReques
 	}
 	resp, err := s.sessionService.DeleteSession(ctx, req)
 	if err != nil {
-		s.logger.Error("ValidateSession Error",
-			zap.String("requestID", requestID),
-			zap.Error(err),
-		)
 		return nil, err
 	}
 	return resp, nil
