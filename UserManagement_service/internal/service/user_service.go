@@ -12,6 +12,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -115,7 +116,9 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		registrateMap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
-	grpcresponse, err := as.GrpcClient.CreateSession(ctx, userID.String())
+	md := metadata.Pairs("requestID", requestid)
+	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
+	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
 	if err != nil || !grpcresponse.Success {
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, "create session failure")
@@ -184,7 +187,9 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 		authenticateMap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: authenticateMap}
 	}
-	grpcresponse, err := as.GrpcClient.CreateSession(ctx, userID.String())
+	md := metadata.Pairs("requestID", requestid)
+	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
+	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
 	if err != nil || !grpcresponse.Success {
 		authenticateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: authenticateMap}
@@ -266,8 +271,9 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		deletemap["ContextError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
-
-	grpcresponse, err := as.GrpcClient.DeleteSession(ctx, sessionID)
+	md := metadata.Pairs("requestID", requestid)
+	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
+	grpcresponse, err := as.GrpcClient.DeleteSession(ctxgrpc, sessionID)
 	if err != nil || !grpcresponse.Success {
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, "delete session failure")

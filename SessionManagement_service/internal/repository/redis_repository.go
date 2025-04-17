@@ -8,6 +8,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/logger"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -19,11 +20,17 @@ type AuthRedis struct {
 }
 
 func validateContext(ctx context.Context, logger *logger.SessionLogger) (string, error) {
-	requestID, ok := ctx.Value("requestID").(string)
-	if !ok || requestID == "" {
-		logger.Error("Request ID not found in context", zap.Error(erro.ErrorMissingRequestID))
-		return "", erro.ErrorMissingRequestID
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		logger.Error("Metadata not found in context", zap.Error(erro.ErrorMissingMetadata))
+		return "", erro.ErrorMissingMetadata
 	}
+	requestIDs := md.Get("requestID")
+	if len(requestIDs) == 0 || requestIDs[0] == "" {
+		logger.Error("Request ID not found in metadata", zap.Error(erro.ErrorRequiredRequestID))
+		return "", erro.ErrorRequiredRequestID
+	}
+	requestID := requestIDs[0]
 
 	if ctx.Err() != nil {
 		logger.Error("Context cancelled",

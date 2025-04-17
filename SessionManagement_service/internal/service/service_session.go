@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -25,12 +26,17 @@ func NewSessionService(repo repository.RedisSessionRepos, log *logger.SessionLog
 	return &SessionService{repo: repo, logger: log}
 }
 func validateContext(ctx context.Context, logger *logger.SessionLogger) (string, error) {
-	requestID, ok := ctx.Value("requestID").(string)
-	if !ok || requestID == "" {
-		logger.Error("Request ID not found in context", zap.Error(erro.ErrorMissingRequestID))
-		return "", erro.ErrorMissingRequestID
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		logger.Error("Metadata not found in context", zap.Error(erro.ErrorMissingMetadata))
+		return "", erro.ErrorMissingMetadata
 	}
-
+	requestIDs := md.Get("requestID")
+	if len(requestIDs) == 0 || requestIDs[0] == "" {
+		logger.Error("Request ID not found in metadata", zap.Error(erro.ErrorRequiredRequestID))
+		return "", erro.ErrorRequiredRequestID
+	}
+	requestID := requestIDs[0]
 	if ctx.Err() != nil {
 		logger.Error("Context cancelled",
 			zap.String("requestID", requestID),
