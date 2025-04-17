@@ -3,6 +3,7 @@ package handlers
 import (
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/middleware"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 
 	"github.com/gorilla/mux"
@@ -27,8 +28,8 @@ func NewHandler(services *service.Service) *Handler {
 }
 func (h *Handler) InitRoutes() *mux.Router {
 	m := mux.NewRouter()
-	m.HandleFunc("/reg", h.Registration).Methods("POST")
-	m.HandleFunc("/auth", h.Authentication).Methods("POST")
-	m.HandleFunc("/delete", h.DeleteAccount).Methods("POST")
+	m.HandleFunc("/reg", middleware.UserManagementMiddleware_NonAuthority(h.Registration)).Methods("POST")
+	m.HandleFunc("/auth", middleware.UserManagementMiddleware_NonAuthority(h.Authentication)).Methods("POST")
+	m.HandleFunc("/delete", middleware.UserManagementMiddleware_Authority(h.DeleteAccount)).Methods("POST")
 	return m
 }

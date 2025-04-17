@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
@@ -17,7 +15,6 @@ import (
 )
 
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
-	//requestID := r.Header.Get("X-Request-ID")
 	maparesponse := make(map[string]string)
 	requestID, ok := r.Context().Value("requestID").(string)
 	if !ok {
@@ -51,10 +48,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	///возможно убрать
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-	regresponse := h.services.RegistrateAndLogin(ctx, &newperk)
+	regresponse := h.services.RegistrateAndLogin(r.Context(), &newperk)
 	if !regresponse.Success {
 		stringMap := convertErrorToString(regresponse)
 		badResponse(w, stringMap, http.StatusBadRequest)
@@ -83,7 +77,6 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
-	//requestID := r.Header.Get("X-Request-ID")
 	maparesponse := make(map[string]string)
 	requestID, ok := r.Context().Value("requestID").(string)
 	if !ok {
@@ -117,10 +110,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	///возможно убрать
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-	auresponse := h.services.AuthenticateAndLogin(ctx, &newperk)
+	auresponse := h.services.AuthenticateAndLogin(r.Context(), &newperk)
 	if !auresponse.Success {
 		stringMap := convertErrorToString(auresponse)
 		badResponse(w, stringMap, http.StatusBadRequest)
@@ -150,7 +140,6 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
-	//requestID := r.Header.Get("X-Request-ID")
 	maparesponse := make(map[string]string)
 	requestID, ok := r.Context().Value("requestID").(string)
 	if !ok {
@@ -197,10 +186,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	///возможно убрать
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-	response := h.services.DeleteAccount(ctx, sessionID, userID, string(password))
+	response := h.services.DeleteAccount(r.Context(), sessionID, userID, string(password))
 	if !response.Success {
 		stringMap := convertErrorToString(response)
 		badResponse(w, stringMap, http.StatusBadRequest)
