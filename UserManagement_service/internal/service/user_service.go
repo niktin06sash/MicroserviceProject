@@ -98,7 +98,6 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	user.Id = userID
 	response := as.Dbrepo.CreateUser(ctx, tx, user)
 	if !response.Success && response.Errors != nil {
-		log.Printf("[RequestID: %s]: RegistrateAndLogin: Error when creating person in the database %v", requestid, response.Errors)
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, "create user failure")
 			isTransactionActive = false
@@ -118,7 +117,6 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	}
 	grpcresponse, err := as.GrpcClient.CreateSession(ctx, userID.String())
 	if err != nil || !grpcresponse.Success {
-		log.Printf("[RequestID: %s]: RegistrateAndLogin: GrpcResponseError %v", requestid, err)
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, "create session failure")
 			isTransactionActive = false
@@ -177,7 +175,6 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 
 	response := as.Dbrepo.GetUser(ctx, user.Email, user.Password)
 	if !response.Success {
-		log.Printf("[RequestID: %s]: AuthenticateAndLogin: Failed to authenticate user: %v", requestid, response.Errors)
 		authenticateMap["AuthenticateError"] = response.Errors
 		return &ServiceResponse{Success: response.Success, Errors: authenticateMap}
 	}
@@ -189,7 +186,6 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	}
 	grpcresponse, err := as.GrpcClient.CreateSession(ctx, userID.String())
 	if err != nil || !grpcresponse.Success {
-		log.Printf("[RequestID: %s]: AuthenticateAndLogin: GrpcResponseError %v", requestid, err)
 		authenticateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: authenticateMap}
 	}
@@ -257,7 +253,6 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 			rollbackTransaction(as.Dbtxmanager, tx, "delete user failure")
 			isTransactionActive = false
 		}
-		log.Printf("[RequestID: %s]: DeleteAccount: Failed to delete user: %v", requestid, response.Errors)
 		deletemap["DeleteError"] = response.Errors
 		return &ServiceResponse{Success: response.Success, Errors: deletemap}
 	}
@@ -274,7 +269,6 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 
 	grpcresponse, err := as.GrpcClient.DeleteSession(ctx, sessionID)
 	if err != nil || !grpcresponse.Success {
-		log.Printf("[RequestID: %s]: DeleteAccount: GrpcResponseError %v", requestid, err)
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, "delete session failure")
 			isTransactionActive = false

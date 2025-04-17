@@ -103,7 +103,7 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 	}
 	_, err = tx.ExecContext(ctx, "DELETE FROM userZ where userId = $1", userId)
 	if err != nil {
-		log.Printf("[RequestID: %s]: Delete Error: %v", requestid, err)
+		log.Printf("[RequestID: %s]: DeleteUser Error: %v", requestid, err)
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
 	}
 	log.Printf("[RequestID: %s]: Successful delete person!", requestid)
