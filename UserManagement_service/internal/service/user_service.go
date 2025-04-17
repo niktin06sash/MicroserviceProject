@@ -343,14 +343,14 @@ func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, reas
 		attempt++
 		err := txMgr.RollbackTx(tx)
 		if err == nil {
-			log.Printf("Successful rollback (%s) on attempt %d", reason, attempt)
+			log.Printf("[INFO] [UserManagement] Successful rollback (%s) on attempt %d", reason, attempt)
 			return
 		}
 
-		log.Printf("Error rolling back transaction (%s) on attempt %d: %v", reason, attempt, err)
+		log.Printf("[ERROR] [UserManagement] Error rolling back transaction (%s) on attempt %d: %v", reason, attempt, err)
 
 		if attempt == maxAttempts {
-			log.Printf("Failed to rollback transaction (%s) after %d attempts", reason, maxAttempts)
+			log.Printf("[ERROR] [UserManagement] Failed to rollback transaction (%s) after %d attempts", reason, maxAttempts)
 			break
 		}
 
