@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/logger"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 
 	"github.com/redis/go-redis/v9"
@@ -26,8 +27,8 @@ type RepositoryResponse struct {
 	Errors         error
 }
 
-func NewRepository(client *redis.Client) *Repository {
+func NewRepository(client *redis.Client, log *logger.SessionLogger) *Repository {
 	return &Repository{
-		RedisSessionRepos: NewAuthRedis(client),
+		RedisSessionRepos: NewAuthRedis(client, log),
 	}
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -12,18 +11,20 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/logger"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/server"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/service"
+	"go.uber.org/zap"
 
 	"github.com/spf13/viper"
 )
 
 func main() {
-
+	logger := logger.NewSessionLogger()
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		log.Fatalf("Failed to get current file path")
+		logger.Fatal("SessionManagement: Failed to get current file path")
 	}
 
 	cmdDir := filepath.Dir(filename)
@@ -39,25 +40,27 @@ func main() {
 	err := viper.ReadInConfig()
 	if err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-
-			log.Printf("Config file not found; using defaults or environment variables")
+			logger.Warn("SessionManagement: Config file not found; using defaults or environment variables")
 		} else {
-			log.Fatalf("Error reading config file: %s", err)
+			logger.Fatal("SessionManagement: Failed to get current file path", zap.Error(err))
 		}
 	}
 	var config configs.Config
 
 	err = viper.Unmarshal(&config)
 	if err != nil {
-		log.Fatalf("Unable to decode into struct, %v", err)
+		logger.Fatal("SessionManagement: Failed to get current file path", zap.Error(err))
 	}
 
-	redis, redisInterface, err := repository.ConnectToRedis(config)
+	redisobject := &repository.RedisObject{
+		Logger: logger,
+	}
+	redis, err := repository.ConnectToRedis(config, redisobject)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logger.Fatal("SessionManagement: Failed to connect to database", zap.Error(err))
 		return
 	}
-	defer redisInterface.Close(redis)
+	defer redisobject.Close(redis)
 	/*brokersString := config.Kafka.BootstrapServers
 	brokers := strings.Split(brokersString, ",")
 	kafkaProducer, err := kafka.NewKafkaProducer(brokers)
@@ -66,10 +69,10 @@ func main() {
 		return
 	}
 	defer kafkaProducer.Close()*/
-	repository := repository.NewRepository(redis)
+	repository := repository.NewRepository(redis, logger)
 
-	service := service.NewService(repository)
-	srv := server.NewGrpcServer(service)
+	service := service.NewService(repository, logger)
+	srv := server.NewGrpcServer(service, logger)
 
 	port := viper.GetString("server.port")
 	if port == "" {
@@ -89,19 +92,19 @@ func main() {
 
 	select {
 	case sig := <-quit:
-		log.Printf("Service shutting down with signal: %v", sig)
+		logger.Info("SessionManagement: Service shutting down with signal", zap.String("signal", sig.String()))
 	case err := <-serverError:
-		log.Fatalf("Service startup failed: %v", err)
+		logger.Fatal("SessionManagement: Service startup failed", zap.Error(err))
 	}
 
 	shutdownTimeout := 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
-	log.Println("Service is shutting down...")
+	logger.Info("SessionManagement: Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("Server shutdown error: %v", err)
+		logger.Error("SessionManagement: Server shutdown error", zap.Error(err))
 	}
 
-	log.Println("Service has shut down successfully")
+	logger.Info("SessionManagement: Service has shut down successfully")
 }
