@@ -13,14 +13,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type RedisClientInterface interface {
-	HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd
-	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
-	HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd
-	Del(ctx context.Context, key ...string) *redis.IntCmd
-}
 type AuthRedis struct {
-	Client RedisClientInterface
+	Client *redis.Client
 	logger *logger.SessionLogger
 }
 
@@ -147,6 +141,6 @@ func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string)
 	redisrepo.logger.Info("Successful session deleted")
 	return &RepositoryResponse{Success: true}
 }
-func NewAuthRedis(client RedisClientInterface, log *logger.SessionLogger) *AuthRedis {
+func NewAuthRedis(client *redis.Client, log *logger.SessionLogger) *AuthRedis {
 	return &AuthRedis{Client: client, logger: log}
 }
