@@ -2,10 +2,10 @@ package repository
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/logger"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 
 	"github.com/google/uuid"
@@ -20,11 +20,11 @@ type RedisClientInterface interface {
 }
 type AuthRedis struct {
 	Client RedisClientInterface
+	logger *logger.SessionLogger
 }
 
 func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Session) *RepositoryResponse {
 	if ctx.Err() != nil {
-		log.Printf("Context Error:%v", ctx.Err())
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
 	}
 	err := redisrepo.Client.HSet(ctx, session.SessionID, map[string]interface{}{
@@ -33,31 +33,26 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 	}).Err()
 
 	if err != nil {
-		log.Printf("Hset error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSetSession}
 	}
 	expiration := time.Until(session.ExpirationTime)
 	err = redisrepo.Client.Expire(ctx, session.SessionID, expiration).Err()
 	if err != nil {
-		log.Printf("Expire error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSetSession}
 	}
 	if ctx.Err() != nil {
-		log.Printf("Context Error:%v", ctx.Err())
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
 	}
-	log.Printf("Successful session id = %v installation!", session)
+	redisrepo.logger.Info("Successful session installation")
 	return &RepositoryResponse{Success: true, SessionId: session.SessionID, ExpirationTime: session.ExpirationTime}
 }
 
 func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
 	if ctx.Err() != nil {
-		log.Printf("Context Error:%v", ctx.Err())
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
 	}
 	result, err := redisrepo.Client.HGetAll(ctx, sessionID).Result()
 	if err != nil {
-		log.Printf("HGetAll error:%v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorGetSession}
 	}
 
@@ -77,39 +72,33 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 
 	expirationTime, err := time.Parse(time.RFC3339, expirationTimeString)
 	if err != nil {
-		log.Printf("Time-parse error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
 
 	userID, err := uuid.Parse(userIDString)
 	if err != nil {
-		log.Printf("UUID-parse error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
 	if ctx.Err() != nil {
-		log.Printf("Context Error:%v", ctx.Err())
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
 	}
-	log.Printf("Successful session id = %v receiving!", sessionID)
+	redisrepo.logger.Info("Successful session receiving")
 	return &RepositoryResponse{Success: true, UserID: userID.String(), ExpirationTime: expirationTime}
 }
 func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
 	if ctx.Err() != nil {
-		log.Printf("Context Error:%v", ctx.Err())
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
 	}
 	err := redisrepo.Client.Del(ctx, sessionID).Err()
 	if err != nil {
-		log.Printf("Error deleting session %s: %v", sessionID, err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorInternalServer}
 	}
 	if ctx.Err() != nil {
-		log.Printf("Context Error:%v", ctx.Err())
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorContextTimeOut}
 	}
-	log.Printf("Session %s deleted successfully", sessionID)
+	redisrepo.logger.Info("Successful session deleted")
 	return &RepositoryResponse{Success: true}
 }
-func NewAuthRedis(client *redis.Client) *AuthRedis {
-	return &AuthRedis{Client: client}
+func NewAuthRedis(client *redis.Client, log *logger.SessionLogger) *AuthRedis {
+	return &AuthRedis{Client: client, logger: log}
 }

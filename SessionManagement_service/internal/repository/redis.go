@@ -3,9 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/logger"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -14,9 +14,12 @@ type RedisInterface interface {
 	Open(host string, port int, password string, db int) (*redis.Client, error)
 	Ping(client *redis.Client) error
 	Close(client *redis.Client) error
+	GetLogger() *logger.SessionLogger
 }
 
-type RedisObject struct{}
+type RedisObject struct {
+	Logger *logger.SessionLogger
+}
 
 func (r *RedisObject) Open(host string, port int, password string, db int) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
@@ -35,21 +38,20 @@ func (r *RedisObject) Ping(client *redis.Client) error {
 func (r *RedisObject) Close(client *redis.Client) error {
 	return client.Close()
 }
-
-func ConnectToRedis(cfg configs.Config) (*redis.Client, RedisInterface, error) {
-	redisInterface := &RedisObject{}
-
+func (r *RedisObject) GetLogger() *logger.SessionLogger {
+	return r.Logger
+}
+func ConnectToRedis(cfg configs.Config, redisInterface RedisInterface) (*redis.Client, error) {
+	logger := redisInterface.GetLogger()
 	client, err := redisInterface.Open(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
-		log.Printf("Redis-Open error %v", err)
-		return nil, nil, err
+		return nil, err
 	}
 	err = redisInterface.Ping(client)
 	if err != nil {
 		redisInterface.Close(client)
-		log.Printf("Redis-Ping error %v", err)
-		return nil, nil, err
+		return nil, err
 	}
-	log.Println("RedisManagement: Successful connect to Redis-Client!")
-	return client, redisInterface, nil
+	logger.Info("SessionManagement: Successful connect to Redis-Client!")
+	return client, nil
 }

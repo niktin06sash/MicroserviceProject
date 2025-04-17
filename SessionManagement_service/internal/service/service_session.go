@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
@@ -46,7 +45,6 @@ func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessio
 	if !response.Success {
 		return nil, response.Errors
 	}
-	log.Printf("Session created: sessionID=%s, userID=%s", sessionID, req.UserID)
 	return &pb.CreateSessionResponse{
 		Success:    true,
 		SessionID:  sessionID.String(),
@@ -64,7 +62,6 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 	if !response.Success {
 		return nil, response.Errors
 	}
-	log.Printf("Session validated: sessionID=%s, userID=%s", req.SessionID, response.UserID)
 	return &pb.ValidateSessionResponse{
 		Success: true,
 		UserID:  response.UserID,
@@ -82,7 +79,6 @@ func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessio
 	if !response.Success {
 		return nil, response.Errors
 	}
-	log.Printf("Session deleted: sessionID=%s", req.SessionID)
 	return &pb.DeleteSessionResponse{
 		Success: true,
 	}, nil
