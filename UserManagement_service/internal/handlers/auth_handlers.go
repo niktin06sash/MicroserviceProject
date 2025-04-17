@@ -49,7 +49,6 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	regresponse := h.services.RegistrateAndLogin(ctx, &newperk)
 	if !regresponse.Success {
 		stringMap := convertErrorToString(regresponse)
-		log.Printf("[RequestID: %s]: Error during user registration: %v", requestID, regresponse.Errors)
 		badResponse(w, stringMap, http.StatusBadRequest)
 
 		return
@@ -108,7 +107,6 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	auresponse := h.services.AuthenticateAndLogin(ctx, &newperk)
 	if !auresponse.Success {
 		stringMap := convertErrorToString(auresponse)
-		log.Printf("[RequestID: %s]: Error during user authentication: %v", requestID, auresponse.Errors)
 		badResponse(w, stringMap, http.StatusBadRequest)
 
 		return
@@ -181,7 +179,6 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	response := h.services.DeleteAccount(ctx, sessionID, userID, string(password))
 	if !response.Success {
-		log.Printf("[RequestID: %s]: Error during delete user: %v", requestID, response.Errors)
 		stringMap := convertErrorToString(response)
 		badResponse(w, stringMap, http.StatusBadRequest)
 		return
