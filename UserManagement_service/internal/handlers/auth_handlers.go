@@ -17,6 +17,7 @@ import (
 )
 
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
+	//requestID := r.Header.Get("X-Request-ID")
 	maparesponse := make(map[string]string)
 	requestID, ok := r.Context().Value("requestID").(string)
 	if !ok {
@@ -82,6 +83,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
+	//requestID := r.Header.Get("X-Request-ID")
 	maparesponse := make(map[string]string)
 	requestID, ok := r.Context().Value("requestID").(string)
 	if !ok {
@@ -148,7 +150,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
-
+	//requestID := r.Header.Get("X-Request-ID")
 	maparesponse := make(map[string]string)
 	requestID, ok := r.Context().Value("requestID").(string)
 	if !ok {
@@ -253,15 +255,4 @@ func convertErrorToString(mapa *service.ServiceResponse) map[string]string {
 		}
 	}
 	return stringMap
-}
-func getUserIDFromRequestContext(r *http.Request) (uuid.UUID, bool) {
-	return getUserIDFromContext(r.Context())
-}
-func getUserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
-	userID, ok := ctx.Value("userID").(uuid.UUID)
-	if !ok {
-		log.Println("UserID not found in request context")
-		return uuid.Nil, false
-	}
-	return userID, true
 }

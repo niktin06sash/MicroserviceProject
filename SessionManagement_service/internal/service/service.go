@@ -8,6 +8,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
 )
 
 type Service struct {
@@ -22,12 +23,17 @@ func NewService(repos *repository.Repository, log *logger.SessionLogger) *Servic
 		logger:         log,
 	}
 }
-
 func (s *Service) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
-	requestID, ok := ctx.Value("requestID").(string)
-	if !ok || requestID == "" {
-		s.logger.Error("Request ID not found in context", zap.Error(erro.ErrorMissingRequestID))
-		return nil, erro.ErrorMissingRequestID
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		s.logger.Error("CreateSession: Metadata not found in context", zap.Error(erro.ErrorMissingMetadata))
+		return nil, erro.ErrorMissingMetadata
+	}
+
+	requestIDs := md.Get("requestID")
+	if len(requestIDs) == 0 || requestIDs[0] == "" {
+		s.logger.Error("CreateSession: Request ID not found in metadata", zap.Error(erro.ErrorRequiredRequestID))
+		return nil, erro.ErrorRequiredRequestID
 	}
 	resp, err := s.sessionService.CreateSession(ctx, req)
 	if err != nil {
@@ -37,10 +43,16 @@ func (s *Service) CreateSession(ctx context.Context, req *pb.CreateSessionReques
 }
 
 func (s *Service) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
-	requestID, ok := ctx.Value("requestID").(string)
-	if !ok || requestID == "" {
-		s.logger.Error("Request ID not found in context", zap.Error(erro.ErrorMissingRequestID))
-		return nil, erro.ErrorMissingRequestID
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		s.logger.Error("ValidateSession: Metadata not found in context", zap.Error(erro.ErrorMissingMetadata))
+		return nil, erro.ErrorMissingMetadata
+	}
+
+	requestIDs := md.Get("requestID")
+	if len(requestIDs) == 0 || requestIDs[0] == "" {
+		s.logger.Error("ValidateSession: Request ID not found in metadata", zap.Error(erro.ErrorRequiredRequestID))
+		return nil, erro.ErrorRequiredRequestID
 	}
 	resp, err := s.sessionService.ValidateSession(ctx, req)
 	if err != nil {
@@ -50,10 +62,16 @@ func (s *Service) ValidateSession(ctx context.Context, req *pb.ValidateSessionRe
 }
 
 func (s *Service) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
-	requestID, ok := ctx.Value("requestID").(string)
-	if !ok || requestID == "" {
-		s.logger.Error("Request ID not found in context", zap.Error(erro.ErrorMissingRequestID))
-		return nil, erro.ErrorMissingRequestID
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		s.logger.Error("DeleteSession: Metadata not found in context", zap.Error(erro.ErrorMissingMetadata))
+		return nil, erro.ErrorMissingMetadata
+	}
+
+	requestIDs := md.Get("requestID")
+	if len(requestIDs) == 0 || requestIDs[0] == "" {
+		s.logger.Error("DeleteSession: Request ID not found in metadata", zap.Error(erro.ErrorRequiredRequestID))
+		return nil, erro.ErrorRequiredRequestID
 	}
 	resp, err := s.sessionService.DeleteSession(ctx, req)
 	if err != nil {

@@ -12,7 +12,8 @@ const (
 	ErrorInvalidSessionConst           = "Error Invalid Session ID"
 	ErrorInternalServerConst           = "Internal Server Error"
 	ErrorContextTimeOutConst           = "Context time is up"
-	ErrorMissingRequestIDConst         = "Error missing request ID"
+	ErrorMissingMetadataConst          = "Metadata is required"
+	ErrorRequiredRequestIDConst        = "RequestId is required"
 	ErrorRequiredUserIdConst           = "UserId is required"
 	ErrorRequiredSessionIdConst        = "SessionId is required"
 )
@@ -27,7 +28,8 @@ var (
 	ErrorInvalidSessionID         = errors.New(ErrorInvalidSessionConst)
 	ErrorInternalServer           = errors.New(ErrorInternalServerConst)
 	ErrorContextTimeOut           = errors.New(ErrorContextTimeOutConst)
-	ErrorMissingRequestID         = errors.New(ErrorMissingRequestIDConst)
+	ErrorMissingMetadata          = errors.New(ErrorMissingMetadataConst)
 	ErrorRequiredUserId           = errors.New(ErrorRequiredUserIdConst)
+	ErrorRequiredRequestID        = errors.New(ErrorRequiredRequestIDConst)
 	ErrorRequiredSessionId        = errors.New(ErrorRequiredSessionIdConst)
 )
