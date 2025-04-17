@@ -28,12 +28,12 @@ func NewGrpcClient(cfg configs.Config) *GrpcClient {
 
 	conn, err := grpc.DialContext(ctx, cfg.SessionService.GrpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Printf("UserManagement: Failed to connect to GRPC-Session Client: %v", err)
+		log.Printf("[ERROR] [UserManagement] Failed to connect to GRPC-Session Client: %v", err)
 		return nil
 	}
 
 	client := pb.NewSessionServiceClient(conn)
-	log.Println("UserManagement: Successful connect to GRPC-Session Client")
+	log.Println("[INFO] [UserManagement] Successful connect to GRPC-Session Client")
 	return &GrpcClient{client: client, conn: conn}
 }
 func (g *GrpcClient) Close() error {
