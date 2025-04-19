@@ -41,7 +41,15 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	regresponse := h.services.RegistrateAndLogin(r.Context(), &newperk)
 	if !regresponse.Success {
 		stringMap := convertErrorToString(regresponse)
-		badResponse(w, stringMap, http.StatusBadRequest)
+		switch regresponse.Type {
+		case erro.ClientErrorType:
+			badResponse(w, stringMap, http.StatusBadRequest)
+		case erro.ServerErrorType:
+			badResponse(w, stringMap, http.StatusInternalServerError)
+		default:
+			log.Printf("[ERROR] [UserManagement] [RequestID: %s] Registration: Unknown error type", requestID)
+			badResponse(w, map[string]string{"Error": "Internal server error"}, http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -90,7 +98,15 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	auresponse := h.services.AuthenticateAndLogin(r.Context(), &newperk)
 	if !auresponse.Success {
 		stringMap := convertErrorToString(auresponse)
-		badResponse(w, stringMap, http.StatusBadRequest)
+		switch auresponse.Type {
+		case erro.ClientErrorType:
+			badResponse(w, stringMap, http.StatusBadRequest)
+		case erro.ServerErrorType:
+			badResponse(w, stringMap, http.StatusInternalServerError)
+		default:
+			log.Printf("[ERROR] [UserManagement] [RequestID: %s] Authentication: Unknown error type", requestID)
+			badResponse(w, map[string]string{"Error": "Internal server error"}, http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -155,7 +171,15 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	response := h.services.DeleteAccount(r.Context(), sessionID, userID, string(password))
 	if !response.Success {
 		stringMap := convertErrorToString(response)
-		badResponse(w, stringMap, http.StatusBadRequest)
+		switch response.Type {
+		case erro.ClientErrorType:
+			badResponse(w, stringMap, http.StatusBadRequest)
+		case erro.ServerErrorType:
+			badResponse(w, stringMap, http.StatusInternalServerError)
+		default:
+			log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: Unknown error type", requestID)
+			badResponse(w, map[string]string{"Error": "Internal server error"}, http.StatusInternalServerError)
+		}
 		return
 	}
 	w.Header().Set("Content-Type", jsonResponseType)

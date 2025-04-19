@@ -30,9 +30,9 @@ func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: CreateUser Error: %v", requestid, err)
 		if errors.Is(err, sql.ErrNoRows) {
-			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorUniqueEmail}
+			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorUniqueEmail, Type: erro.ClientErrorType}
 		}
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType}
 	}
 	log.Printf("[INFO] [UserManagement] [RequestID: %s]: Successful create person!", requestid)
 	return &DBRepositoryResponse{Success: true, UserId: createdUserID, Errors: nil}
@@ -46,14 +46,14 @@ func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: GetUser Error: %v", requestid, err)
 		if errors.Is(err, sql.ErrNoRows) {
-			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorEmailNotRegister}
+			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorEmailNotRegister, Type: erro.ClientErrorType}
 		}
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(userpassword))
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: CompareHashAndPassword Error: %v", requestid, err)
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword, Type: erro.ClientErrorType}
 	}
 	log.Printf("[INFO] [UserManagement] [RequestID: %s]: Successful get person!", requestid)
 	return &DBRepositoryResponse{Success: true, UserId: userId, Errors: nil}
@@ -65,19 +65,19 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: DeleteUser Error: %v", requestid, err)
 		if errors.Is(err, sql.ErrNoRows) {
-			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorFoundUser}
+			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorFoundUser, Type: erro.ClientErrorType}
 		}
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(password))
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: CompareHashAndPassword Error: %v", requestid, err)
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword, Type: erro.ClientErrorType}
 	}
 	_, err = tx.ExecContext(ctx, "DELETE FROM userZ where userId = $1", userId)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: DeleteUser Error: %v", requestid, err)
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType}
 	}
 	log.Printf("[INFO] [UserManagement] [RequestID: %s]: Successful delete person!", requestid)
 	return &DBRepositoryResponse{Success: true}

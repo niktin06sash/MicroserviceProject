@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 
 	"github.com/google/uuid"
@@ -28,6 +29,7 @@ type DBRepositoryResponse struct {
 	Success bool
 	UserId  uuid.UUID
 	Errors  error
+	Type    erro.ErrorType
 }
 
 func NewRepository(db *sql.DB) *Repository {

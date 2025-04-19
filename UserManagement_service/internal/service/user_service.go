@@ -43,14 +43,14 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	errorvalidate := validatePerson(as.Validator, user, true)
 	if errorvalidate != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: RegistrateAndLogin: Validate error %v", requestid, errorvalidate)
-		return &ServiceResponse{Success: false, Errors: errorvalidate}
+		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
 	}
 	var tx *sql.Tx
 	tx, err := as.Dbtxmanager.BeginTx(ctx)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: RegistrateAndLogin: TransactionError %v", requestid, err)
 		registrateMap["TransactionError"] = erro.ErrorStartTransaction
-		return &ServiceResponse{Success: false, Errors: registrateMap}
+		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive := true
 	defer func() {
@@ -69,7 +69,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: RegistrateAndLogin: HashPassError %v", requestid, err)
 		registrateMap["HashPassError"] = erro.ErrorHashPass
-		return &ServiceResponse{Success: false, Errors: registrateMap}
+		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	user.Password = string(hashpass)
 	if ctxresponse, shouldReturn := checkContext(ctx, registrateMap); shouldReturn {
@@ -81,7 +81,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	response := as.Dbrepo.CreateUser(ctx, tx, user)
 	if !response.Success && response.Errors != nil {
 		registrateMap["RegistrateError"] = response.Errors
-		return &ServiceResponse{Success: response.Success, Errors: registrateMap}
+		return &ServiceResponse{Success: response.Success, Errors: registrateMap, Type: response.Type}
 	}
 	userID = response.UserId
 	if ctxresponse, shouldReturn := checkContext(ctx, registrateMap); shouldReturn {
@@ -93,7 +93,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
 	if err != nil || !grpcresponse.Success {
 		registrateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
-		return &ServiceResponse{Success: false, Errors: registrateMap}
+		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: RegistrateAndLogin: Error committing transaction: %v", requestid, err)
@@ -101,10 +101,10 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		if err != nil {
 			log.Printf("[RequestID: %s]: RegistrateAndLogin: Failed to delete session after commit failure: %v", requestid, err)
 			registrateMap["GrpcRollbackError"] = erro.ErrorGrpcRollback
-			return &ServiceResponse{Success: false, Errors: registrateMap}
+			return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 		}
 		registrateMap["TransactionError"] = erro.ErrorCommitTransaction
-		return &ServiceResponse{Success: false, Errors: registrateMap}
+		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive = false
 	log.Printf("[INFO] [UserManagement] [RequestID: %s]: RegistrateAndLogin: Transaction was successfully committed", requestid)
@@ -124,7 +124,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	errorvalidate := validatePerson(as.Validator, user, false)
 	if errorvalidate != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: AuthenticateAndLogin: Validate error %v", requestid, errorvalidate)
-		return &ServiceResponse{Success: false, Errors: errorvalidate}
+		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
 	}
 	if ctxresponse, shouldReturn := checkContext(ctx, authenticateMap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: AuthenticateAndLogin: Context cancelled before GetUser: %v", requestid, ctx.Err())
@@ -133,7 +133,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	response := as.Dbrepo.GetUser(ctx, user.Email, user.Password)
 	if !response.Success {
 		authenticateMap["AuthenticateError"] = response.Errors
-		return &ServiceResponse{Success: response.Success, Errors: authenticateMap}
+		return &ServiceResponse{Success: response.Success, Errors: authenticateMap, Type: response.Type}
 	}
 	userID := response.UserId
 	if ctxresponse, shouldReturn := checkContext(ctx, authenticateMap); shouldReturn {
@@ -145,7 +145,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
 	if err != nil || !grpcresponse.Success {
 		authenticateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
-		return &ServiceResponse{Success: false, Errors: authenticateMap}
+		return &ServiceResponse{Success: false, Errors: authenticateMap, Type: erro.ServerErrorType}
 	}
 	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
 	log.Printf("[INFO] [UserManagement] [RequestID: %s]: AuthenticateAndLogin: The session was created successfully and the user is authenticated!", requestid)
@@ -170,7 +170,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: DeleteAccount: TransactionError %v", requestid, err)
 		deletemap["TransactionError"] = erro.ErrorStartTransaction
-		return &ServiceResponse{Success: false, Errors: deletemap}
+		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive := true
 	defer func() {
@@ -191,7 +191,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	response := as.Dbrepo.DeleteUser(ctx, tx, userid, password)
 	if !response.Success && response.Errors != nil {
 		deletemap["DeleteError"] = response.Errors
-		return &ServiceResponse{Success: response.Success, Errors: deletemap}
+		return &ServiceResponse{Success: response.Success, Errors: deletemap, Type: response.Type}
 	}
 	if ctxresponse, shouldReturn := checkContext(ctx, deletemap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: DeleteAccount: Context cancelled before DeleteSession: %v", requestid, ctx.Err())
@@ -202,12 +202,12 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	grpcresponse, err := as.GrpcClient.DeleteSession(ctxgrpc, sessionID)
 	if err != nil || !grpcresponse.Success {
 		deletemap["GrpcResponseError"] = erro.ErrorGrpcResponse
-		return &ServiceResponse{Success: false, Errors: deletemap}
+		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: DeleteAccount: Error committing transaction: %v", requestid, err)
 		deletemap["TransactionError"] = erro.ErrorCommitTransaction
-		return &ServiceResponse{Success: false, Errors: deletemap}
+		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive = false
 	log.Printf("[INFO] [UserManagement] [RequestID: %s]: DeleteAccount:  Transaction was successfully committed", requestid)
@@ -271,7 +271,7 @@ func checkContext(ctx context.Context, Map map[string]error) (*ServiceResponse, 
 	select {
 	case <-ctx.Done():
 		Map["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: Map}, true
+		return &ServiceResponse{Success: false, Errors: Map, Type: erro.ServerErrorType}, true
 	default:
 		return nil, false
 	}
