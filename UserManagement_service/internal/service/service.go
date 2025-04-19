@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
@@ -27,6 +28,7 @@ type ServiceResponse struct {
 	SessionId     string
 	ExpireSession time.Time
 	Errors        map[string]error
+	Type          erro.ErrorType
 }
 
 func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducer, clientgrpc *client.GrpcClient) *Service {

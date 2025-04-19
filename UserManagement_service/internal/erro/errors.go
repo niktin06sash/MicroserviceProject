@@ -2,6 +2,13 @@ package erro
 
 import "errors"
 
+type ErrorType string
+
+const (
+	ClientErrorType ErrorType = "ClientError"
+	ServerErrorType ErrorType = "ServerError"
+)
+
 const (
 	ErrorGetEnvDBConst           = "DB get environment error"
 	ErrorNotPostConst            = "Method is not POST"

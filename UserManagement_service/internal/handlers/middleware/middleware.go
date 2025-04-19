@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func LogRequest(r *http.Request, requestID string, isError bool, errorMessage string) {
+func logRequest(r *http.Request, requestID string, isError bool, errorMessage string) {
 	ip := r.RemoteAddr
 	method := r.Method
 	path := r.URL.Path
@@ -24,18 +24,19 @@ func UserManagementMiddleware_NonAuthority(next http.HandlerFunc) http.HandlerFu
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestID := r.Header.Get("X-Request-ID")
 		if requestID == "" {
+			logRequest(r, requestID, true, "Required Request-ID")
 			requestID = uuid.New().String()
 		}
 		userID := r.Header.Get("X-User-ID")
 		if userID != "" {
-			LogRequest(r, requestID, true, "Not-Required User-ID")
+			logRequest(r, requestID, true, "Not-Required User-ID")
 			//рассмотреть возможность такого же ответа клиенту в случае ошибки как в обработчиках(utils?)
 			http.Error(w, "Not-Required User-ID", http.StatusBadRequest)
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID != "" {
-			LogRequest(r, requestID, true, "Not-Required Session-ID")
+			logRequest(r, requestID, true, "Not-Required Session-ID")
 			//рассмотреть возможность такого же ответа клиенту в случае ошибки как в обработчиках(utils?)
 			http.Error(w, "Not-Required Session-ID", http.StatusBadRequest)
 			return
@@ -44,7 +45,7 @@ func UserManagementMiddleware_NonAuthority(next http.HandlerFunc) http.HandlerFu
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 		r = r.WithContext(ctx)
-		LogRequest(r, requestID, false, "")
+		logRequest(r, requestID, false, "")
 		next.ServeHTTP(w, r)
 	}
 }
@@ -56,14 +57,14 @@ func UserManagementMiddleware_Authority(next http.HandlerFunc) http.HandlerFunc 
 		}
 		userID := r.Header.Get("X-User-ID")
 		if userID == "" {
-			LogRequest(r, requestID, true, "Required User-ID")
+			logRequest(r, requestID, true, "Required User-ID")
 			//рассмотреть возможность такого же ответа клиенту в случае ошибки как в обработчиках(utils?)
 			http.Error(w, "Required User-ID", http.StatusBadRequest)
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID == "" {
-			LogRequest(r, requestID, true, "Required Session-ID")
+			logRequest(r, requestID, true, "Required Session-ID")
 			//рассмотреть возможность такого же ответа клиенту в случае ошибки как в обработчиках(utils?)
 			http.Error(w, "Required Session-ID", http.StatusBadRequest)
 			return
@@ -74,7 +75,7 @@ func UserManagementMiddleware_Authority(next http.HandlerFunc) http.HandlerFunc 
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 		r = r.WithContext(ctx)
-		LogRequest(r, requestID, false, "")
+		logRequest(r, requestID, false, "")
 		next.ServeHTTP(w, r)
 	}
 }
