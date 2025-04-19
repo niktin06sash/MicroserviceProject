@@ -3,7 +3,7 @@ package handlers
 import (
 	"time"
 
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/middleware"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/middleware"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 
 	"github.com/gorilla/mux"
