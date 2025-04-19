@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func LogRequest(r *http.Request, requestID string, isError bool, errorMessage string) {
@@ -22,10 +24,7 @@ func UserManagementMiddleware_NonAuthority(next http.HandlerFunc) http.HandlerFu
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestID := r.Header.Get("X-Request-ID")
 		if requestID == "" {
-			LogRequest(r, "", true, "Missing X-Request-ID")
-			//рассмотреть возможность такого же ответа клиенту в случае ошибки как в обработчиках(utils?)
-			http.Error(w, "Required Request-ID", http.StatusBadRequest)
-			return
+			requestID = uuid.New().String()
 		}
 		userID := r.Header.Get("X-User-ID")
 		if userID != "" {
@@ -53,10 +52,7 @@ func UserManagementMiddleware_Authority(next http.HandlerFunc) http.HandlerFunc 
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestID := r.Header.Get("X-Request-ID")
 		if requestID == "" {
-			LogRequest(r, "", true, "Missing X-Request-ID")
-			//рассмотреть возможность такого же ответа клиенту в случае ошибки как в обработчиках(utils?)
-			http.Error(w, "Required Request-ID", http.StatusBadRequest)
-			return
+			requestID = uuid.New().String()
 		}
 		userID := r.Header.Get("X-User-ID")
 		if userID == "" {
