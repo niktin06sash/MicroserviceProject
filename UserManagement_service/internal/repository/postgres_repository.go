@@ -22,19 +22,11 @@ func NewAuthPostgresRepo(db *sql.DB) *AuthPostgresRepo {
 }
 
 func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.Person) *DBRepositoryResponse {
-	requestid, ok := ctx.Value("requestID").(string)
-	if !ok {
-		log.Println("[ERROR] [UserManagement] CreateUser Error: Request ID not found in context")
-		return &DBRepositoryResponse{
-			Success: false,
-			Errors:  erro.ErrorMissingRequestID,
-		}
-	}
+	requestid := ctx.Value("requestID").(string)
 	var createdUserID uuid.UUID
 	err := tx.QueryRowContext(ctx,
 		"INSERT INTO UserZ (userid, username, useremail, userpassword) values ($1, $2, $3, $4) ON CONFLICT (useremail) DO NOTHING RETURNING userid;",
 		user.Id, user.Name, user.Email, user.Password).Scan(&createdUserID)
-
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: CreateUser Error: %v", requestid, err)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -42,24 +34,15 @@ func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 		}
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
 	}
-
 	log.Printf("[INFO] [UserManagement] [RequestID: %s]: Successful create person!", requestid)
 	return &DBRepositoryResponse{Success: true, UserId: createdUserID, Errors: nil}
 }
 
 func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpassword string) *DBRepositoryResponse {
-	requestid, ok := ctx.Value("requestID").(string)
-	if !ok {
-		log.Println("[ERROR] [UserManagement] GetUser Error: Request ID not found in context")
-		return &DBRepositoryResponse{
-			Success: false,
-			Errors:  erro.ErrorMissingRequestID,
-		}
-	}
+	requestid := ctx.Value("requestID").(string)
 	var hashpass string
 	var userId uuid.UUID
 	err := repoap.Db.QueryRowContext(ctx, "SELECT userid, userpassword FROM userZ WHERE useremail = $1", useremail).Scan(&userId, &hashpass)
-
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: GetUser Error: %v", requestid, err)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -67,28 +50,18 @@ func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 		}
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError}
 	}
-
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(userpassword))
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: CompareHashAndPassword Error: %v", requestid, err)
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword}
 	}
-
 	log.Printf("[INFO] [UserManagement] [RequestID: %s]: Successful get person!", requestid)
 	return &DBRepositoryResponse{Success: true, UserId: userId, Errors: nil}
 }
 func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *DBRepositoryResponse {
-	requestid, ok := ctx.Value("requestID").(string)
-	if !ok {
-		log.Println("[ERROR] [UserManagement] DeleteUser Error: Request ID not found in context")
-		return &DBRepositoryResponse{
-			Success: false,
-			Errors:  erro.ErrorMissingRequestID,
-		}
-	}
+	requestid := ctx.Value("requestID").(string)
 	var hashpass string
 	err := tx.QueryRowContext(ctx, "SELECT userpassword FROM userZ WHERE userid = $1", userId).Scan(&hashpass)
-
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: DeleteUser Error: %v", requestid, err)
 		if errors.Is(err, sql.ErrNoRows) {

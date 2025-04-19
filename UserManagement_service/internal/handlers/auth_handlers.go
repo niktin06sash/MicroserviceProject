@@ -16,19 +16,11 @@ import (
 
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
-	requestID, ok := r.Context().Value("requestID").(string)
-	if !ok {
-		log.Println("[ERROR] [UserManagement] Registration: Request ID not found in context")
-		maparesponse["RequestId"] = erro.ErrorMissingRequestID.Error()
-		badResponse(w, maparesponse, http.StatusInternalServerError)
-		return
-	}
-
+	requestID := r.Context().Value("requestID").(string)
 	if r.Method != http.MethodPost {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Registration: Invalid request method(expected Post but it was sent %v)", requestID, r.Method)
 		maparesponse["Method"] = erro.ErrorNotPost.Error()
 		badResponse(w, maparesponse, http.StatusMethodNotAllowed)
-
 		return
 	}
 	datafromperson, err := io.ReadAll(r.Body)
@@ -36,7 +28,6 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Registration: ReadAll Error: %v", requestID, err)
 		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
 		badResponse(w, maparesponse, http.StatusBadRequest)
-
 		return
 	}
 	var newperk model.Person
@@ -44,15 +35,13 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Registration: Unmarshal Error: %v", requestID, err)
 		maparesponse["Unmarshal"] = erro.ErrorUnmarshal.Error()
-		badResponse(w, maparesponse, http.StatusInternalServerError)
-
+		badResponse(w, maparesponse, http.StatusBadRequest)
 		return
 	}
 	regresponse := h.services.RegistrateAndLogin(r.Context(), &newperk)
 	if !regresponse.Success {
 		stringMap := convertErrorToString(regresponse)
 		badResponse(w, stringMap, http.StatusBadRequest)
-
 		return
 	}
 
@@ -65,32 +54,22 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse, err := json.Marshal(sucresponse)
 	if err != nil {
-		log.Printf("Marshal Error: %v", err)
+		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Registration: Marshal Error: %v", requestID, err)
 		maparesponse["Marshal"] = erro.ErrorMarshal.Error()
 		badResponse(w, maparesponse, http.StatusInternalServerError)
-
 		return
 	}
 	log.Printf("[INFO] [UserManagement] [RequestID: %s] Registration: Person with id: %v has successfully registered", requestID, regresponse.UserId)
-
 	fmt.Fprint(w, string(jsonResponse))
 }
 
 func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
-	requestID, ok := r.Context().Value("requestID").(string)
-	if !ok {
-		log.Println("[ERROR] [UserManagement] Authentication: Request ID not found in context")
-		maparesponse["RequestId"] = erro.ErrorMissingRequestID.Error()
-		badResponse(w, maparesponse, http.StatusInternalServerError)
-		return
-	}
-
+	requestID := r.Context().Value("requestID").(string)
 	if r.Method != http.MethodPost {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Authentication: Invalid request method(expected Post but it was sent %v)", requestID, r.Method)
 		maparesponse["Method"] = erro.ErrorNotPost.Error()
 		badResponse(w, maparesponse, http.StatusMethodNotAllowed)
-
 		return
 	}
 	datafromperson, err := io.ReadAll(r.Body)
@@ -98,7 +77,6 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Authentication: ReadAll Error: %v", requestID, err)
 		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
 		badResponse(w, maparesponse, http.StatusBadRequest)
-
 		return
 	}
 	var newperk model.Person
@@ -107,14 +85,12 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Authentication: Unmarshal Error: %v", requestID, err)
 		maparesponse["Unmarshal"] = erro.ErrorUnmarshal.Error()
 		badResponse(w, maparesponse, http.StatusInternalServerError)
-
 		return
 	}
 	auresponse := h.services.AuthenticateAndLogin(r.Context(), &newperk)
 	if !auresponse.Success {
 		stringMap := convertErrorToString(auresponse)
 		badResponse(w, stringMap, http.StatusBadRequest)
-
 		return
 	}
 
@@ -130,24 +106,16 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Authentication: Marshal Error: %v", requestID, err)
 		maparesponse["Marshal"] = erro.ErrorMarshal.Error()
 		badResponse(w, maparesponse, http.StatusInternalServerError)
-
 		return
 	}
 	log.Printf("[INFO] [UserManagement] [RequestID: %s] Authentication: Person with id: %v has successfully authenticated", requestID, auresponse.UserId)
-
 	fmt.Fprint(w, string(jsonResponse))
 
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
-	requestID, ok := r.Context().Value("requestID").(string)
-	if !ok {
-		log.Println("[ERROR] [UserManagement] DeleteAccount: Request ID not found in context")
-		maparesponse["RequestId"] = erro.ErrorMissingRequestID.Error()
-		badResponse(w, maparesponse, http.StatusInternalServerError)
-		return
-	}
+	requestID := r.Context().Value("requestID").(string)
 	sessionID, ok := r.Context().Value("sessionID").(string)
 	if !ok {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: Session ID not found in context", requestID)
@@ -155,7 +123,6 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		badResponse(w, maparesponse, http.StatusInternalServerError)
 		return
 	}
-
 	userID, ok := r.Context().Value("userID").(uuid.UUID)
 	if !ok {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: User ID not found in context", requestID)
@@ -177,7 +144,6 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-
 	var password string
 	if err := json.Unmarshal(passwordBytes, &password); err != nil || password == "" {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: Invalid password format or empty password", requestID)
@@ -192,7 +158,6 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		badResponse(w, stringMap, http.StatusBadRequest)
 		return
 	}
-
 	w.Header().Set("Content-Type", jsonResponseType)
 	w.WriteHeader(http.StatusOK)
 	sucresponse := HTTPResponse{
@@ -206,7 +171,6 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("[INFO] [UserManagement] [RequestID: %s] DeleteAccount: Person with id: %v has successfully delete account with all data", requestID, userID)
-
 	fmt.Fprint(w, string(jsonResponse))
 
 }
@@ -221,10 +185,8 @@ func badResponse(w http.ResponseWriter, vc map[string]string, statusCode int) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", jsonResponseType)
 	w.WriteHeader(statusCode)
-
 	_, err = w.Write(jsonResponse)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] Write Error: %v", err)

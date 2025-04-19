@@ -39,15 +39,7 @@ type UserRegistrateEvent struct {
 
 func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	registrateMap := make(map[string]error)
-	requestid, ok := ctx.Value("requestID").(string)
-	if !ok {
-		log.Println("[ERROR] [UserManagement] RegistrateAndLogin: Request ID not found in context")
-		registrateMap["ContextError"] = erro.ErrorMissingRequestID
-		return &ServiceResponse{
-			Success: false,
-			Errors:  registrateMap,
-		}
-	}
+	requestid := ctx.Value("requestID").(string)
 	errorvalidate := validatePerson(as.Validator, user, true)
 	if errorvalidate != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: RegistrateAndLogin: Validate error %v", requestid, errorvalidate)
@@ -65,74 +57,46 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		if r := recover(); r != nil {
 			log.Printf("[ERROR] [UserManagement] RegistrateAndLogin: Panic occurred: %v", r)
 			if isTransactionActive {
-				rollbackTransaction(as.Dbtxmanager, tx, "panic")
+				rollbackTransaction(as.Dbtxmanager, tx)
 			}
 		}
 		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "failure")
+			rollbackTransaction(as.Dbtxmanager, tx)
 		}
 	}()
 
 	hashpass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: RegistrateAndLogin: HashPassError %v", requestid, err)
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "hash password failure")
-			isTransactionActive = false
-		}
 		registrateMap["HashPassError"] = erro.ErrorHashPass
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
 	user.Password = string(hashpass)
-
-	if ctx.Err() != nil {
+	if ctxresponse, shouldReturn := checkContext(ctx, registrateMap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: RegistrateAndLogin: Context cancelled before CreateUser: %v", requestid, ctx.Err())
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
-			isTransactionActive = false
-		}
-		registrateMap["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: registrateMap}
+		return ctxresponse
 	}
-
 	userID := uuid.New()
 	user.Id = userID
 	response := as.Dbrepo.CreateUser(ctx, tx, user)
 	if !response.Success && response.Errors != nil {
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "create user failure")
-			isTransactionActive = false
-		}
 		registrateMap["RegistrateError"] = response.Errors
 		return &ServiceResponse{Success: response.Success, Errors: registrateMap}
 	}
 	userID = response.UserId
-	if ctx.Err() != nil {
+	if ctxresponse, shouldReturn := checkContext(ctx, registrateMap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: RegistrateAndLogin: Context cancelled before CreateSession: %v", requestid, ctx.Err())
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
-			isTransactionActive = false
-		}
-		registrateMap["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: registrateMap}
+		return ctxresponse
 	}
 	md := metadata.Pairs("requestID", requestid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
 	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
 	if err != nil || !grpcresponse.Success {
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "create session failure")
-			isTransactionActive = false
-		}
 		registrateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: RegistrateAndLogin: Error committing transaction: %v", requestid, err)
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "commit failure")
-			isTransactionActive = false
-		}
 		_, err := as.GrpcClient.DeleteSession(ctx, grpcresponse.SessionID)
 		if err != nil {
 			log.Printf("[RequestID: %s]: RegistrateAndLogin: Failed to delete session after commit failure: %v", requestid, err)
@@ -156,36 +120,25 @@ type UserAuthenticateEvent struct {
 
 func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	authenticateMap := make(map[string]error)
-	requestid, ok := ctx.Value("requestID").(string)
-	if !ok {
-		log.Println("[ERROR] [UserManagement] AuthenticateAndLogin: Request ID not found in context")
-		authenticateMap["ContextError"] = erro.ErrorMissingRequestID
-		return &ServiceResponse{
-			Success: false,
-			Errors:  authenticateMap,
-		}
-	}
+	requestid := ctx.Value("requestID").(string)
 	errorvalidate := validatePerson(as.Validator, user, false)
 	if errorvalidate != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: AuthenticateAndLogin: Validate error %v", requestid, errorvalidate)
 		return &ServiceResponse{Success: false, Errors: errorvalidate}
 	}
-	if ctx.Err() != nil {
+	if ctxresponse, shouldReturn := checkContext(ctx, authenticateMap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: AuthenticateAndLogin: Context cancelled before GetUser: %v", requestid, ctx.Err())
-		authenticateMap["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: authenticateMap}
+		return ctxresponse
 	}
-
 	response := as.Dbrepo.GetUser(ctx, user.Email, user.Password)
 	if !response.Success {
 		authenticateMap["AuthenticateError"] = response.Errors
 		return &ServiceResponse{Success: response.Success, Errors: authenticateMap}
 	}
 	userID := response.UserId
-	if ctx.Err() != nil {
+	if ctxresponse, shouldReturn := checkContext(ctx, authenticateMap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: AuthenticateAndLogin: Context cancelled before CreateSession: %v", requestid, ctx.Err())
-		authenticateMap["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: authenticateMap}
+		return ctxresponse
 	}
 	md := metadata.Pairs("requestID", requestid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
@@ -211,15 +164,7 @@ type UserDeleteEvent struct {
 
 func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse {
 	deletemap := make(map[string]error)
-	requestid, ok := ctx.Value("requestID").(string)
-	if !ok {
-		log.Println("[ERROR] [UserManagement] DeleteAccount: Request ID not found in context")
-		deletemap["ContextError"] = erro.ErrorMissingRequestID
-		return &ServiceResponse{
-			Success: false,
-			Errors:  deletemap,
-		}
-	}
+	requestid := ctx.Value("requestID").(string)
 	var tx *sql.Tx
 	tx, err := as.Dbtxmanager.BeginTx(ctx)
 	if err != nil {
@@ -227,66 +172,39 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		deletemap["TransactionError"] = erro.ErrorStartTransaction
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
-
 	isTransactionActive := true
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("[ERROR] [UserManagement] DeleteAccount: Panic occurred: %v", r)
 			if isTransactionActive {
-				rollbackTransaction(as.Dbtxmanager, tx, "panic")
+				rollbackTransaction(as.Dbtxmanager, tx)
 			}
 		}
-
 		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "failure")
+			rollbackTransaction(as.Dbtxmanager, tx)
 		}
 	}()
-
-	if ctx.Err() != nil {
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
-			isTransactionActive = false
-		}
+	if ctxresponse, shouldReturn := checkContext(ctx, deletemap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: DeleteAccount: Context cancelled before DeleteUser: %v", requestid, ctx.Err())
-		deletemap["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: deletemap}
+		return ctxresponse
 	}
-
 	response := as.Dbrepo.DeleteUser(ctx, tx, userid, password)
 	if !response.Success && response.Errors != nil {
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "delete user failure")
-			isTransactionActive = false
-		}
 		deletemap["DeleteError"] = response.Errors
 		return &ServiceResponse{Success: response.Success, Errors: deletemap}
 	}
-
-	if ctx.Err() != nil {
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "context timeout")
-			isTransactionActive = false
-		}
+	if ctxresponse, shouldReturn := checkContext(ctx, deletemap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: DeleteAccount: Context cancelled before DeleteSession: %v", requestid, ctx.Err())
-		deletemap["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: deletemap}
+		return ctxresponse
 	}
 	md := metadata.Pairs("requestID", requestid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
 	grpcresponse, err := as.GrpcClient.DeleteSession(ctxgrpc, sessionID)
 	if err != nil || !grpcresponse.Success {
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "delete session failure")
-			isTransactionActive = false
-		}
 		deletemap["GrpcResponseError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: deletemap}
 	}
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, "commit failure")
-			isTransactionActive = false
-		}
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: DeleteAccount: Error committing transaction: %v", requestid, err)
 		deletemap["TransactionError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: deletemap}
@@ -309,9 +227,7 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool) map[
 		if ok {
 			erors := make(map[string]error)
 			for _, err := range validationErrors {
-
 				switch err.Tag() {
-
 				case "email":
 					log.Println("Email format error")
 					erors[err.Field()] = erro.ErrorNotEmail
@@ -319,7 +235,6 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool) map[
 					errv := fmt.Errorf("%s is too short", err.Field())
 					log.Println(err.Field() + " format error")
 					erors[err.Field()] = errv
-
 				default:
 					errv := fmt.Errorf("%s is Null", err.Field())
 					log.Println(err.Field() + " format error")
@@ -331,29 +246,33 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool) map[
 	}
 	return nil
 }
-func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, reason string) {
+func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx) {
 	if tx == nil {
 		return
 	}
-
 	maxAttempts := 3
 	attempt := 0
-
 	for attempt < maxAttempts {
 		attempt++
 		err := txMgr.RollbackTx(tx)
 		if err == nil {
-			log.Printf("[INFO] [UserManagement] Successful rollback (%s) on attempt %d", reason, attempt)
+			log.Printf("[INFO] [UserManagement] Successful rollback on attempt %d", attempt)
 			return
 		}
-
-		log.Printf("[ERROR] [UserManagement] Error rolling back transaction (%s) on attempt %d: %v", reason, attempt, err)
-
+		log.Printf("[ERROR] [UserManagement] Error rolling back transaction on attempt %d: %v", attempt, err)
 		if attempt == maxAttempts {
-			log.Printf("[ERROR] [UserManagement] Failed to rollback transaction (%s) after %d attempts", reason, maxAttempts)
+			log.Printf("[ERROR] [UserManagement] Failed to rollback transaction after %d attempts", maxAttempts)
 			break
 		}
-
 		time.Sleep(100 * time.Millisecond)
+	}
+}
+func checkContext(ctx context.Context, Map map[string]error) (*ServiceResponse, bool) {
+	select {
+	case <-ctx.Done():
+		Map["ContextError"] = erro.ErrorContextTimeout
+		return &ServiceResponse{Success: false, Errors: Map}, true
+	default:
+		return nil, false
 	}
 }
