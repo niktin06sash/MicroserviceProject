@@ -40,6 +40,7 @@ const (
 	ErrorMissingUserIDConst      = "Error missing user ID"
 	ErrorMissingSessionIDConst   = "Error missing session ID"
 	ErrorMissingRequestIDConst   = "Error missing request ID"
+	ErrorAllRetryFailedConst     = "All retry attempts failed"
 )
 
 var (
@@ -73,4 +74,5 @@ var (
 	ErrorMissingRequestID  = errors.New(ErrorMissingRequestIDConst)
 	ErrorMissingUserID     = errors.New(ErrorMissingUserIDConst)
 	ErrorMissingSessionID  = errors.New(ErrorMissingSessionIDConst)
+	ErrorAllRetryFailed    = errors.New(ErrorAllRetryFailedConst)
 )
