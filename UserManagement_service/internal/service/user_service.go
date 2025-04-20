@@ -31,12 +31,6 @@ func NewAuthService(dbrepo repository.DBAuthenticateRepos, dbtxmanager repositor
 	validator := validator.New()
 	return &AuthService{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
 }
-
-type UserRegistrateEvent struct {
-	UserID     uuid.UUID `json:"user_id"`
-	LastUpdate time.Time `json:"last_update"`
-}
-
 func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	registrateMap := make(map[string]error)
 	requestid := ctx.Value("requestID").(string)
@@ -112,12 +106,6 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	log.Printf("[INFO] [UserManagement] [RequestID: %s]: RegistrateAndLogin: The session was created successfully and the user is registered!", requestid)
 	return &ServiceResponse{Success: true, UserId: response.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
-
-type UserAuthenticateEvent struct {
-	UserID     uuid.UUID `json:"user_id"`
-	LastUpdate time.Time `json:"last_update"`
-}
-
 func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	authenticateMap := make(map[string]error)
 	requestid := ctx.Value("requestID").(string)
@@ -151,17 +139,6 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	log.Printf("[INFO] [UserManagement] [RequestID: %s]: AuthenticateAndLogin: The session was created successfully and the user is authenticated!", requestid)
 	return &ServiceResponse{Success: true, UserId: response.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
-
-type UserLogoutEvent struct {
-	UserID     uuid.UUID `json:"user_id"`
-	LastUpdate time.Time `json:"last_update"`
-}
-
-type UserDeleteEvent struct {
-	UserID     uuid.UUID `json:"user_id"`
-	LastUpdate time.Time `json:"last_update"`
-}
-
 func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse {
 	deletemap := make(map[string]error)
 	requestid := ctx.Value("requestID").(string)
