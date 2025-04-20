@@ -28,8 +28,8 @@ func NewHandler(services *service.Service) *Handler {
 }
 func (h *Handler) InitRoutes() *mux.Router {
 	m := mux.NewRouter()
-	m.HandleFunc("/reg", middleware.UserManagementMiddleware_NonAuthority(h.Registration)).Methods("POST")
-	m.HandleFunc("/auth", middleware.UserManagementMiddleware_NonAuthority(h.Authentication)).Methods("POST")
-	m.HandleFunc("/delete", middleware.UserManagementMiddleware_Authority(h.DeleteAccount)).Methods("POST")
+	m.HandleFunc("/reg", middleware.Middleware_Logging(middleware.Middleware_Authorized(false)(middleware.Middleware_Retry(h.Registration)))).Methods("POST")
+	m.HandleFunc("/auth", middleware.Middleware_Logging(middleware.Middleware_Authorized(false)(middleware.Middleware_Retry(h.Authentication)))).Methods("POST")
+	m.HandleFunc("/delete", middleware.Middleware_Logging(middleware.Middleware_Authorized(true)(middleware.Middleware_Retry(h.DeleteAccount)))).Methods("POST")
 	return m
 }
