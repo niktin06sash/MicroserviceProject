@@ -21,7 +21,7 @@ func Middleware_Authorized(isauthority bool) func(http.HandlerFunc) http.Handler
 					logRequest(r, "Not-Authority", requestID, true, "Not-Required User-ID")
 					maparesponse["UserId"] = erro.ErrorNotRequiredUserID.Error()
 					br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-					response.SendResponse(w, br)
+					response.SendResponse(w, br, requestID)
 					return
 				}
 				sessionID := r.Header.Get("X-Session-ID")
@@ -29,7 +29,7 @@ func Middleware_Authorized(isauthority bool) func(http.HandlerFunc) http.Handler
 					logRequest(r, "Not-Authority", requestID, true, "Not-Required Session-ID")
 					maparesponse["SessionId"] = erro.ErrorNotRequiredUserID.Error()
 					br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-					response.SendResponse(w, br)
+					response.SendResponse(w, br, requestID)
 					return
 				}
 				logRequest(r, "Non-Authority", requestID, false, "")
@@ -39,7 +39,7 @@ func Middleware_Authorized(isauthority bool) func(http.HandlerFunc) http.Handler
 					logRequest(r, "Authority", requestID, true, "Required User-ID")
 					maparesponse["UserId"] = erro.ErrorRequiredUserID.Error()
 					br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-					response.SendResponse(w, br)
+					response.SendResponse(w, br, requestID)
 					return
 				}
 				sessionID := r.Header.Get("X-Session-ID")
@@ -47,7 +47,7 @@ func Middleware_Authorized(isauthority bool) func(http.HandlerFunc) http.Handler
 					logRequest(r, "Authority", requestID, true, "Required Session-ID")
 					maparesponse["SessionId"] = erro.ErrorRequiredSessionID.Error()
 					br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-					response.SendResponse(w, br)
+					response.SendResponse(w, br, requestID)
 					return
 				}
 				ctx := context.WithValue(r.Context(), "userID", userID)

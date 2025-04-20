@@ -57,11 +57,11 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		if r := recover(); r != nil {
 			log.Printf("[ERROR] [UserManagement] RegistrateAndLogin: Panic occurred: %v", r)
 			if isTransactionActive {
-				rollbackTransaction(as.Dbtxmanager, tx)
+				rollbackTransaction(as.Dbtxmanager, tx, requestid)
 			}
 		}
 		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx)
+			rollbackTransaction(as.Dbtxmanager, tx, requestid)
 		}
 	}()
 
@@ -177,11 +177,11 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		if r := recover(); r != nil {
 			log.Printf("[ERROR] [UserManagement] DeleteAccount: Panic occurred: %v", r)
 			if isTransactionActive {
-				rollbackTransaction(as.Dbtxmanager, tx)
+				rollbackTransaction(as.Dbtxmanager, tx, requestid)
 			}
 		}
 		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx)
+			rollbackTransaction(as.Dbtxmanager, tx, requestid)
 		}
 	}()
 	if ctxresponse, shouldReturn := checkContext(ctx, deletemap); shouldReturn {
@@ -246,7 +246,7 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool) map[
 	}
 	return nil
 }
-func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx) {
+func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, requestid string) {
 	if tx == nil {
 		return
 	}
@@ -256,12 +256,12 @@ func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx) {
 		attempt++
 		err := txMgr.RollbackTx(tx)
 		if err == nil {
-			log.Printf("[INFO] [UserManagement] Successful rollback on attempt %d", attempt)
+			log.Printf("[INFO] [UserManagement] [RequestID: %s]: Successful rollback on attempt %d", requestid, attempt)
 			return
 		}
-		log.Printf("[ERROR] [UserManagement] Error rolling back transaction on attempt %d: %v", attempt, err)
+		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: Error rolling back transaction on attempt %d: %v", requestid, attempt, err)
 		if attempt == maxAttempts {
-			log.Printf("[ERROR] [UserManagement] Failed to rollback transaction after %d attempts", maxAttempts)
+			log.Printf("[ERROR] [UserManagement] [RequestID: %s]: Failed to rollback transaction after %d attempts", requestid, maxAttempts)
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
