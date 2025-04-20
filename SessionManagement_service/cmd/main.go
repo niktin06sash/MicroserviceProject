@@ -71,7 +71,7 @@ func main() {
 	defer kafkaProducer.Close()*/
 	repository := repository.NewRepository(redis, logger)
 
-	service := service.NewService(repository, logger)
+	service := service.NewSessionAPI(repository, logger)
 	srv := server.NewGrpcServer(service, logger)
 
 	port := viper.GetString("server.port")

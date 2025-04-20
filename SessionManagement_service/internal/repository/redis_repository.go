@@ -2,13 +2,15 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/logger"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -19,31 +21,21 @@ type AuthRedis struct {
 	logger *logger.SessionLogger
 }
 
-func validateContext(ctx context.Context, logger *logger.SessionLogger) (string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		logger.Error("Metadata not found in context", zap.Error(erro.ErrorMissingMetadata))
-		return "", erro.ErrorMissingMetadata
-	}
-	requestIDs := md.Get("requestID")
-	if len(requestIDs) == 0 || requestIDs[0] == "" {
-		logger.Error("Request ID not found in metadata", zap.Error(erro.ErrorRequiredRequestID))
-		return "", erro.ErrorRequiredRequestID
-	}
-	requestID := requestIDs[0]
-
-	if ctx.Err() != nil {
-		logger.Error("Context cancelled",
+func validateContext(ctx context.Context, logger *logger.SessionLogger, place string) (string, error) {
+	requestID := ctx.Value("requestID").(string)
+	select {
+	case <-ctx.Done():
+		logger.Error(fmt.Sprintf("[%s] Context time-out", place),
 			zap.String("requestID", requestID),
 			zap.Error(ctx.Err()),
 		)
-		return "", erro.ErrorContextTimeOut
+		return "", status.Errorf(codes.DeadlineExceeded, "request timed out")
+	default:
+		return requestID, nil
 	}
-
-	return requestID, nil
 }
 func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Session) *RepositoryResponse {
-	requestID, err := validateContext(ctx, redisrepo.logger)
+	requestID, err := validateContext(ctx, redisrepo.logger, "SetSession")
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
 	}
@@ -51,101 +43,101 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 		"UserID":         session.UserID,
 		"ExpirationTime": session.ExpirationTime.Format(time.RFC3339),
 	}).Err()
-
 	if err != nil {
-		redisrepo.logger.Error("Hset session Error",
+		redisrepo.logger.Error("SetSession: Hset session Error",
 			zap.String("requestID", requestID),
 			zap.Error(err),
 		)
-		return &RepositoryResponse{Success: false, Errors: erro.ErrorSetSession}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Hset session Error")}
 	}
 	expiration := time.Until(session.ExpirationTime)
 	err = redisrepo.Client.Expire(ctx, session.SessionID, expiration).Err()
 	if err != nil {
-		redisrepo.logger.Error("Expire session error",
+		redisrepo.logger.Error("SetSession: Expire session error",
 			zap.String("requestID", requestID),
 			zap.Error(err),
 		)
-		return &RepositoryResponse{Success: false, Errors: erro.ErrorSetSession}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Expire session Error")}
 	}
-	redisrepo.logger.Info("Successful session installation")
+	redisrepo.logger.Info("SetSession: Successful session installation",
+		zap.String("requestID", requestID),
+	)
 	return &RepositoryResponse{Success: true, SessionId: session.SessionID, ExpirationTime: session.ExpirationTime}
 }
 
 func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
-	requestID, err := validateContext(ctx, redisrepo.logger)
+	requestID, err := validateContext(ctx, redisrepo.logger, "GetSession")
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
 	}
 	result, err := redisrepo.Client.HGetAll(ctx, sessionID).Result()
 	if err != nil {
-		redisrepo.logger.Error("HGetAll session Error",
+		redisrepo.logger.Error("GetSession: HGetAll session Error",
 			zap.String("requestID", requestID),
 			zap.Error(err),
 		)
-		return &RepositoryResponse{Success: false, Errors: erro.ErrorGetSession}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "HGetAll session Error")}
 	}
-
 	if len(result) == 0 {
-		redisrepo.logger.Error("HGetAll session Error",
+		redisrepo.logger.Error("GetSession: HGetAll session Error",
 			zap.String("requestID", requestID),
 			zap.Error(erro.ErrorInvalidSessionID),
 		)
-		return &RepositoryResponse{Success: false, Errors: erro.ErrorInvalidSessionID}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "HGetAll session Error")}
 	}
-
 	userIDString, ok := result["UserID"]
 	if !ok {
-		redisrepo.logger.Error("Get UserID from session Error",
+		redisrepo.logger.Error("GetSession: Get UserID from session Error",
 			zap.String("requestID", requestID),
 			zap.Error(erro.ErrorGetUserIdSession),
 		)
-		return &RepositoryResponse{Success: false, Errors: erro.ErrorGetUserIdSession}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Get UserID from session Error")}
 	}
-
 	expirationTimeString, ok := result["ExpirationTime"]
 	if !ok {
-		redisrepo.logger.Error("Get ExpirationTime from session Error",
+		redisrepo.logger.Error("GetSession: Get ExpirationTime from session Error",
 			zap.String("requestID", requestID),
 			zap.Error(erro.ErrorGetExpirationTimeSession),
 		)
-		return &RepositoryResponse{Success: false, Errors: erro.ErrorGetExpirationTimeSession}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Get Expiration Time from session Error")}
 	}
-
 	expirationTime, err := time.Parse(time.RFC3339, expirationTimeString)
 	if err != nil {
-		redisrepo.logger.Error("Time-parse Error",
+		redisrepo.logger.Error("GetSession: Time-parse Error",
 			zap.String("requestID", requestID),
 			zap.Error(err),
 		)
-		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Time-parse Error")}
 	}
-
 	userID, err := uuid.Parse(userIDString)
 	if err != nil {
-		redisrepo.logger.Error("UUID-parse Error",
+		redisrepo.logger.Error("GetSession: UUID-parse Error",
 			zap.String("requestID", requestID),
 			zap.Error(err),
 		)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
-	redisrepo.logger.Info("Successful session receiving")
+	redisrepo.logger.Info("GetSession: Successful session receiving",
+		zap.String("requestID", requestID),
+	)
 	return &RepositoryResponse{Success: true, UserID: userID.String(), ExpirationTime: expirationTime}
 }
 func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
-	requestID, err := validateContext(ctx, redisrepo.logger)
+	requestID, err := validateContext(ctx, redisrepo.logger, "DeleteSession")
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
 	}
 	err = redisrepo.Client.Del(ctx, sessionID).Err()
 	if err != nil {
-		redisrepo.logger.Error("Del session Error",
+		redisrepo.logger.Error("DeleteSession: Del session Error",
 			zap.String("requestID", requestID),
 			zap.Error(err),
 		)
-		return &RepositoryResponse{Success: false, Errors: erro.ErrorInternalServer}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Del session Error")}
 	}
-	redisrepo.logger.Info("Successful session deleted")
+	redisrepo.logger.Info("DeleteSession: Successful session deleted",
+		zap.String("requestID", requestID),
+	)
 	return &RepositoryResponse{Success: true}
 }
 func NewAuthRedis(client *redis.Client, log *logger.SessionLogger) *AuthRedis {

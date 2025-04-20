@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -25,52 +25,40 @@ type SessionService struct {
 func NewSessionService(repo repository.RedisSessionRepos, log *logger.SessionLogger) *SessionService {
 	return &SessionService{repo: repo, logger: log}
 }
-func validateContext(ctx context.Context, logger *logger.SessionLogger) (string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		logger.Error("Metadata not found in context", zap.Error(erro.ErrorMissingMetadata))
-		return "", erro.ErrorMissingMetadata
-	}
-	requestIDs := md.Get("requestID")
-	if len(requestIDs) == 0 || requestIDs[0] == "" {
-		logger.Error("Request ID not found in metadata", zap.Error(erro.ErrorRequiredRequestID))
-		return "", erro.ErrorRequiredRequestID
-	}
-	requestID := requestIDs[0]
-	if ctx.Err() != nil {
-		logger.Error("Context cancelled",
+func validateContext(ctx context.Context, logger *logger.SessionLogger, place string) (string, error) {
+	requestID := ctx.Value("requestID").(string)
+	select {
+	case <-ctx.Done():
+		logger.Error(fmt.Sprintf("[%s] Context time-out", place),
 			zap.String("requestID", requestID),
 			zap.Error(ctx.Err()),
 		)
 		return "", status.Errorf(codes.DeadlineExceeded, "request timed out")
+	default:
+		return requestID, nil
 	}
-
-	return requestID, nil
 }
 func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
-	requestID, err := validateContext(ctx, s.logger)
+	requestID, err := validateContext(ctx, s.logger, "CreateSession")
 	if err != nil {
 		return nil, err
 	}
 	if req.UserID == "" {
-		s.logger.Error("Required userID",
+		s.logger.Error("CreateSession: Required userID",
 			zap.String("requestID", requestID),
 			zap.Error(erro.ErrorRequiredUserId),
 		)
-		return nil, status.Errorf(codes.InvalidArgument, "userID is required")
+		return nil, status.Errorf(codes.InvalidArgument, "UserID is required")
 	}
-
 	if _, err := uuid.Parse(req.UserID); err != nil {
-		s.logger.Error("UUID-Parse userID",
+		s.logger.Error("CreateSession: Error UUID-Parse userID",
 			zap.String("requestID", requestID),
 			zap.Error(err),
 		)
-		return nil, status.Errorf(codes.InvalidArgument, "invalid userID format: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid userID format: %v", err)
 	}
-
 	sessionID := uuid.New()
 	expiryTime := time.Now().Add(24 * time.Hour)
-
 	newsession := model.Session{
 		SessionID:      sessionID.String(),
 		UserID:         req.UserID,
@@ -87,16 +75,16 @@ func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessio
 	}, nil
 }
 func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
-	requestID, err := validateContext(ctx, s.logger)
+	requestID, err := validateContext(ctx, s.logger, "ValidateSession")
 	if err != nil {
 		return nil, err
 	}
 	if req.SessionID == "" {
-		s.logger.Error("Required sessionID",
+		s.logger.Error("ValidateSession: Required sessionID",
 			zap.String("requestID", requestID),
 			zap.Error(erro.ErrorRequiredSessionId),
 		)
-		return nil, status.Errorf(codes.InvalidArgument, "sessionID is required")
+		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
 	}
 	response := s.repo.GetSession(ctx, req.SessionID)
 	if !response.Success {
@@ -108,18 +96,17 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 	}, nil
 }
 func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
-	requestID, err := validateContext(ctx, s.logger)
+	requestID, err := validateContext(ctx, s.logger, "DeleteSession")
 	if err != nil {
 		return nil, err
 	}
 	if req.SessionID == "" {
-		s.logger.Error("Required sessionID",
+		s.logger.Error("DeleteSession: Required sessionID",
 			zap.String("requestID", requestID),
 			zap.Error(erro.ErrorRequiredSessionId),
 		)
-		return nil, status.Errorf(codes.InvalidArgument, "sessionID is required")
+		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
 	}
-
 	response := s.repo.DeleteSession(ctx, req.SessionID)
 	if !response.Success {
 		return nil, response.Errors
