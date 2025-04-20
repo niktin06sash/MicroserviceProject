@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 )
 
 type customResponseWriter struct {
@@ -38,11 +39,13 @@ func retryRequest(next http.HandlerFunc, w http.ResponseWriter, r *http.Request,
 func Middleware_Retry(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestID := r.Context().Value("requestID").(string)
+		maparesponse := make(map[string]string)
 		err := retryRequest(next, w, r, requestID)
 		if err != nil {
 			logRequest(r, "Retry", requestID, true, "All attempts failed!")
-			//рассмотреть возможность такого же ответа клиенту в случае ошибки как в обработчиках(utils?)
-			http.Error(w, "Not-Required User-ID", http.StatusBadRequest)
+			maparesponse["Retry"] = err.Error()
+			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
+			response.SendResponse(w, br)
 			return
 		}
 	}
