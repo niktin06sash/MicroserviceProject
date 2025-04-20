@@ -84,14 +84,14 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	}
 	md := metadata.Pairs("requestID", requestid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
-	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
+	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String(), requestid)
 	if err != nil || !grpcresponse.Success {
 		registrateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
 		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: RegistrateAndLogin: Error committing transaction: %v", requestid, err)
-		_, err := as.GrpcClient.DeleteSession(ctx, grpcresponse.SessionID)
+		_, err := as.GrpcClient.DeleteSession(ctx, grpcresponse.SessionID, requestid)
 		if err != nil {
 			log.Printf("[RequestID: %s]: RegistrateAndLogin: Failed to delete session after commit failure: %v", requestid, err)
 			registrateMap["GrpcRollbackError"] = erro.ErrorGrpcRollback
@@ -130,7 +130,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	}
 	md := metadata.Pairs("requestID", requestid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
-	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
+	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String(), requestid)
 	if err != nil || !grpcresponse.Success {
 		authenticateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: authenticateMap, Type: erro.ServerErrorType}
@@ -176,7 +176,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	}
 	md := metadata.Pairs("requestID", requestid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
-	grpcresponse, err := as.GrpcClient.DeleteSession(ctxgrpc, sessionID)
+	grpcresponse, err := as.GrpcClient.DeleteSession(ctxgrpc, sessionID, requestid)
 	if err != nil || !grpcresponse.Success {
 		deletemap["GrpcResponseError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
