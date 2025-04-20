@@ -1,26 +1,14 @@
 package handlers
 
 import (
-	"time"
-
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/middleware"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 
 	"github.com/gorilla/mux"
 )
 
-const (
-	jsonResponseType = "application/json"
-)
-
 type Handler struct {
 	services *service.Service
-}
-type HTTPResponse struct {
-	Success       bool              `json:"success"`
-	Errors        map[string]string `json:"errors"`
-	SessionId     string            `json:"sessionid"`
-	ExpireSession time.Time         `json:"expiresession"`
 }
 
 func NewHandler(services *service.Service) *Handler {
