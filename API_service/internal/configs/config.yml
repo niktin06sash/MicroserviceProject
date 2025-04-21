@@ -9,5 +9,5 @@ routes:
 
 ssl:
   enabled: true
-  cert_file: "/path/to/cert.pem"
-  key_file: "/path/to/key.pem"
+  cert_file: "cert.pem"
+  key_file: "key.pem"
