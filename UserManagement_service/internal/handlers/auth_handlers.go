@@ -15,29 +15,29 @@ import (
 
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
-	requestID := r.Context().Value("requestID").(string)
+	traceID := r.Context().Value("traceID").(string)
 	if r.Method != http.MethodPost {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Registration: Invalid request method(expected Post but it was sent %v)", requestID, r.Method)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Registration: Invalid request method(expected Post but it was sent %v)", traceID, r.Method)
 		maparesponse["Method"] = erro.ErrorNotPost.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusMethodNotAllowed)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	datafromperson, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Registration: ReadAll Error: %v", requestID, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Registration: ReadAll Error: %v", traceID, err)
 		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	var newperk model.Person
 	err = json.Unmarshal(datafromperson, &newperk)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Registration: Unmarshal Error: %v", requestID, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Registration: Unmarshal Error: %v", traceID, err)
 		maparesponse["Unmarshal"] = erro.ErrorUnmarshal.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	regresponse := h.services.RegistrateAndLogin(r.Context(), &newperk)
@@ -46,50 +46,50 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 		switch regresponse.Type {
 		case erro.ClientErrorType:
 			br := response.NewErrorResponse(stringMap, http.StatusBadRequest)
-			response.SendResponse(w, br, requestID)
+			response.SendResponse(w, br, traceID)
 		case erro.ServerErrorType:
 			br := response.NewErrorResponse(stringMap, http.StatusInternalServerError)
-			response.SendResponse(w, br, requestID)
+			response.SendResponse(w, br, traceID)
 		default:
-			log.Printf("[ERROR] [UserManagement] [RequestID: %s] Registration: Unknown error type", requestID)
+			log.Printf("[ERROR] [UserManagement] [TraceID: %s] Registration: Unknown error type", traceID)
 			maparesponse["InternalServer"] = erro.ErrorInternalServer.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, requestID)
+			response.SendResponse(w, br, traceID)
 		}
 		return
 	}
 
 	respdata := map[string]any{"SessionID": regresponse.SessionId, "ExpiryTime": regresponse.ExpireSession}
 	br := response.NewSuccessResponse(respdata, http.StatusOK)
-	response.SendResponse(w, br, requestID)
-	log.Printf("[INFO] [UserManagement] [RequestID: %s] Registration: Person with id: %v has successfully registered", requestID, regresponse.UserId)
+	response.SendResponse(w, br, traceID)
+	log.Printf("[INFO] [UserManagement] [TraceID: %s] Registration: Person with id: %v has successfully registered", traceID, regresponse.UserId)
 }
 
 func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
-	requestID := r.Context().Value("requestID").(string)
+	traceID := r.Context().Value("traceID").(string)
 	if r.Method != http.MethodPost {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Authentication: Invalid request method(expected Post but it was sent %v)", requestID, r.Method)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Authentication: Invalid request method(expected Post but it was sent %v)", traceID, r.Method)
 		maparesponse["Method"] = erro.ErrorNotPost.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusMethodNotAllowed)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	datafromperson, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Authentication: ReadAll Error: %v", requestID, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Authentication: ReadAll Error: %v", traceID, err)
 		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	var newperk model.Person
 	err = json.Unmarshal(datafromperson, &newperk)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] Authentication: Unmarshal Error: %v", requestID, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Authentication: Unmarshal Error: %v", traceID, err)
 		maparesponse["Unmarshal"] = erro.ErrorUnmarshal.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	auresponse := h.services.AuthenticateAndLogin(r.Context(), &newperk)
@@ -98,82 +98,82 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 		switch auresponse.Type {
 		case erro.ClientErrorType:
 			br := response.NewErrorResponse(stringMap, http.StatusBadRequest)
-			response.SendResponse(w, br, requestID)
+			response.SendResponse(w, br, traceID)
 		case erro.ServerErrorType:
 			br := response.NewErrorResponse(stringMap, http.StatusInternalServerError)
-			response.SendResponse(w, br, requestID)
+			response.SendResponse(w, br, traceID)
 		default:
-			log.Printf("[ERROR] [UserManagement] [RequestID: %s] Authentication: Unknown error type", requestID)
+			log.Printf("[ERROR] [UserManagement] [TraceID: %s] Authentication: Unknown error type", traceID)
 			maparesponse["InternalServer"] = erro.ErrorInternalServer.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, requestID)
+			response.SendResponse(w, br, traceID)
 		}
 		return
 	}
 
 	respdata := map[string]any{"SessionID": auresponse.SessionId, "ExpiryTime": auresponse.ExpireSession}
 	br := response.NewSuccessResponse(respdata, http.StatusOK)
-	response.SendResponse(w, br, requestID)
-	log.Printf("[INFO] [UserManagement] [RequestID: %s] Authentication: Person with id: %v has successfully authenticated", requestID, auresponse.UserId)
+	response.SendResponse(w, br, traceID)
+	log.Printf("[INFO] [UserManagement] [TraceID: %s] Authentication: Person with id: %v has successfully authenticated", traceID, auresponse.UserId)
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
-	requestID := r.Context().Value("requestID").(string)
+	traceID := r.Context().Value("traceID").(string)
 	sessionID, ok := r.Context().Value("sessionID").(string)
 	if !ok {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: Session ID not found in context", requestID)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Session ID not found in context", traceID)
 		maparesponse["SessionId"] = erro.ErrorMissingSessionID.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	userIDStr, ok := r.Context().Value("userID").(string)
 	if !ok {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: User ID not found in context", requestID)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: User ID not found in context", traceID)
 		maparesponse := map[string]string{"UserId": "User ID not found in context"}
 		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: Invalid User ID format: %v", requestID, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid User ID format: %v", traceID, err)
 		maparesponse := map[string]string{"UserId": "Invalid User ID format"}
 		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	if r.Method != http.MethodDelete {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: Invalid request method(expected Delete but it was sent %v)", requestID, r.Method)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid request method(expected Delete but it was sent %v)", traceID, r.Method)
 		maparesponse["Method"] = erro.ErrorNotDelete.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusMethodNotAllowed)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	passwordBytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: ReadAll Error: %v", requestID, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: ReadAll Error: %v", traceID, err)
 		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	defer r.Body.Close()
 	var data map[string]string
 	if err := json.Unmarshal(passwordBytes, &data); err != nil {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: Invalid password format or empty password", requestID)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid password format or empty password", traceID)
 		maparesponse["Password"] = erro.ErrorInvalidPassword.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	password, ok := data["password"]
 	if !ok || password == "" {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: Password is missing or empty", requestID)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Password is missing or empty", traceID)
 		maparesponse["Password"] = erro.ErrorInvalidPassword.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
-		response.SendResponse(w, br, requestID)
+		response.SendResponse(w, br, traceID)
 		return
 	}
 	defer r.Body.Close()
@@ -183,19 +183,19 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		switch delresponse.Type {
 		case erro.ClientErrorType:
 			br := response.NewErrorResponse(stringMap, http.StatusBadRequest)
-			response.SendResponse(w, br, requestID)
+			response.SendResponse(w, br, traceID)
 		case erro.ServerErrorType:
 			br := response.NewErrorResponse(stringMap, http.StatusInternalServerError)
-			response.SendResponse(w, br, requestID)
+			response.SendResponse(w, br, traceID)
 		default:
-			log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteAccount: Unknown error type", requestID)
+			log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Unknown error type", traceID)
 			maparesponse["InternalServer"] = erro.ErrorInternalServer.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, requestID)
+			response.SendResponse(w, br, traceID)
 		}
 		return
 	}
 	br := response.NewSuccessResponse(nil, http.StatusOK)
-	response.SendResponse(w, br, requestID)
-	log.Printf("[INFO] [UserManagement] [RequestID: %s] DeleteAccount: Person with id: %v has successfully delete account with all data", requestID, userID)
+	response.SendResponse(w, br, traceID)
+	log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: Person with id: %v has successfully delete account with all data", traceID, userID)
 }
