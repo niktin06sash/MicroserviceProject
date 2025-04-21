@@ -88,7 +88,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Authentication: Unmarshal Error: %v", traceID, err)
 		maparesponse["Unmarshal"] = erro.ErrorUnmarshal.Error()
-		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
+		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID)
 		return
 	}
