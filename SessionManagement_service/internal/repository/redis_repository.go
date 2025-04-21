@@ -22,20 +22,20 @@ type AuthRedis struct {
 }
 
 func validateContext(ctx context.Context, logger *logger.SessionLogger, place string) (string, error) {
-	requestID := ctx.Value("requestID").(string)
+	traceID := ctx.Value("traceID").(string)
 	select {
 	case <-ctx.Done():
 		logger.Error(fmt.Sprintf("[%s] Context time-out", place),
-			zap.String("requestID", requestID),
+			zap.String("requestID", traceID),
 			zap.Error(ctx.Err()),
 		)
 		return "", status.Errorf(codes.DeadlineExceeded, "request timed out")
 	default:
-		return requestID, nil
+		return traceID, nil
 	}
 }
 func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Session) *RepositoryResponse {
-	requestID, err := validateContext(ctx, redisrepo.logger, "SetSession")
+	traceID, err := validateContext(ctx, redisrepo.logger, "SetSession")
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
 	}
@@ -45,7 +45,7 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 	}).Err()
 	if err != nil {
 		redisrepo.logger.Error("SetSession: Hset session Error",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(err),
 		)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Hset session Error")}
@@ -54,33 +54,33 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 	err = redisrepo.Client.Expire(ctx, session.SessionID, expiration).Err()
 	if err != nil {
 		redisrepo.logger.Error("SetSession: Expire session error",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(err),
 		)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Expire session Error")}
 	}
 	redisrepo.logger.Info("SetSession: Successful session installation",
-		zap.String("requestID", requestID),
+		zap.String("traceID", traceID),
 	)
 	return &RepositoryResponse{Success: true, SessionId: session.SessionID, ExpirationTime: session.ExpirationTime}
 }
 
 func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
-	requestID, err := validateContext(ctx, redisrepo.logger, "GetSession")
+	traceID, err := validateContext(ctx, redisrepo.logger, "GetSession")
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
 	}
 	result, err := redisrepo.Client.HGetAll(ctx, sessionID).Result()
 	if err != nil {
 		redisrepo.logger.Error("GetSession: HGetAll session Error",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(err),
 		)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "HGetAll session Error")}
 	}
 	if len(result) == 0 {
 		redisrepo.logger.Error("GetSession: HGetAll session Error",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(erro.ErrorInvalidSessionID),
 		)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "HGetAll session Error")}
@@ -88,7 +88,7 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 	userIDString, ok := result["UserID"]
 	if !ok {
 		redisrepo.logger.Error("GetSession: Get UserID from session Error",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(erro.ErrorGetUserIdSession),
 		)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Get UserID from session Error")}
@@ -96,7 +96,7 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 	expirationTimeString, ok := result["ExpirationTime"]
 	if !ok {
 		redisrepo.logger.Error("GetSession: Get ExpirationTime from session Error",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(erro.ErrorGetExpirationTimeSession),
 		)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Get Expiration Time from session Error")}
@@ -104,7 +104,7 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 	expirationTime, err := time.Parse(time.RFC3339, expirationTimeString)
 	if err != nil {
 		redisrepo.logger.Error("GetSession: Time-parse Error",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(err),
 		)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Time-parse Error")}
@@ -112,31 +112,31 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 	userID, err := uuid.Parse(userIDString)
 	if err != nil {
 		redisrepo.logger.Error("GetSession: UUID-parse Error",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(err),
 		)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
 	redisrepo.logger.Info("GetSession: Successful session receiving",
-		zap.String("requestID", requestID),
+		zap.String("traceID", traceID),
 	)
 	return &RepositoryResponse{Success: true, UserID: userID.String(), ExpirationTime: expirationTime}
 }
 func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
-	requestID, err := validateContext(ctx, redisrepo.logger, "DeleteSession")
+	traceID, err := validateContext(ctx, redisrepo.logger, "DeleteSession")
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
 	}
 	err = redisrepo.Client.Del(ctx, sessionID).Err()
 	if err != nil {
 		redisrepo.logger.Error("DeleteSession: Del session Error",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(err),
 		)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Del session Error")}
 	}
 	redisrepo.logger.Info("DeleteSession: Successful session deleted",
-		zap.String("requestID", requestID),
+		zap.String("traceID", traceID),
 	)
 	return &RepositoryResponse{Success: true}
 }

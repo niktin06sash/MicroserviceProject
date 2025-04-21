@@ -13,7 +13,7 @@ const (
 	ErrorInternalServerConst           = "Internal Server Error"
 	ErrorContextTimeOutConst           = "Context time is up"
 	ErrorMissingMetadataConst          = "Metadata is required"
-	ErrorRequiredRequestIDConst        = "RequestId is required"
+	ErrorRequiredTraceIDConst          = "TraceId is required"
 	ErrorRequiredUserIdConst           = "UserId is required"
 	ErrorRequiredSessionIdConst        = "SessionId is required"
 )
@@ -30,6 +30,6 @@ var (
 	ErrorContextTimeOut           = errors.New(ErrorContextTimeOutConst)
 	ErrorMissingMetadata          = errors.New(ErrorMissingMetadataConst)
 	ErrorRequiredUserId           = errors.New(ErrorRequiredUserIdConst)
-	ErrorRequiredRequestID        = errors.New(ErrorRequiredRequestIDConst)
+	ErrorRequiredTraceID          = errors.New(ErrorRequiredTraceIDConst)
 	ErrorRequiredSessionId        = errors.New(ErrorRequiredSessionIdConst)
 )
