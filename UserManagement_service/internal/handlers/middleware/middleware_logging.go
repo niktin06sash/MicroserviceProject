@@ -13,21 +13,21 @@ func logRequest(r *http.Request, place string, requestID string, isError bool, e
 	method := r.Method
 	path := r.URL.Path
 	if isError {
-		log.Printf("[ERROR] [UserManagement] [%s] [RequestID: %s] [IP: %s] [Method: %s] [Path: %s] Error: %s", place, requestID, ip, method, path, errorMessage)
+		log.Printf("[ERROR] [UserManagement] [%s] [TraceID: %s] [IP: %s] [Method: %s] [Path: %s] Error: %s", place, requestID, ip, method, path, errorMessage)
 	} else {
-		log.Printf("[INFO] [UserManagement] [%s] [RequestID: %s] [IP: %s] [Method: %s] [Path: %s]", place, requestID, ip, method, path)
+		log.Printf("[INFO] [UserManagement] [%s] [TraceID: %s] [IP: %s] [Method: %s] [Path: %s]", place, requestID, ip, method, path)
 	}
 }
 func Middleware_Logging(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		requestID := r.Header.Get("X-Request-ID")
-		if requestID == "" {
+		traceID := r.Header.Get("X-Trace-ID")
+		if traceID == "" {
 			log.Println("[WARN] [UserManagement] Warn: Required Request-ID")
-			requestID = uuid.New().String()
+			traceID = uuid.New().String()
 		}
-		ctx := context.WithValue(r.Context(), "requestID", requestID)
+		ctx := context.WithValue(r.Context(), "traceID", traceID)
 		r = r.WithContext(ctx)
-		logRequest(r, "Logging", requestID, false, "")
+		logRequest(r, "Logging", traceID, false, "")
 		next.ServeHTTP(w, r)
 	}
 }

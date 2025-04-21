@@ -33,17 +33,17 @@ func NewErrorResponse(errors map[string]string, status int) HTTPResponse {
 		Status:  status,
 	}
 }
-func SendResponse(w http.ResponseWriter, resp HTTPResponse, reqid string) {
+func SendResponse(w http.ResponseWriter, resp HTTPResponse, traceid string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(resp.Status)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s]: Failed to encode response: %v", reqid, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: Failed to encode response: %v", traceid, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(NewErrorResponse(map[string]string{
 			"Internal": "InternalServerError",
 		}, resp.Status))
 	}
-	log.Printf("[INFO] [UserManagement] [RequestID: %s]: Succesfull send response to client", reqid)
+	log.Printf("[INFO] [UserManagement] [TraceID: %s]: Succesfull send response to client", traceid)
 }
 func ConvertErrorsToString(errors map[string]error) map[string]string {
 	stringMap := make(map[string]string)

@@ -12,8 +12,8 @@ import (
 
 //go:generate mockgen -source=grpc_client.go -destination=mocks/mock.go
 type GrpcClientService interface {
-	CreateSession(ctx context.Context, userID string, reqid string) (*pb.CreateSessionResponse, error)
-	DeleteSession(ctx context.Context, sessionID string, reqid string) (*pb.DeleteSessionResponse, error)
+	CreateSession(ctx context.Context, userID string) (*pb.CreateSessionResponse, error)
+	DeleteSession(ctx context.Context, sessionID string) (*pb.DeleteSessionResponse, error)
 	Close() error
 }
 type GrpcClient struct {
@@ -34,23 +34,25 @@ func NewGrpcClient(cfg configs.Config) *GrpcClient {
 func (g *GrpcClient) Close() error {
 	return g.conn.Close()
 }
-func (g *GrpcClient) CreateSession(ctx context.Context, userd string, reqid string) (*pb.CreateSessionResponse, error) {
+func (g *GrpcClient) CreateSession(ctx context.Context, userd string) (*pb.CreateSessionResponse, error) {
+	traceid := ctx.Value("traceID").(string)
 	req := &pb.CreateSessionRequest{UserID: userd}
 	resp, err := g.client.CreateSession(ctx, req)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] CreateSession: Request error to GRPC-Session Client: %v", reqid, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] CreateSession: Request error to GRPC-Session Client: %v", traceid, err)
 		return nil, err
 	}
-	log.Printf("[INFO] [UserManagement] [RequestID: %s] CreateSession: Successful request to GRPC-Session Client", reqid)
+	log.Printf("[INFO] [UserManagement] [TraceID: %s] CreateSession: Successful request to GRPC-Session Client", traceid)
 	return resp, nil
 }
-func (g *GrpcClient) DeleteSession(ctx context.Context, sessionid string, reqid string) (*pb.DeleteSessionResponse, error) {
+func (g *GrpcClient) DeleteSession(ctx context.Context, sessionid string) (*pb.DeleteSessionResponse, error) {
+	traceid := ctx.Value("traceID").(string)
 	req := &pb.DeleteSessionRequest{SessionID: sessionid}
 	resp, err := g.client.DeleteSession(ctx, req)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [RequestID: %s] DeleteSession: Request error to GRPC-Session Client(DeleteSession): %v", reqid, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteSession: Request error to GRPC-Session Client(DeleteSession): %v", traceid, err)
 		return nil, err
 	}
-	log.Printf("[INFO] [UserManagement] [RequestID: %s] DeleteSession: Successful request to GRPC-Session Client(DeleteSession)", reqid)
+	log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteSession: Successful request to GRPC-Session Client(DeleteSession)", traceid)
 	return resp, nil
 }
