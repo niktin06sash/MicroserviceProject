@@ -84,7 +84,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: Context cancelled before CreateSession: %v", traceid, ctx.Err())
 		return ctxresponse
 	}
-	md := metadata.Pairs("requestID", traceid)
+	md := metadata.Pairs("traceID", traceid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
 	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
 	if err != nil || !grpcresponse.Success {
@@ -128,7 +128,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: AuthenticateAndLogin: Context cancelled before CreateSession: %v", traceid, ctx.Err())
 		return ctxresponse
 	}
-	md := metadata.Pairs("requestID", traceid)
+	md := metadata.Pairs("traceID", traceid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
 	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
 	if err != nil || !grpcresponse.Success {

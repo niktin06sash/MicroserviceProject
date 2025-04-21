@@ -26,33 +26,33 @@ func NewSessionService(repo repository.RedisSessionRepos, log *logger.SessionLog
 	return &SessionService{repo: repo, logger: log}
 }
 func validateContext(ctx context.Context, logger *logger.SessionLogger, place string) (string, error) {
-	requestID := ctx.Value("requestID").(string)
+	traceID := ctx.Value("traceID").(string)
 	select {
 	case <-ctx.Done():
 		logger.Error(fmt.Sprintf("[%s] Context time-out", place),
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(ctx.Err()),
 		)
 		return "", status.Errorf(codes.DeadlineExceeded, "request timed out")
 	default:
-		return requestID, nil
+		return traceID, nil
 	}
 }
 func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
-	requestID, err := validateContext(ctx, s.logger, "CreateSession")
+	traceID, err := validateContext(ctx, s.logger, "CreateSession")
 	if err != nil {
 		return nil, err
 	}
 	if req.UserID == "" {
 		s.logger.Error("CreateSession: Required userID",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(erro.ErrorRequiredUserId),
 		)
 		return nil, status.Errorf(codes.InvalidArgument, "UserID is required")
 	}
 	if _, err := uuid.Parse(req.UserID); err != nil {
 		s.logger.Error("CreateSession: Error UUID-Parse userID",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(err),
 		)
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid userID format: %v", err)
@@ -75,13 +75,13 @@ func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessio
 	}, nil
 }
 func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
-	requestID, err := validateContext(ctx, s.logger, "ValidateSession")
+	traceID, err := validateContext(ctx, s.logger, "ValidateSession")
 	if err != nil {
 		return nil, err
 	}
 	if req.SessionID == "" {
 		s.logger.Error("ValidateSession: Required sessionID",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(erro.ErrorRequiredSessionId),
 		)
 		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
@@ -96,13 +96,13 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 	}, nil
 }
 func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
-	requestID, err := validateContext(ctx, s.logger, "DeleteSession")
+	traceID, err := validateContext(ctx, s.logger, "DeleteSession")
 	if err != nil {
 		return nil, err
 	}
 	if req.SessionID == "" {
 		s.logger.Error("DeleteSession: Required sessionID",
-			zap.String("requestID", requestID),
+			zap.String("traceID", traceID),
 			zap.Error(erro.ErrorRequiredSessionId),
 		)
 		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
