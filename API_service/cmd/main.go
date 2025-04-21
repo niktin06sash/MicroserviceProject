@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/server"
 	"github.com/spf13/viper"
@@ -62,6 +63,8 @@ func main() {
 	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
 		log.Fatalf("[ERROR] [API-Service] Key file not found: %s", keyFile)
 	}
+	grpcclient := client.NewGrpcClient(config)
+	defer grpcclient.Close()
 	srv := server.NewServer(nil)
 	serverError := make(chan error, 1)
 	go func() {
