@@ -1,4 +1,13 @@
 server:
-  port: "8081"      
+  port: "8083"
+session_service:
+  grpc_address: "localhost:50052"
 routes:
-   /api/users: "http://user-service:8082"
+   /users/reg: "http://localhost:8082"
+   /users/auth: "http://localhost:8082"
+   /users/del: "http://localhost:8082"
+
+ssl:
+  enabled: true
+  cert_file: "/path/to/cert.pem"
+  key_file: "/path/to/key.pem"
