@@ -8,6 +8,5 @@ routes:
    /users/del: "http://localhost:8082"
 
 ssl:
-  enabled: true
   cert_file: "cert1.pem"
   key_file: "key1.pem"
