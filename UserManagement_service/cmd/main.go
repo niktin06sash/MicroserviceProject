@@ -57,7 +57,7 @@ func main() {
 	}
 
 	dbObject := &repository.DBObject{}
-	db, err := repository.ConnectToDb(config, dbObject)
+	db, err := repository.ConnectToDb(config.Database, dbObject)
 	if err != nil {
 		log.Fatalf("[ERROR] [UserManagement] Failed to connect to database: %v", err)
 		return
@@ -72,15 +72,14 @@ func main() {
 	}
 	defer kafkaProducer.Close()
 	repositories := repository.NewRepository(db)
-	grpcclient := client.NewGrpcClient(config)
+	grpcclient := client.NewGrpcClient(config.SessionService)
 	defer grpcclient.Close()
 	service := service.NewService(repositories, kafkaProducer, grpcclient)
 	handlers := handlers.NewHandler(service)
 	srv := &server.Server{}
-
-	port := viper.GetString("server.port")
+	port := config.Server.Port
 	if port == "" {
-		port = "8080"
+		port = "8082"
 	}
 	serverError := make(chan error, 1)
 	go func() {

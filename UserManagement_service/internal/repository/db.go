@@ -59,10 +59,10 @@ func BuildConnectionString(cfg configs.DatabaseConfig) string {
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.SSLMode)
 }
 
-func ConnectToDb(cfg configs.Config, dbInterface DBInterface) (*sql.DB, error) {
-	connectionString := BuildConnectionString(cfg.Database)
+func ConnectToDb(cfg configs.DatabaseConfig, dbInterface DBInterface) (*sql.DB, error) {
+	connectionString := BuildConnectionString(cfg)
 
-	db, err := dbInterface.Open(cfg.Database.Driver, connectionString)
+	db, err := dbInterface.Open(cfg.Driver, connectionString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}

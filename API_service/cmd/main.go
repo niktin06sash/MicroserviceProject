@@ -48,10 +48,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("[ERROR] [API-Service] Unable to decode into struct, %v", err)
 	}
-	port := config.Server.Port
-	if port == "" {
-		port = "8083"
-	}
 
 	certFile := resolvePath(config.SSL.CertFile, configDir)
 	keyFile := resolvePath(config.SSL.KeyFile, configDir)
@@ -67,10 +63,14 @@ func main() {
 	grpcclient := client.NewGrpcClient(config.Session)
 	defer grpcclient.Close()
 	handler := handlers.NewHandler(grpcclient, config.Routes)
-	srv := server.NewServer(handler)
+	srv := &server.Server{}
+	port := config.Server.Port
+	if port == "" {
+		port = "8083"
+	}
 	serverError := make(chan error, 1)
 	go func() {
-		if err := srv.Run(nil, port, certFile, keyFile); err != nil {
+		if err := srv.Run(port, handler.InitRoutes(), certFile, keyFile); err != nil {
 			serverError <- fmt.Errorf("server run failed: %w", err)
 			return
 		}

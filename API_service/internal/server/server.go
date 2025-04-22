@@ -11,10 +11,7 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func NewServer(handler http.Handler) *Server {
-	return &Server{}
-}
-func (s *Server) Run(handler http.Handler, port string, cert string, key string) error {
+func (s *Server) Run(port string, handler http.Handler, cert string, key string) error {
 	s.httpServer = &http.Server{
 		Addr:           ":" + port,
 		Handler:        handler,

@@ -55,7 +55,7 @@ func main() {
 	redisobject := &repository.RedisObject{
 		Logger: logger,
 	}
-	redis, err := repository.ConnectToRedis(config, redisobject)
+	redis, err := repository.ConnectToRedis(config.Redis, redisobject)
 	if err != nil {
 		logger.Fatal("SessionManagement: Failed to connect to database", zap.Error(err))
 		return
