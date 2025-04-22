@@ -40,7 +40,7 @@ func SendResponse(w http.ResponseWriter, resp HTTPResponse, traceid string) {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: Failed to encode response: %v", traceid, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(NewErrorResponse(map[string]string{
-			"Internal": "InternalServerError",
+			"InternalServerError": "EncoderResponse Error",
 		}, resp.Status))
 	}
 	log.Printf("[INFO] [UserManagement] [TraceID: %s]: Succesfull send response to client", traceid)

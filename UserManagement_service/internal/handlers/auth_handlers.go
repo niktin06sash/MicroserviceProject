@@ -18,7 +18,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	traceID := r.Context().Value("traceID").(string)
 	if r.Method != http.MethodPost {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Registration: Invalid request method(expected Post but it was sent %v)", traceID, r.Method)
-		maparesponse["Method"] = erro.ErrorNotPost.Error()
+		maparesponse["ClientError"] = erro.ErrorNotPost.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusMethodNotAllowed)
 		response.SendResponse(w, br, traceID)
 		return
@@ -26,7 +26,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	datafromperson, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Registration: ReadAll Error: %v", traceID, err)
-		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
+		maparesponse["ClientError"] = erro.ErrorReadAll.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID)
 		return
@@ -35,7 +35,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(datafromperson, &newperk)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Registration: Unmarshal Error: %v", traceID, err)
-		maparesponse["Unmarshal"] = erro.ErrorUnmarshal.Error()
+		maparesponse["ClientError"] = erro.ErrorUnmarshal.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID)
 		return
@@ -52,7 +52,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 			response.SendResponse(w, br, traceID)
 		default:
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] Registration: Unknown error type", traceID)
-			maparesponse["InternalServer"] = erro.ErrorInternalServer.Error()
+			maparesponse["InternalServerError"] = erro.ErrorInternalServer.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 			response.SendResponse(w, br, traceID)
 		}
@@ -70,7 +70,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	traceID := r.Context().Value("traceID").(string)
 	if r.Method != http.MethodPost {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Authentication: Invalid request method(expected Post but it was sent %v)", traceID, r.Method)
-		maparesponse["Method"] = erro.ErrorNotPost.Error()
+		maparesponse["ClientError"] = erro.ErrorNotPost.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusMethodNotAllowed)
 		response.SendResponse(w, br, traceID)
 		return
@@ -78,7 +78,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	datafromperson, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Authentication: ReadAll Error: %v", traceID, err)
-		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
+		maparesponse["ClientError"] = erro.ErrorReadAll.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID)
 		return
@@ -87,7 +87,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(datafromperson, &newperk)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Authentication: Unmarshal Error: %v", traceID, err)
-		maparesponse["Unmarshal"] = erro.ErrorUnmarshal.Error()
+		maparesponse["ClientError"] = erro.ErrorUnmarshal.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID)
 		return
@@ -104,7 +104,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 			response.SendResponse(w, br, traceID)
 		default:
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] Authentication: Unknown error type", traceID)
-			maparesponse["InternalServer"] = erro.ErrorInternalServer.Error()
+			maparesponse["InternalServerError"] = erro.ErrorInternalServer.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 			response.SendResponse(w, br, traceID)
 		}
@@ -123,7 +123,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	sessionID, ok := r.Context().Value("sessionID").(string)
 	if !ok {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Session ID not found in context", traceID)
-		maparesponse["SessionId"] = erro.ErrorMissingSessionID.Error()
+		maparesponse["ClientError"] = erro.ErrorMissingSessionID.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 		response.SendResponse(w, br, traceID)
 		return
@@ -131,7 +131,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	userIDStr, ok := r.Context().Value("userID").(string)
 	if !ok {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: User ID not found in context", traceID)
-		maparesponse := map[string]string{"UserId": "User ID not found in context"}
+		maparesponse := map[string]string{"ClientError": "User ID not found in context"}
 		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 		response.SendResponse(w, br, traceID)
 		return
@@ -139,14 +139,14 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid User ID format: %v", traceID, err)
-		maparesponse := map[string]string{"UserId": "Invalid User ID format"}
+		maparesponse := map[string]string{"ClientError": "Invalid User ID format"}
 		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 		response.SendResponse(w, br, traceID)
 		return
 	}
 	if r.Method != http.MethodDelete {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid request method(expected Delete but it was sent %v)", traceID, r.Method)
-		maparesponse["Method"] = erro.ErrorNotDelete.Error()
+		maparesponse["ClientError"] = erro.ErrorNotDelete.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusMethodNotAllowed)
 		response.SendResponse(w, br, traceID)
 		return
@@ -154,7 +154,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	passwordBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: ReadAll Error: %v", traceID, err)
-		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
+		maparesponse["ClientError"] = erro.ErrorReadAll.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID)
 		return
@@ -163,7 +163,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	var data map[string]string
 	if err := json.Unmarshal(passwordBytes, &data); err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid password format or empty password", traceID)
-		maparesponse["Password"] = erro.ErrorInvalidPassword.Error()
+		maparesponse["ClientError"] = erro.ErrorInvalidPassword.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID)
 		return
@@ -171,7 +171,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	password, ok := data["password"]
 	if !ok || password == "" {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Password is missing or empty", traceID)
-		maparesponse["Password"] = erro.ErrorInvalidPassword.Error()
+		maparesponse["ClientError"] = erro.ErrorInvalidPassword.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID)
 		return
@@ -189,7 +189,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 			response.SendResponse(w, br, traceID)
 		default:
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Unknown error type", traceID)
-			maparesponse["InternalServer"] = erro.ErrorInternalServer.Error()
+			maparesponse["InternalServerError"] = erro.ErrorInternalServer.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 			response.SendResponse(w, br, traceID)
 		}
