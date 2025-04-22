@@ -29,7 +29,7 @@ func validateContext(ctx context.Context, logger *logger.SessionLogger, place st
 			zap.String("requestID", traceID),
 			zap.Error(ctx.Err()),
 		)
-		return "", status.Errorf(codes.DeadlineExceeded, "request timed out")
+		return "", status.Errorf(codes.Internal, "request timed out")
 	default:
 		return traceID, nil
 	}
@@ -72,6 +72,16 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 	}
 	result, err := redisrepo.Client.HGetAll(ctx, sessionID).Result()
 	if err != nil {
+		if err == redis.Nil {
+			redisrepo.logger.Warn("GetSession: Session not found",
+				zap.String("traceID", traceID),
+				zap.String("sessionID", sessionID),
+			)
+			return &RepositoryResponse{
+				Success: false,
+				Errors:  status.Errorf(codes.InvalidArgument, "Session not found"),
+			}
+		}
 		redisrepo.logger.Error("GetSession: HGetAll session Error",
 			zap.String("traceID", traceID),
 			zap.Error(err),
@@ -79,11 +89,11 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "HGetAll session Error")}
 	}
 	if len(result) == 0 {
-		redisrepo.logger.Error("GetSession: HGetAll session Error",
+		redisrepo.logger.Error("GetSession: Session is empty or invalid",
 			zap.String("traceID", traceID),
 			zap.Error(erro.ErrorInvalidSessionID),
 		)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "HGetAll session Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session is empty or invalid")}
 	}
 	userIDString, ok := result["UserID"]
 	if !ok {
@@ -91,7 +101,7 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 			zap.String("traceID", traceID),
 			zap.Error(erro.ErrorGetUserIdSession),
 		)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Get UserID from session Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Get UserID from session Error")}
 	}
 	expirationTimeString, ok := result["ExpirationTime"]
 	if !ok {
@@ -99,7 +109,7 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 			zap.String("traceID", traceID),
 			zap.Error(erro.ErrorGetExpirationTimeSession),
 		)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Get Expiration Time from session Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Get Expiration Time from session Error")}
 	}
 	expirationTime, err := time.Parse(time.RFC3339, expirationTimeString)
 	if err != nil {
@@ -115,7 +125,7 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 			zap.String("traceID", traceID),
 			zap.Error(err),
 		)
-		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "UUID-parse Error")}
 	}
 	redisrepo.logger.Info("GetSession: Successful session receiving",
 		zap.String("traceID", traceID),
