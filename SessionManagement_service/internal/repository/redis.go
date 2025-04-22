@@ -41,9 +41,9 @@ func (r *RedisObject) Close(client *redis.Client) error {
 func (r *RedisObject) GetLogger() *logger.SessionLogger {
 	return r.Logger
 }
-func ConnectToRedis(cfg configs.Config, redisInterface RedisInterface) (*redis.Client, error) {
+func ConnectToRedis(cfg configs.RedisConfig, redisInterface RedisInterface) (*redis.Client, error) {
 	logger := redisInterface.GetLogger()
-	client, err := redisInterface.Open(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
+	client, err := redisInterface.Open(cfg.Host, cfg.Port, cfg.Password, cfg.DB)
 	if err != nil {
 		return nil, err
 	}
