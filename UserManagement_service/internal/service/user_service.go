@@ -7,12 +7,15 @@ import (
 	"log"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -78,32 +81,29 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		return serviceresponse
 	}
 	userID = bdresponse.UserId
-	if ctxresponse, shouldReturn := checkContext(ctx, registrateMap); shouldReturn {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: Context cancelled before CreateSession: %v", traceid, ctx.Err())
-		return ctxresponse
-	}
 	md := metadata.Pairs("traceID", traceid)
-	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
-	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
-	//retry-запросы
-	if err != nil || !grpcresponse.Success {
-		registrateMap["InternalServerError"] = erro.ErrorGrpcResponse
-		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
+		return as.GrpcClient.CreateSession(ctx, userID.String())
+	}, traceid, registrateMap)
+	if serviceresponse != nil {
+		return serviceresponse
 	}
+	sessionresponse := grpcresponse.(*proto.CreateSessionResponse)
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: Error committing transaction: %v", traceid, err)
-		_, err := as.GrpcClient.DeleteSession(ctx, grpcresponse.SessionID)
-		if err != nil {
-			log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: Failed to delete session after commit failure: %v", traceid, err)
-			registrateMap["InternalServerError"] = erro.ErrorGrpcRollback
-			return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
+		_, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
+			return as.GrpcClient.DeleteSession(ctx, sessionresponse.SessionID)
+		}, traceid, registrateMap)
+		if serviceresponse != nil {
+			log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: Failed to delete session after transaction failure: %v", traceid, serviceresponse.Errors)
 		}
 		registrateMap["InternalServerError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive = false
-	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
-	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
+	timeExpire := time.Unix(sessionresponse.ExpiryTime, 0)
+	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: sessionresponse.SessionID, ExpireSession: timeExpire}
 }
 func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	authenticateMap := make(map[string]error)
@@ -120,21 +120,18 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 		return serviceresponse
 	}
 	userID := bdresponse.UserId
-	if ctxresponse, shouldReturn := checkContext(ctx, authenticateMap); shouldReturn {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: AuthenticateAndLogin: Context cancelled before CreateSession: %v", traceid, ctx.Err())
-		return ctxresponse
-	}
 	md := metadata.Pairs("traceID", traceid)
-	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
-	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
-	//retry-запросы
-	if err != nil || !grpcresponse.Success {
-		authenticateMap["InternalServerError"] = erro.ErrorGrpcResponse
-		return &ServiceResponse{Success: false, Errors: authenticateMap, Type: erro.ServerErrorType}
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
+		return as.GrpcClient.CreateSession(ctx, userID.String())
+	}, traceid, authenticateMap)
+	if serviceresponse != nil {
+		return serviceresponse
 	}
-	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
+	sessionresponse := grpcresponse.(*proto.CreateSessionResponse)
+	timeExpire := time.Unix(sessionresponse.ExpiryTime, 0)
 	log.Printf("[INFO] [UserManagement] [TraceID: %s]: AuthenticateAndLogin: The session was created successfully and the user is authenticated!", traceid)
-	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
+	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: sessionresponse.SessionID, ExpireSession: timeExpire}
 }
 func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse {
 	deletemap := make(map[string]error)
@@ -166,26 +163,18 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	if ctxresponse, shouldReturn := checkContext(ctx, deletemap); shouldReturn {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: DeleteAccount: Context cancelled before DeleteSession: %v", traceid, ctx.Err())
-		return ctxresponse
-	}
 	md := metadata.Pairs("traceID", traceid)
-	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
-	grpcresponse, err := as.GrpcClient.DeleteSession(ctxgrpc, sessionID)
-	//retry-запросы
-	if err != nil || !grpcresponse.Success {
-		deletemap["InternalServerError"] = erro.ErrorGrpcResponse
-		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
+		return as.GrpcClient.DeleteSession(ctx, sessionID)
+	}, traceid, deletemap)
+	if serviceresponse != nil {
+		return serviceresponse
 	}
-	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: DeleteAccount: Error committing transaction: %v", traceid, err)
-		deletemap["InternalServerError"] = erro.ErrorCommitTransaction
-		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
-	}
+	sessionresponse := grpcresponse.(*proto.DeleteSessionResponse)
 	isTransactionActive = false
 	return &ServiceResponse{
-		Success: grpcresponse.Success,
+		Success: sessionresponse.Success,
 	}
 }
 func validatePerson(val *validator.Validate, user *model.Person, flag bool, traceid string) map[string]error {
@@ -247,6 +236,39 @@ func checkContext(ctx context.Context, mapa map[string]error) (*ServiceResponse,
 	default:
 		return nil, false
 	}
+}
+func retryOperationGrpc(ctx context.Context, operation func(context.Context) (interface{}, error), traceID string, errorMap map[string]error) (interface{}, *ServiceResponse) {
+	var response interface{}
+	var err error
+	for i := 1; i <= 5; i++ {
+		if ctxresponse, shouldReturn := checkContext(ctx, errorMap); shouldReturn {
+			log.Printf("[ERROR] [UserManagement] [TraceID: %s]: Context cancelled before operation: %v", traceID, ctx.Err())
+			return nil, ctxresponse
+		}
+		response, err = operation(ctx)
+		if err != nil {
+			st, _ := status.FromError(err)
+			log.Printf("[ERROR] [UserManagement] [TraceID: %s]: Operation attempt %d failed: %v", traceID, i, st.Message())
+			switch st.Code() {
+			case codes.Internal:
+				time.Sleep(time.Duration(i) * time.Second)
+				continue
+			default:
+				errorMap["ClientError"] = err
+				return nil, &ServiceResponse{
+					Success: false,
+					Errors:  errorMap,
+					Type:    erro.ClientErrorType,
+				}
+			}
+		}
+	}
+	if response == nil {
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: Operation failed after all attempts", traceID)
+		errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
+		return nil, &ServiceResponse{Success: false, Errors: errorMap, Type: erro.ServerErrorType}
+	}
+	return response, nil
 }
 func retryOperationBD(ctx context.Context, operation func(context.Context) *repository.DBRepositoryResponse, traceID string, errorMap map[string]error) (*repository.DBRepositoryResponse, *ServiceResponse) {
 	var response *repository.DBRepositoryResponse
