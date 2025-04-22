@@ -8,17 +8,21 @@ import (
 
 type Handler struct {
 	GRPCclient *client.GrpcClient
+	Routes     map[string]string
 }
 
-func NewHandler(grpc *client.GrpcClient) *Handler {
+func NewHandler(grpc *client.GrpcClient, routes map[string]string) *Handler {
 	return &Handler{
 		GRPCclient: grpc,
+		Routes:     routes,
 	}
 }
 func (h *Handler) InitRoutes() *gin.Engine {
 	r := gin.Default()
 	r.Use(middleware.LoggingMiddleware())
-	r.POST("/reg", middleware.NotAuthorityMiddleware(h.GRPCclient), h.RegistrationHandler)
-	r.POST("/login", middleware.AuthorityMiddleware(h.GRPCclient), h.LoginHandler)
+	r.POST("/reg", middleware.NotAuthorityMiddleware(h.GRPCclient), h.ProxyHTTP)
+	r.POST("/auth", middleware.NotAuthorityMiddleware(h.GRPCclient), h.ProxyHTTP)
+	r.DELETE("/del", middleware.NotAuthorityMiddleware(h.GRPCclient), h.ProxyHTTP)
+	r.POST("/logout", middleware.AuthorityMiddleware(h.GRPCclient), h.ProxtGrpc)
 	return r
 }

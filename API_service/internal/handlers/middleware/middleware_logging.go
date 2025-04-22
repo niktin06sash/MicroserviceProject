@@ -24,14 +24,7 @@ func LoggingMiddleware() gin.HandlerFunc {
 		traceID := uuid.New()
 		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
 		c.Request = c.Request.WithContext(ctx)
-
 		logRequest(c.Request, "Logging", traceID.String(), false, "")
 		c.Next()
-
-		if len(c.Errors) > 0 {
-			for _, err := range c.Errors {
-				logRequest(c.Request, "Logging", traceID.String(), true, err.Error())
-			}
-		}
 	}
 }

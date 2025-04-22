@@ -64,9 +64,9 @@ func main() {
 	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
 		log.Fatalf("[ERROR] [API-Service] Key file not found: %s", keyFile)
 	}
-	grpcclient := client.NewGrpcClient(config)
+	grpcclient := client.NewGrpcClient(config.Session)
 	defer grpcclient.Close()
-	handler := handlers.NewHandler()
+	handler := handlers.NewHandler(grpcclient, config.Routes)
 	srv := server.NewServer(handler)
 	serverError := make(chan error, 1)
 	go func() {

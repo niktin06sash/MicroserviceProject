@@ -20,8 +20,8 @@ type GrpcClient struct {
 	conn   *grpc.ClientConn
 }
 
-func NewGrpcClient(cfg configs.Config) *GrpcClient {
-	conn, err := grpc.Dial(cfg.Session.GrpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func NewGrpcClient(cfg configs.SessionServiceConfig) *GrpcClient {
+	conn, err := grpc.Dial(cfg.GrpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Printf("[ERROR] [API-Service] Failed to connect to GRPC-Session Client: %v", err)
 		return nil
