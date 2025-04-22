@@ -18,8 +18,8 @@ func logRequest(r *http.Request, place string, requestID string, isError bool, e
 		log.Printf("[INFO] [UserManagement] [%s] [TraceID: %s] [IP: %s] [Method: %s] [Path: %s]", place, requestID, ip, method, path)
 	}
 }
-func Middleware_Logging(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func Middleware_Logging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		traceID := r.Header.Get("X-Trace-ID")
 		if traceID == "" {
 			log.Println("[WARN] [UserManagement] Warn: Required Request-ID")
@@ -29,5 +29,5 @@ func Middleware_Logging(next http.HandlerFunc) http.HandlerFunc {
 		r = r.WithContext(ctx)
 		logRequest(r, "Logging", traceID, false, "")
 		next.ServeHTTP(w, r)
-	}
+	})
 }
