@@ -5,29 +5,33 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"google.golang.org/grpc/metadata"
 )
 
 func AuthorityMiddleware(grpcClient *client.GrpcClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
 		cookie, err := c.Cookie("session")
 		if err != nil {
 			logRequest(c.Request, "Authority", traceID, true, err.Error())
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			maparesponse["ClientError"] = "Required Session in Cookie"
+			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse)
 			return
 		}
 
 		sessionID := cookie
 		md := metadata.Pairs("traceID", traceID)
 		ctxGRPC := metadata.NewOutgoingContext(c.Request.Context(), md)
-		response, err := grpcClient.ValidateSession(ctxGRPC, sessionID)
-		if err != nil || !response.Success {
+		grpcresponse, err := grpcClient.ValidateSession(ctxGRPC, sessionID)
+		if err != nil || !grpcresponse.Success {
 			logRequest(c.Request, "Authority", traceID, true, err.Error())
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			maparesponse["ClientError"] = "Invalid Session Data!"
+			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse)
 			return
 		}
-		c.Set("userID", response.UserID)
+		c.Set("userID", grpcresponse.UserID)
 		c.Set("sessionID", sessionID)
 		c.Next()
 	}
@@ -35,6 +39,7 @@ func AuthorityMiddleware(grpcClient *client.GrpcClient) gin.HandlerFunc {
 
 func NotAuthorityMiddleware(grpcClient *client.GrpcClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
 		cookie, err := c.Cookie("session")
 		if err != nil {
@@ -46,10 +51,11 @@ func NotAuthorityMiddleware(grpcClient *client.GrpcClient) gin.HandlerFunc {
 		sessionID := cookie
 		md := metadata.Pairs("traceID", traceID)
 		ctxGRPC := metadata.NewOutgoingContext(c.Request.Context(), md)
-		response, err := grpcClient.ValidateSession(ctxGRPC, sessionID)
-		if err == nil || response.Success {
+		grpcresponse, err := grpcClient.ValidateSession(ctxGRPC, sessionID)
+		if err == nil || grpcresponse.Success {
 			logRequest(c.Request, "Not-Authority", traceID, true, err.Error())
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+			maparesponse["ClientError"] = "Invalid Session Data!"
+			response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse)
 			return
 		}
 
