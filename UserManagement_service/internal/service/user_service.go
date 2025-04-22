@@ -84,6 +84,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	}
 	md := metadata.Pairs("traceID", traceid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
+	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
 	if err != nil || !grpcresponse.Success {
 		registrateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
@@ -201,11 +202,11 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool, trac
 					erors["ClientError"] = erro.ErrorNotEmail
 				case "min":
 					errv := fmt.Errorf("%s is too short", err.Field())
-					log.Printf("[INFO] [UserManagement] [TraceID: %s]: %s format error", traceid, err.Field())
+					log.Printf("[INFO] [UserManagement] [TraceID: %s]: %s format error", traceid, errv)
 					erors["ClientError"] = errv
 				default:
 					errv := fmt.Errorf("%s is Null", err.Field())
-					log.Printf("[INFO] [UserManagement] [TraceID: %s]: %s format error", traceid, err.Field())
+					log.Printf("[INFO] [UserManagement] [TraceID: %s]: %s format error", traceid, errv)
 					erors["ClientError"] = errv
 				}
 			}
