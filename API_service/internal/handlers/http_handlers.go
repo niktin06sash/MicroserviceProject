@@ -1,21 +1,24 @@
 package handlers
 
 import (
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 )
 
 type Handler struct {
-	APIMiddleware *middleware.APIMiddleware
+	GRPCclient *client.GrpcClient
 }
 
-func NewHandler(midleware *middleware.APIMiddleware) *Handler {
-	return &Handler{APIMiddleware: midleware}
+func NewHandler(grpc *client.GrpcClient) *Handler {
+	return &Handler{
+		GRPCclient: grpc,
+	}
 }
-func (h *Handler) InitRoutes() *mux.Router {
-	m := mux.NewRouter()
-	m.HandleFunc("/reg", h.APIMiddleware.Middleware()).Methods("POST")
-	m.HandleFunc("/auth", h.APIMiddleware.Middleware()).Methods("POST")
-	m.HandleFunc("/delete", h.APIMiddleware.Middleware()).Methods("DELETE")
-	return m
+func (h *Handler) InitRoutes() *gin.Engine {
+	r := gin.Default()
+	r.Use(middleware.LoggingMiddleware())
+	r.POST("/reg", middleware.NotAuthorityMiddleware(h.GRPCclient), h.RegistrationHandler)
+	r.POST("/login", middleware.AuthorityMiddleware(h.GRPCclient), h.LoginHandler)
+	return r
 }

@@ -14,7 +14,6 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers"
-	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/server"
 	"github.com/spf13/viper"
 )
@@ -67,8 +66,7 @@ func main() {
 	}
 	grpcclient := client.NewGrpcClient(config)
 	defer grpcclient.Close()
-	apimiddleware := middleware.NewAPIMiddleware(grpcclient)
-	handler := handlers.NewHandler(apimiddleware)
+	handler := handlers.NewHandler()
 	srv := server.NewServer(handler)
 	serverError := make(chan error, 1)
 	go func() {
