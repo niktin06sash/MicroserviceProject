@@ -85,8 +85,9 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	md := metadata.Pairs("traceID", traceid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
 	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
+	//retry-запросы
 	if err != nil || !grpcresponse.Success {
-		registrateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
+		registrateMap["InternalServerError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
@@ -126,8 +127,9 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	md := metadata.Pairs("traceID", traceid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
 	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
+	//retry-запросы
 	if err != nil || !grpcresponse.Success {
-		authenticateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
+		authenticateMap["InternalServerError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: authenticateMap, Type: erro.ServerErrorType}
 	}
 	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
@@ -171,8 +173,9 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	md := metadata.Pairs("traceID", traceid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
 	grpcresponse, err := as.GrpcClient.DeleteSession(ctxgrpc, sessionID)
+	//retry-запросы
 	if err != nil || !grpcresponse.Success {
-		deletemap["GrpcResponseError"] = erro.ErrorGrpcResponse
+		deletemap["InternalServerError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
