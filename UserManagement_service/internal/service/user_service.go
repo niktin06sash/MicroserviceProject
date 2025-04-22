@@ -34,7 +34,7 @@ func NewAuthService(dbrepo repository.DBAuthenticateRepos, dbtxmanager repositor
 func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	registrateMap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
-	errorvalidate := validatePerson(as.Validator, user, true)
+	errorvalidate := validatePerson(as.Validator, user, true, traceid)
 	if errorvalidate != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: Validate error %v", traceid, errorvalidate)
 		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
@@ -43,7 +43,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	tx, err := as.Dbtxmanager.BeginTx(ctx)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: TransactionError %v", traceid, err)
-		registrateMap["TransactionError"] = erro.ErrorStartTransaction
+		registrateMap["InternalServerError"] = erro.ErrorStartTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive := true
@@ -64,29 +64,26 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	hashpass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: HashPassError %v", traceid, err)
-		registrateMap["HashPassError"] = erro.ErrorHashPass
+		registrateMap["InternalServerError"] = erro.ErrorHashPass
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	user.Password = string(hashpass)
-	if ctxresponse, shouldReturn := checkContext(ctx, registrateMap); shouldReturn {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: Context cancelled before CreateUser: %v", traceid, ctx.Err())
-		return ctxresponse
-	}
+
 	userID := uuid.New()
 	user.Id = userID
-	response := as.Dbrepo.CreateUser(ctx, tx, user)
-	if !response.Success && response.Errors != nil {
-		registrateMap["RegistrateError"] = response.Errors
-		return &ServiceResponse{Success: response.Success, Errors: registrateMap, Type: response.Type}
+	bdresponse, serviceresponse := retryOperationBD(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
+		return as.Dbrepo.CreateUser(ctx, tx, user)
+	}, traceid, registrateMap)
+	if serviceresponse != nil {
+		return serviceresponse
 	}
-	userID = response.UserId
+	userID = bdresponse.UserId
 	if ctxresponse, shouldReturn := checkContext(ctx, registrateMap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: Context cancelled before CreateSession: %v", traceid, ctx.Err())
 		return ctxresponse
 	}
 	md := metadata.Pairs("traceID", traceid)
 	ctxgrpc := metadata.NewOutgoingContext(ctx, md)
-	grpcresponse, err := as.GrpcClient.CreateSession(ctxgrpc, userID.String())
 	if err != nil || !grpcresponse.Success {
 		registrateMap["GrpcResponseError"] = erro.ErrorGrpcResponse
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
@@ -96,34 +93,31 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		_, err := as.GrpcClient.DeleteSession(ctx, grpcresponse.SessionID)
 		if err != nil {
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s]: RegistrateAndLogin: Failed to delete session after commit failure: %v", traceid, err)
-			registrateMap["GrpcRollbackError"] = erro.ErrorGrpcRollback
+			registrateMap["InternalServerError"] = erro.ErrorGrpcRollback
 			return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 		}
-		registrateMap["TransactionError"] = erro.ErrorCommitTransaction
+		registrateMap["InternalServerError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive = false
 	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
-	return &ServiceResponse{Success: true, UserId: response.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
+	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
 func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	authenticateMap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
-	errorvalidate := validatePerson(as.Validator, user, false)
+	errorvalidate := validatePerson(as.Validator, user, false, traceid)
 	if errorvalidate != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: AuthenticateAndLogin: Validate error %v", traceid, errorvalidate)
 		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
 	}
-	if ctxresponse, shouldReturn := checkContext(ctx, authenticateMap); shouldReturn {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: AuthenticateAndLogin: Context cancelled before GetUser: %v", traceid, ctx.Err())
-		return ctxresponse
+	bdresponse, serviceresponse := retryOperationBD(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
+		return as.Dbrepo.GetUser(ctx, user.Email, user.Password)
+	}, traceid, authenticateMap)
+	if serviceresponse != nil {
+		return serviceresponse
 	}
-	response := as.Dbrepo.GetUser(ctx, user.Email, user.Password)
-	if !response.Success {
-		authenticateMap["AuthenticateError"] = response.Errors
-		return &ServiceResponse{Success: response.Success, Errors: authenticateMap, Type: response.Type}
-	}
-	userID := response.UserId
+	userID := bdresponse.UserId
 	if ctxresponse, shouldReturn := checkContext(ctx, authenticateMap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: AuthenticateAndLogin: Context cancelled before CreateSession: %v", traceid, ctx.Err())
 		return ctxresponse
@@ -137,7 +131,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	}
 	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
 	log.Printf("[INFO] [UserManagement] [TraceID: %s]: AuthenticateAndLogin: The session was created successfully and the user is authenticated!", traceid)
-	return &ServiceResponse{Success: true, UserId: response.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
+	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
 func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse {
 	deletemap := make(map[string]error)
@@ -146,7 +140,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	tx, err := as.Dbtxmanager.BeginTx(ctx)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: DeleteAccount: TransactionError %v", traceid, err)
-		deletemap["TransactionError"] = erro.ErrorStartTransaction
+		deletemap["InternalServerError"] = erro.ErrorStartTransaction
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive := true
@@ -163,14 +157,11 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		log.Printf("[INFO] [UserManagement] [TraceID: %s]: DeleteAccount: Transaction was successfully committed", traceid)
 		log.Printf("[INFO] [UserManagement] [TraceID: %s]: DeleteAccount: The user has successfully deleted his account with all data!", traceid)
 	}()
-	if ctxresponse, shouldReturn := checkContext(ctx, deletemap); shouldReturn {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: DeleteAccount: Context cancelled before DeleteUser: %v", traceid, ctx.Err())
-		return ctxresponse
-	}
-	response := as.Dbrepo.DeleteUser(ctx, tx, userid, password)
-	if !response.Success && response.Errors != nil {
-		deletemap["DeleteError"] = response.Errors
-		return &ServiceResponse{Success: response.Success, Errors: deletemap, Type: response.Type}
+	_, serviceresponse := retryOperationBD(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
+		return as.Dbrepo.DeleteUser(ctx, tx, userid, password)
+	}, traceid, deletemap)
+	if serviceresponse != nil {
+		return serviceresponse
 	}
 	if ctxresponse, shouldReturn := checkContext(ctx, deletemap); shouldReturn {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: DeleteAccount: Context cancelled before DeleteSession: %v", traceid, ctx.Err())
@@ -185,7 +176,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	}
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: DeleteAccount: Error committing transaction: %v", traceid, err)
-		deletemap["TransactionError"] = erro.ErrorCommitTransaction
+		deletemap["InternalServerError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive = false
@@ -193,7 +184,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		Success: grpcresponse.Success,
 	}
 }
-func validatePerson(val *validator.Validate, user *model.Person, flag bool) map[string]error {
+func validatePerson(val *validator.Validate, user *model.Person, flag bool, traceid string) map[string]error {
 	personToValidate := *user
 	if !flag {
 		personToValidate.Name = "qwertyuiopasdfghjklzxcvbn"
@@ -206,16 +197,16 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool) map[
 			for _, err := range validationErrors {
 				switch err.Tag() {
 				case "email":
-					log.Println("Email format error")
-					erors[err.Field()] = erro.ErrorNotEmail
+					log.Printf("[INFO] [UserManagement] [TraceID: %s]: Email format error", traceid)
+					erors["ClientError"] = erro.ErrorNotEmail
 				case "min":
 					errv := fmt.Errorf("%s is too short", err.Field())
-					log.Println(err.Field() + " format error")
-					erors[err.Field()] = errv
+					log.Printf("[INFO] [UserManagement] [TraceID: %s]: %s format error", traceid, err.Field())
+					erors["ClientError"] = errv
 				default:
 					errv := fmt.Errorf("%s is Null", err.Field())
-					log.Println(err.Field() + " format error")
-					erors[err.Field()] = errv
+					log.Printf("[INFO] [UserManagement] [TraceID: %s]: %s format error", traceid, err.Field())
+					erors["ClientError"] = errv
 				}
 			}
 			return erors
@@ -244,12 +235,38 @@ func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, trac
 		time.Sleep(100 * time.Millisecond)
 	}
 }
-func checkContext(ctx context.Context, Map map[string]error) (*ServiceResponse, bool) {
+func checkContext(ctx context.Context, mapa map[string]error) (*ServiceResponse, bool) {
 	select {
 	case <-ctx.Done():
-		Map["ContextError"] = erro.ErrorContextTimeout
-		return &ServiceResponse{Success: false, Errors: Map, Type: erro.ServerErrorType}, true
+		mapa["InternalServerError"] = erro.ErrorContextTimeout
+		return &ServiceResponse{Success: false, Errors: mapa, Type: erro.ServerErrorType}, true
 	default:
 		return nil, false
 	}
+}
+func retryOperationBD(ctx context.Context, operation func(context.Context) *repository.DBRepositoryResponse, traceID string, errorMap map[string]error) (*repository.DBRepositoryResponse, *ServiceResponse) {
+	var response *repository.DBRepositoryResponse
+	for i := 1; i <= 5; i++ {
+		if ctxresponse, shouldReturn := checkContext(ctx, errorMap); shouldReturn {
+			log.Printf("[ERROR] [UserManagement] [TraceID: %s]: Context cancelled before operation: %v", traceID, ctx.Err())
+			return nil, ctxresponse
+		}
+		response = operation(ctx)
+		if !response.Success && response.Errors != nil {
+			log.Printf("[ERROR] [UserManagement] [TraceID: %s]: Operation attempt %d failed: %v", traceID, i, response.Errors)
+			if response.Type == erro.ServerErrorType {
+				time.Sleep(time.Duration(i) * time.Second)
+				continue
+			}
+			errorMap["ClientError"] = response.Errors
+			return nil, &ServiceResponse{Success: response.Success, Errors: errorMap, Type: response.Type}
+		}
+		break
+	}
+	if response == nil || response.UserId == uuid.Nil {
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: Operation failed after all attempts", traceID)
+		errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
+		return nil, &ServiceResponse{Success: false, Errors: errorMap, Type: erro.ServerErrorType}
+	}
+	return response, nil
 }
