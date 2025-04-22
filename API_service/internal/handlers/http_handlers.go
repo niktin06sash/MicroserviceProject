@@ -7,7 +7,7 @@ import (
 )
 
 type Handler struct {
-	GRPCclient *client.GrpcClient
+	GRPCclient client.GrpcClientService
 	Routes     map[string]string
 }
 
