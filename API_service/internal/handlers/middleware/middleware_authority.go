@@ -21,7 +21,7 @@ func checkContext(ctx context.Context, traceID string, place string) error {
 		return nil
 	}
 }
-func AuthorityMiddleware(grpcClient *client.GrpcClient) gin.HandlerFunc {
+func Middleware_Authorized(grpcClient *client.GrpcClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
@@ -50,7 +50,7 @@ func AuthorityMiddleware(grpcClient *client.GrpcClient) gin.HandlerFunc {
 	}
 }
 
-func NotAuthorityMiddleware(grpcClient *client.GrpcClient) gin.HandlerFunc {
+func Middleware_AuthorizedNot(grpcClient *client.GrpcClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
