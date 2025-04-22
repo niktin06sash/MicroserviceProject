@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -23,6 +24,8 @@ func LoggingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		traceID := uuid.New()
 		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
 		c.Request = c.Request.WithContext(ctx)
 		logRequest(c.Request, "Logging", traceID.String(), false, "")
 		c.Next()

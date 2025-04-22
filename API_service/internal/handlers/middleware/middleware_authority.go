@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"context"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +11,16 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+func checkContext(ctx context.Context, traceID string, place string) error {
+	select {
+	case <-ctx.Done():
+		err := ctx.Err()
+		log.Printf("[ERROR] [API-Service] [%s] [TraceID: %s] ContextError: %s", place, traceID, err)
+		return err
+	default:
+		return nil
+	}
+}
 func AuthorityMiddleware(grpcClient *client.GrpcClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		maparesponse := make(map[string]string)
@@ -23,8 +35,9 @@ func AuthorityMiddleware(grpcClient *client.GrpcClient) gin.HandlerFunc {
 
 		sessionID := cookie
 		md := metadata.Pairs("traceID", traceID)
-		ctxGRPC := metadata.NewOutgoingContext(c.Request.Context(), md)
-		grpcresponse, err := grpcClient.ValidateSession(ctxGRPC, sessionID)
+		ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
+		//retry-logic
+		grpcresponse, err := grpcClient.ValidateSession(ctx, sessionID)
 		if err != nil || !grpcresponse.Success {
 			logRequest(c.Request, "Authority", traceID, true, err.Error())
 			maparesponse["ClientError"] = "Invalid Session Data!"
@@ -50,8 +63,9 @@ func NotAuthorityMiddleware(grpcClient *client.GrpcClient) gin.HandlerFunc {
 
 		sessionID := cookie
 		md := metadata.Pairs("traceID", traceID)
-		ctxGRPC := metadata.NewOutgoingContext(c.Request.Context(), md)
-		grpcresponse, err := grpcClient.ValidateSession(ctxGRPC, sessionID)
+		ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
+		//retry-logic
+		grpcresponse, err := grpcClient.ValidateSession(ctx, sessionID)
 		if err == nil || grpcresponse.Success {
 			logRequest(c.Request, "Not-Authority", traceID, true, err.Error())
 			maparesponse["ClientError"] = "Invalid Session Data!"
