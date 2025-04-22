@@ -6,6 +6,7 @@ routes:
    /reg: "http://localhost:8082"
    /auth: "http://localhost:8082"
    /del: "http://localhost:8082"
+   /logout: "http://localhost:8082"
 
 ssl:
   cert_file: "cert1.pem"
