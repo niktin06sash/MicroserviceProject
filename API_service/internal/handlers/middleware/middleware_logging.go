@@ -20,7 +20,7 @@ func logRequest(r *http.Request, place string, requestID string, isError bool, e
 		log.Printf("[INFO] [API-Service] [%s] [TraceID: %s] [IP: %s] [Method: %s] [Path: %s]", place, requestID, ip, method, path)
 	}
 }
-func LoggingMiddleware() gin.HandlerFunc {
+func Middleware_Logging() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		traceID := uuid.New()
 		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
