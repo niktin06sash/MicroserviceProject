@@ -123,7 +123,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	sessionID, ok := r.Context().Value("sessionID").(string)
 	if !ok {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Session ID not found in context", traceID)
-		maparesponse["ClientError"] = erro.ErrorMissingSessionID.Error()
+		maparesponse["InternalServerError"] = erro.ErrorMissingSessionID.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 		response.SendResponse(w, br, traceID)
 		return
@@ -131,7 +131,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	userIDStr, ok := r.Context().Value("userID").(string)
 	if !ok {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: User ID not found in context", traceID)
-		maparesponse := map[string]string{"ClientError": "User ID not found in context"}
+		maparesponse["InternalServerError"] = erro.ErrorMissingUserID.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 		response.SendResponse(w, br, traceID)
 		return
@@ -139,7 +139,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid User ID format: %v", traceID, err)
-		maparesponse := map[string]string{"ClientError": "Invalid User ID format"}
+		maparesponse["InternalServerError"] = erro.ErrorMissingUserID.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 		response.SendResponse(w, br, traceID)
 		return
