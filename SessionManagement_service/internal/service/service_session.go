@@ -33,7 +33,7 @@ func validateContext(ctx context.Context, logger *logger.SessionLogger, place st
 			zap.String("traceID", traceID),
 			zap.Error(ctx.Err()),
 		)
-		return "", status.Errorf(codes.DeadlineExceeded, "request timed out")
+		return "", status.Errorf(codes.Internal, "Request timed out")
 	default:
 		return traceID, nil
 	}
