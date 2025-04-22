@@ -16,7 +16,7 @@ func Middleware_Authorized(next http.Handler) http.Handler {
 		userID := r.Header.Get("X-User-ID")
 		if userID == "" {
 			logRequest(r, "Authority", traceID, true, "Required User-ID")
-			maparesponse["UserId"] = erro.ErrorRequiredUserID.Error()
+			maparesponse["InternalServerError"] = erro.ErrorRequiredUserID.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 			response.SendResponse(w, br, traceID)
 			return
@@ -24,18 +24,17 @@ func Middleware_Authorized(next http.Handler) http.Handler {
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID == "" {
 			logRequest(r, "Authority", traceID, true, "Required Session-ID")
-			maparesponse["SessionId"] = erro.ErrorRequiredSessionID.Error()
+			maparesponse["InternalServerError"] = erro.ErrorRequiredSessionID.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 			response.SendResponse(w, br, traceID)
 			return
 		}
 		ctx := context.WithValue(r.Context(), "userID", userID)
 		ctx = context.WithValue(ctx, "sessionID", sessionID)
-		r = r.WithContext(ctx)
-		logRequest(r, "Authority", traceID, false, "")
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		r = r.WithContext(ctx)
+		logRequest(r, "Authority", traceID, false, "")
 		next.ServeHTTP(w, r)
 	})
 }
@@ -46,7 +45,7 @@ func Middleware_AuthorizedNot(next http.Handler) http.Handler {
 		userID := r.Header.Get("X-User-ID")
 		if userID != "" {
 			logRequest(r, "Not-Authority", traceID, true, "Not-Required User-ID")
-			maparesponse["UserId"] = erro.ErrorNotRequiredUserID.Error()
+			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 			response.SendResponse(w, br, traceID)
 			return
@@ -54,15 +53,15 @@ func Middleware_AuthorizedNot(next http.Handler) http.Handler {
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID != "" {
 			logRequest(r, "Not-Authority", traceID, true, "Not-Required Session-ID")
-			maparesponse["SessionId"] = erro.ErrorNotRequiredUserID.Error()
+			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
 			response.SendResponse(w, br, traceID)
 			return
 		}
-		logRequest(r, "Non-Authority", traceID, false, "")
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
 		r = r.WithContext(ctx)
+		logRequest(r, "Non-Authority", traceID, false, "")
 		next.ServeHTTP(w, r)
 	})
 }
