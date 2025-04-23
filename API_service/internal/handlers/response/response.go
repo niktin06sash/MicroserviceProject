@@ -1,6 +1,11 @@
 package response
 
-import "github.com/gin-gonic/gin"
+import (
+	"context"
+	"log"
+
+	"github.com/gin-gonic/gin"
+)
 
 type HTTPResponse struct {
 	Success bool              `json:"success"`
@@ -17,4 +22,14 @@ func SendResponse(c *gin.Context, status int, success bool, data map[string]any,
 		Status:  status,
 	}
 	c.JSON(status, response)
+}
+func CheckContext(ctx context.Context, traceID string, place string) error {
+	select {
+	case <-ctx.Done():
+		err := ctx.Err()
+		log.Printf("[ERROR] [API-Service] [%s] [TraceID: %s] ContextError: %s", place, traceID, err)
+		return err
+	default:
+		return nil
+	}
 }

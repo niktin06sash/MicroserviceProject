@@ -18,11 +18,11 @@ func NewHandler(grpc *client.GrpcClient, routes map[string]string) *Handler {
 	}
 }
 func (h *Handler) InitRoutes() *gin.Engine {
-	r := gin.Default()
-	r.Use(middleware.LoggingMiddleware())
-	r.POST("/reg", middleware.NotAuthorityMiddleware(h.GRPCclient), h.ProxyHTTP)
-	r.POST("/auth", middleware.NotAuthorityMiddleware(h.GRPCclient), h.ProxyHTTP)
-	r.DELETE("/del", middleware.NotAuthorityMiddleware(h.GRPCclient), h.ProxyHTTP)
-	r.POST("/logout", middleware.AuthorityMiddleware(h.GRPCclient), h.ProxtGrpc)
+	r := gin.New()
+	r.Use(middleware.Middleware_Logging())
+	r.POST("/reg", middleware.Middleware_AuthorizedNot(h.GRPCclient), h.ProxyHTTP)
+	r.POST("/auth", middleware.Middleware_AuthorizedNot(h.GRPCclient), h.ProxyHTTP)
+	r.DELETE("/del", middleware.Middleware_Authorized(h.GRPCclient), h.ProxyHTTP)
+	r.POST("/logout", middleware.Middleware_Authorized(h.GRPCclient), h.ProxtGrpc)
 	return r
 }
