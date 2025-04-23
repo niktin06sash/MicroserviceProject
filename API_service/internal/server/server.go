@@ -20,7 +20,7 @@ func (s *Server) Run(port string, handler http.Handler, cert string, key string)
 		WriteTimeout:   10 * time.Second,
 	}
 	log.Println("[INFO] [API-Service] Starting server on port:", port)
-	return s.httpServer.ListenAndServeTLS(cert, key)
+	return s.httpServer.ListenAndServe()
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
