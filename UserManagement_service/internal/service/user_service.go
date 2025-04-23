@@ -56,6 +56,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		}
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, traceid, "RegistrateAndLogin")
+			isTransactionActive = false
 		} else {
 			log.Printf("[INFO] [UserManagement] [TraceID: %s] RegistrateAndLogin: Transaction was successfully committed", traceid)
 			log.Printf("[INFO] [UserManagement] [TraceID: %s] RegistrateAndLogin: The session was created successfully and the user is registered!", traceid)
