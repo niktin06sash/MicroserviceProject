@@ -22,12 +22,12 @@ func logRequest(r *http.Request, place string, requestID string, isError bool, e
 }
 func Middleware_Logging() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		traceID := uuid.New()
+		traceID := uuid.New().String()
 		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		c.Request = c.Request.WithContext(ctx)
-		logRequest(c.Request, "Logging", traceID.String(), false, "")
+		logRequest(c.Request, "Logging", traceID, false, "")
 		c.Next()
 	}
 }
