@@ -25,7 +25,7 @@ func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc 
 		sessionID := cookie
 		md := metadata.Pairs("traceID", traceID)
 		ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
-		err = response.CheckContext(c.Request.Context(), traceID, "ProxyHTTP")
+		err = response.CheckContext(c.Request.Context(), traceID, "Authority")
 		if err != nil {
 			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
 			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
@@ -51,9 +51,16 @@ func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFu
 	return func(c *gin.Context) {
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
+		err := response.CheckContext(c.Request.Context(), traceID, "Not-Authority")
+		if err != nil {
+			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
+			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+			c.Abort()
+			return
+		}
 		cookie, err := c.Cookie("session")
 		if err != nil {
-			logRequest(c.Request, "Not-Authority", traceID, false, "")
+			logRequest(c.Request, "Not-Authority", traceID, false, "Successful unauthorization verification")
 			c.Next()
 			return
 		}
@@ -61,7 +68,7 @@ func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFu
 		sessionID := cookie
 		md := metadata.Pairs("traceID", traceID)
 		ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
-		err = response.CheckContext(c.Request.Context(), traceID, "ProxyHTTP")
+		err = response.CheckContext(c.Request.Context(), traceID, "Not-Authority")
 		if err != nil {
 			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
 			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
