@@ -53,9 +53,9 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		maparesponse["InternalServerError"] = "Proxy Error"
 		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
 	}
-	log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Successful HTTP-request to %s", traceID, target)
+	log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Successful HTTP-request to %s", traceID, targetURL)
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
-func (h *Handler) ProxtGrpc(c *gin.Context) {
+func (h *Handler) ProxyGrpc(c *gin.Context) {
 
 }

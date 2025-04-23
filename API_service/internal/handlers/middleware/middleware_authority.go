@@ -18,6 +18,7 @@ func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc 
 			logRequest(c.Request, "Authority", traceID, true, err.Error())
 			maparesponse["ClientError"] = "Required Session in Cookie"
 			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse)
+			c.Abort()
 			return
 		}
 
@@ -28,6 +29,7 @@ func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc 
 		if err != nil {
 			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
 			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+			c.Abort()
 			return
 		}
 		grpcresponse, err := grpcClient.ValidateSession(ctx, sessionID)
@@ -35,6 +37,7 @@ func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc 
 			logRequest(c.Request, "Authority", traceID, true, err.Error())
 			maparesponse["ClientError"] = "Invalid Session Data!"
 			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse)
+			c.Abort()
 			return
 		}
 		logRequest(c.Request, "Authority", traceID, false, "Successful authorization verification")
@@ -62,6 +65,7 @@ func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFu
 		if err != nil {
 			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
 			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+			c.Abort()
 			return
 		}
 		grpcresponse, err := grpcClient.ValidateSession(ctx, sessionID)
@@ -69,6 +73,7 @@ func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFu
 			logRequest(c.Request, "Not-Authority", traceID, true, err.Error())
 			maparesponse["ClientError"] = "Invalid Session Data!"
 			response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse)
+			c.Abort()
 			return
 		}
 		logRequest(c.Request, "Not-Authority", traceID, false, "Successful unauthorization verification")
