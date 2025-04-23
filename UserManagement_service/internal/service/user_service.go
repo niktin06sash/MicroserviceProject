@@ -56,9 +56,10 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		}
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, traceid, "RegistrateAndLogin")
+		} else {
+			log.Printf("[INFO] [UserManagement] [TraceID: %s] RegistrateAndLogin: Transaction was successfully committed", traceid)
+			log.Printf("[INFO] [UserManagement] [TraceID: %s] RegistrateAndLogin: The session was created successfully and the user is registered!", traceid)
 		}
-		log.Printf("[INFO] [UserManagement] [TraceID: %s] RegistrateAndLogin: Transaction was successfully committed", traceid)
-		log.Printf("[INFO] [UserManagement] [TraceID: %s] RegistrateAndLogin: The session was created successfully and the user is registered!", traceid)
 	}()
 
 	hashpass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
@@ -150,9 +151,10 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		}
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, traceid, "DeleteAccount")
+		} else {
+			log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: Transaction was successfully committed", traceid)
+			log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: The user has successfully deleted his account with all data!", traceid)
 		}
-		log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: Transaction was successfully committed", traceid)
-		log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: The user has successfully deleted his account with all data!", traceid)
 	}()
 	_, serviceresponse := retryOperationDB(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
 		return as.Dbrepo.DeleteUser(ctx, tx, userid, password)
