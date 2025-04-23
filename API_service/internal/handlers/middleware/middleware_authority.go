@@ -37,6 +37,7 @@ func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc 
 			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse)
 			return
 		}
+		logRequest(c.Request, "Authority", traceID, false, "Successful authorization verification")
 		c.Set("userID", grpcresponse.UserID)
 		c.Set("sessionID", sessionID)
 		c.Next()
@@ -70,7 +71,7 @@ func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFu
 			response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse)
 			return
 		}
-
+		logRequest(c.Request, "Not-Authority", traceID, false, "Successful unauthorization verification")
 		c.Next()
 	}
 }

@@ -17,7 +17,7 @@ func logRequest(r *http.Request, place string, requestID string, isError bool, e
 	if isError {
 		log.Printf("[ERROR] [API-Service] [%s] [TraceID: %s] [IP: %s] [Method: %s] [Path: %s] Error: %s", place, requestID, ip, method, path, errorMessage)
 	} else {
-		log.Printf("[INFO] [API-Service] [%s] [TraceID: %s] [IP: %s] [Method: %s] [Path: %s]", place, requestID, ip, method, path)
+		log.Printf("[INFO] [API-Service] [%s] [TraceID: %s] [IP: %s] [Method: %s] [Path: %s] %s", place, requestID, ip, method, path, errorMessage)
 	}
 }
 func Middleware_Logging() gin.HandlerFunc {
