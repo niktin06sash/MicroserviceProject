@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"context"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,17 +9,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func checkContext(ctx context.Context, traceID string, place string) error {
-	select {
-	case <-ctx.Done():
-		err := ctx.Err()
-		log.Printf("[ERROR] [API-Service] [%s] [TraceID: %s] ContextError: %s", place, traceID, err)
-		return err
-	default:
-		return nil
-	}
-}
-func Middleware_Authorized(grpcClient *client.GrpcClient) gin.HandlerFunc {
+func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
@@ -50,7 +38,7 @@ func Middleware_Authorized(grpcClient *client.GrpcClient) gin.HandlerFunc {
 	}
 }
 
-func Middleware_AuthorizedNot(grpcClient *client.GrpcClient) gin.HandlerFunc {
+func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
