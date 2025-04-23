@@ -53,7 +53,7 @@ func AddSessionCookie(w http.ResponseWriter, sessionID string, expireTime time.T
 		Value:    sessionID,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   false, //временное использование так как пока протокол http
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   maxAge,
 	})
@@ -64,7 +64,7 @@ func DeleteSessionCookie(w http.ResponseWriter) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   false, //временное использование так как пока протокол http
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   -1,
 	})
