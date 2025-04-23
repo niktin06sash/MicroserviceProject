@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
@@ -79,7 +78,7 @@ func checkContext(ctx context.Context, mapa map[string]error) (*ServiceResponse,
 func retryOperationGrpc(ctx context.Context, operation func(context.Context) (interface{}, error), traceID string, errorMap map[string]error, place string) (interface{}, *ServiceResponse) {
 	var response interface{}
 	var err error
-	for i := 1; i <= 4; i++ {
+	for i := 1; i <= 3; i++ {
 		if ctxresponse, shouldReturn := checkContext(ctx, errorMap); shouldReturn {
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Context cancelled before operation: %v", traceID, place, ctx.Err())
 			return nil, ctxresponse
@@ -104,18 +103,21 @@ func retryOperationGrpc(ctx context.Context, operation func(context.Context) (in
 					Type:    erro.ClientErrorType,
 				}
 			}
+		} else {
+			return response, nil
 		}
 	}
-	if response == nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Operation failed after all attempts", traceID, place)
-		errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
-		return nil, &ServiceResponse{Success: false, Errors: errorMap, Type: erro.ServerErrorType}
+	log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Operation failed after all attempts", traceID, place)
+	errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
+	return nil, &ServiceResponse{
+		Success: false,
+		Errors:  errorMap,
+		Type:    erro.ServerErrorType,
 	}
-	return response, nil
 }
 func retryOperationDB(ctx context.Context, operation func(context.Context) *repository.DBRepositoryResponse, traceID string, errorMap map[string]error, place string) (*repository.DBRepositoryResponse, *ServiceResponse) {
 	var response *repository.DBRepositoryResponse
-	for i := 1; i <= 4; i++ {
+	for i := 1; i <= 3; i++ {
 		if ctxresponse, shouldReturn := checkContext(ctx, errorMap); shouldReturn {
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Context cancelled before operation: %v", traceID, place, ctx.Err())
 			return nil, ctxresponse
@@ -129,13 +131,15 @@ func retryOperationDB(ctx context.Context, operation func(context.Context) *repo
 			}
 			errorMap["ClientError"] = response.Errors
 			return nil, &ServiceResponse{Success: response.Success, Errors: errorMap, Type: response.Type}
+		} else {
+			return response, nil
 		}
-		break
 	}
-	if response == nil || response.UserId == uuid.Nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Operation failed after all attempts", traceID, place)
-		errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
-		return nil, &ServiceResponse{Success: false, Errors: errorMap, Type: erro.ServerErrorType}
+	log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Operation failed after all attempts", traceID, place)
+	errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
+	return nil, &ServiceResponse{
+		Success: false,
+		Errors:  errorMap,
+		Type:    erro.ServerErrorType,
 	}
-	return response, nil
 }
