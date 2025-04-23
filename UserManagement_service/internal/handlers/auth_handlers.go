@@ -59,7 +59,8 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respdata := map[string]any{"SessionID": regresponse.SessionId, "ExpiryTime": regresponse.ExpireSession}
+	respdata := map[string]any{"UserID": regresponse.UserId}
+	response.AddSessionCookie(w, regresponse.SessionId, regresponse.ExpireSession)
 	br := response.NewSuccessResponse(respdata, http.StatusOK)
 	response.SendResponse(w, br, traceID)
 	log.Printf("[INFO] [UserManagement] [TraceID: %s] Registration: Person with id: %v has successfully registered", traceID, regresponse.UserId)
@@ -111,7 +112,8 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respdata := map[string]any{"SessionID": auresponse.SessionId, "ExpiryTime": auresponse.ExpireSession}
+	respdata := map[string]any{"UserID": auresponse.UserId}
+	response.AddSessionCookie(w, auresponse.SessionId, auresponse.ExpireSession)
 	br := response.NewSuccessResponse(respdata, http.StatusOK)
 	response.SendResponse(w, br, traceID)
 	log.Printf("[INFO] [UserManagement] [TraceID: %s] Authentication: Person with id: %v has successfully authenticated", traceID, auresponse.UserId)
@@ -196,6 +198,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	br := response.NewSuccessResponse(nil, http.StatusOK)
+	response.DeleteSessionCookie(w)
 	response.SendResponse(w, br, traceID)
 	log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: Person with id: %v has successfully delete account with all data", traceID, userID)
 }

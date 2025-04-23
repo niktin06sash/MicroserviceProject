@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 )
 
 type HTTPResponse struct {
@@ -44,6 +45,29 @@ func SendResponse(w http.ResponseWriter, resp HTTPResponse, traceid string) {
 		}, resp.Status))
 	}
 	log.Printf("[INFO] [UserManagement] [TraceID: %s]: Succesfull send response to client", traceid)
+}
+func AddSessionCookie(w http.ResponseWriter, sessionID string, expireTime time.Time) {
+	maxAge := int(time.Until(expireTime).Seconds())
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    sessionID,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   maxAge,
+	})
+}
+func DeleteSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   -1,
+	})
 }
 func ConvertErrorsToString(errors map[string]error) map[string]string {
 	stringMap := make(map[string]string)
