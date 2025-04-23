@@ -92,6 +92,10 @@ func retryOperationGrpc(ctx context.Context, operation func(context.Context) (in
 			case codes.Internal:
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
+			case codes.Unavailable:
+				log.Printf("[WARN] [UserManagement] [TraceID: %s] %s: Server unavailable, retrying (%d)...", traceID, place, i)
+				time.Sleep(time.Duration(i) * time.Second)
+				continue
 			default:
 				errorMap["ClientError"] = err
 				return nil, &ServiceResponse{

@@ -39,7 +39,7 @@ func (g *GrpcClient) CreateSession(ctx context.Context, userd string) (*pb.Creat
 	req := &pb.CreateSessionRequest{UserID: userd}
 	resp, err := g.client.CreateSession(ctx, req)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] CreateSession: Request error to GRPC-Session Client: %v", traceid, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] CreateSession: Request error to GRPC-Session Client %v", traceid, err)
 		return nil, err
 	}
 	log.Printf("[INFO] [UserManagement] [TraceID: %s] CreateSession: Successful request to GRPC-Session Client", traceid)
@@ -50,9 +50,9 @@ func (g *GrpcClient) DeleteSession(ctx context.Context, sessionid string) (*pb.D
 	req := &pb.DeleteSessionRequest{SessionID: sessionid}
 	resp, err := g.client.DeleteSession(ctx, req)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteSession: Request error to GRPC-Session Client(DeleteSession): %v", traceid, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteSession: Request error to GRPC-Session Client %v", traceid, err)
 		return nil, err
 	}
-	log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteSession: Successful request to GRPC-Session Client(DeleteSession)", traceid)
+	log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteSession: Successful request to GRPC-Session Client", traceid)
 	return resp, nil
 }
