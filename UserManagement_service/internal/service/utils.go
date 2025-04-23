@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -56,6 +57,10 @@ func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, trac
 		err := txMgr.RollbackTx(tx)
 		if err == nil {
 			log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: Successful rollback on attempt %d", traceid, place, attempt)
+			return
+		}
+		if errors.Is(err, sql.ErrTxDone) {
+			log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: Transaction is already completed, skipping rollback", traceid, place)
 			return
 		}
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Error rolling back transaction on attempt %d: %v", traceid, place, attempt, err)
