@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -49,9 +50,23 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		req.Header.Set("X-Trace-ID", traceID)
 	}
 	proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, err error) {
+		traceID := req.Context().Value("traceID").(string)
 		log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Proxy error: %s", traceID, err)
-		maparesponse["InternalServerError"] = "Proxy Error"
-		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+		if req.Context().Err() != nil {
+			log.Printf("[WARN] [API-Service] [ProxyHTTP] [TraceID: %v] Context canceled or deadline exceeded", traceID)
+		}
+		maparesponse := map[string]string{"InternalServerError": "Proxy Error"}
+		response := response.HTTPResponse{
+			Success: false,
+			Data:    nil,
+			Errors:  maparesponse,
+			Status:  http.StatusBadGateway,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Failed to send response: %v", traceID, err)
+		}
 	}
 	log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Successful HTTP-request to %s", traceID, targetURL)
 	proxy.ServeHTTP(c.Writer, c.Request)
