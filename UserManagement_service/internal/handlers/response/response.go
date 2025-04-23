@@ -34,17 +34,17 @@ func NewErrorResponse(errors map[string]string, status int) HTTPResponse {
 		Status:  status,
 	}
 }
-func SendResponse(w http.ResponseWriter, resp HTTPResponse, traceid string) {
+func SendResponse(w http.ResponseWriter, resp HTTPResponse, traceid string, place string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(resp.Status)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s]: Failed to encode response: %v", traceid, err)
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Failed to encode response: %v", traceid, place, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(NewErrorResponse(map[string]string{
 			"InternalServerError": "EncoderResponse Error",
 		}, resp.Status))
 	}
-	log.Printf("[INFO] [UserManagement] [TraceID: %s]: Succesfull send response to client", traceid)
+	log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: Succesfull send response to client", traceid, place)
 }
 func AddSessionCookie(w http.ResponseWriter, sessionID string, expireTime time.Time) {
 	maxAge := int(time.Until(expireTime).Seconds())

@@ -18,7 +18,7 @@ func Middleware_Authorized(next http.Handler) http.Handler {
 			logRequest(r, "Authority", traceID, true, "Required User-ID")
 			maparesponse["InternalServerError"] = erro.ErrorRequiredUserID.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, traceID)
+			response.SendResponse(w, br, traceID, "Authority")
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
@@ -26,7 +26,7 @@ func Middleware_Authorized(next http.Handler) http.Handler {
 			logRequest(r, "Authority", traceID, true, "Required Session-ID")
 			maparesponse["InternalServerError"] = erro.ErrorRequiredSessionID.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, traceID)
+			response.SendResponse(w, br, traceID, "Authority")
 			return
 		}
 		ctx := context.WithValue(r.Context(), "userID", userID)
@@ -34,7 +34,7 @@ func Middleware_Authorized(next http.Handler) http.Handler {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		r = r.WithContext(ctx)
-		logRequest(r, "Authority", traceID, false, "")
+		logRequest(r, "Authority", traceID, false, "Successful authorization verification")
 		next.ServeHTTP(w, r)
 	})
 }
@@ -47,7 +47,7 @@ func Middleware_AuthorizedNot(next http.Handler) http.Handler {
 			logRequest(r, "Not-Authority", traceID, true, "Not-Required User-ID")
 			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, traceID)
+			response.SendResponse(w, br, traceID, "Not-Authority")
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
@@ -55,13 +55,13 @@ func Middleware_AuthorizedNot(next http.Handler) http.Handler {
 			logRequest(r, "Not-Authority", traceID, true, "Not-Required Session-ID")
 			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
 			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, traceID)
+			response.SendResponse(w, br, traceID, "Not-Authority")
 			return
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
 		r = r.WithContext(ctx)
-		logRequest(r, "Non-Authority", traceID, false, "")
+		logRequest(r, "Non-Authority", traceID, false, "Successful unauthorization verification")
 		next.ServeHTTP(w, r)
 	})
 }
