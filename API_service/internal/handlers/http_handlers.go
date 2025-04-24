@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	_ "github.com/niktin06sash/MicroserviceProject/API_service/cmd/docs"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Handler struct {
@@ -19,6 +22,7 @@ func NewHandler(grpc *client.GrpcClient, routes map[string]string) *Handler {
 }
 func (h *Handler) InitRoutes() *gin.Engine {
 	r := gin.New()
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.Use(middleware.Middleware_Logging())
 	r.POST("/reg", middleware.Middleware_AuthorizedNot(h.GRPCclient), h.ProxyHTTP)
 	r.POST("/auth", middleware.Middleware_AuthorizedNot(h.GRPCclient), h.ProxyHTTP)
