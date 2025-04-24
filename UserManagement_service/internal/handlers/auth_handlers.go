@@ -149,7 +149,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid request method(expected Delete but it was sent %v)", traceID, r.Method)
 		maparesponse["ClientError"] = erro.ErrorNotDelete.Error()
-		br := response.NewErrorResponse(maparesponse, http.StatusMethodNotAllowed)
+		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID, "DeleteAccount", r.Context())
 		return
 	}
