@@ -11,6 +11,40 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 )
 
+// ProxyHTTP handles HTTP requests and proxies them to the target service.
+// @Summary Register a new user
+// @Description Register a new user by sending user data to the target service.
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Param request body PersonReg true "User registration data"
+// @Success 200 {object} HTTPResponse "User successfully registered"
+// @Failure 400 {object} HTTPResponse "Invalid input data"
+// @Failure 500 {object} HTTPResponse "Internal server error"
+// @Router /reg [post]
+//
+// @Summary Authenticate a user
+// @Description Authenticate a user by sending credentials to the target service.
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Param request body PersonAuth true "User credentials"
+// @Success 200 {object} HTTPResponse "Authentication successful"
+// @Failure 400 {object} HTTPResponse "Invalid input data"
+// @Failure 500 {object} HTTPResponse "Internal server error"
+// @Router /auth [post]
+//
+// @Summary Delete a user
+// @Description Delete a user by sending a DELETE request with session and user ID.
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Param session cookie string true "Session ID for authorization"
+// @Param request body PersonDelete true "User credentials"
+// @Success 200 {object} HTTPResponse "User successfully deleted"
+// @Failure 400 {object} HTTPResponse "Invalid input data"
+// @Failure 500 {object} HTTPResponse "Internal server error"
+// @Router /del [delete]
 func (h *Handler) ProxyHTTP(c *gin.Context) {
 	traceID := c.MustGet("traceID").(string)
 	maparesponse := make(map[string]string)
