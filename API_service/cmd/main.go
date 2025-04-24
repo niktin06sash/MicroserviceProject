@@ -14,6 +14,8 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers"
+	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
+	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/server"
 	"github.com/spf13/viper"
 )
@@ -21,9 +23,10 @@ import (
 // @title API-Gateway
 // @version 1.0
 // @description This is a sample server for managing users and sessions.
+
 // @host localhost:8083
 // @BasePath /
-// @schemes http
+
 func main() {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {

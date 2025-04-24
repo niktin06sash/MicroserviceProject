@@ -3,10 +3,10 @@ server:
 session_service:
   grpc_address: "localhost:50052"
 routes:
-   /reg: "http://localhost:8082"
-   /auth: "http://localhost:8082"
-   /del: "http://localhost:8082"
-   /logout: "http://localhost:8082"
+   /api/reg: "http://localhost:8082/reg"
+   /api/auth: "http://localhost:8082/auth"
+   /api/del: "http://localhost:8082/del"
+   /api/logout: "http://localhost:8082/logout"
 
 ssl:
   cert_file: "cert1.pem"
