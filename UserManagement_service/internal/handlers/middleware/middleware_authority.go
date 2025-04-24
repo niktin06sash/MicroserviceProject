@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
@@ -31,8 +30,6 @@ func Middleware_Authorized(next http.Handler) http.Handler {
 		}
 		ctx := context.WithValue(r.Context(), "userID", userID)
 		ctx = context.WithValue(ctx, "sessionID", sessionID)
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
 		r = r.WithContext(ctx)
 		logRequest(r, "Authority", traceID, false, "Successful authorization verification")
 		next.ServeHTTP(w, r)
@@ -58,9 +55,6 @@ func Middleware_AuthorizedNot(next http.Handler) http.Handler {
 			response.SendResponse(w, br, traceID, "Not-Authority")
 			return
 		}
-		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-		defer cancel()
-		r = r.WithContext(ctx)
 		logRequest(r, "Non-Authority", traceID, false, "Successful unauthorization verification")
 		next.ServeHTTP(w, r)
 	})
