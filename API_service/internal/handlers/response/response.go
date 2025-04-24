@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// swagger:model HTTPResponse
 type HTTPResponse struct {
 	Success bool              `json:"success"`
 	Errors  map[string]string `json:"errors"`
@@ -14,17 +15,20 @@ type HTTPResponse struct {
 	Status  int               `json:"status"`
 }
 
+// swagger:model PersonReg
 type PersonReg struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+// swagger:model PersonAuth
 type PersonAuth struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+// swagger:model PersonDelete
 type PersonDelete struct {
 	Password string `json:"password"`
 }

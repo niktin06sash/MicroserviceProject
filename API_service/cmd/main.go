@@ -23,9 +23,9 @@ import (
 // @title API-Gateway
 // @version 1.0
 // @description This is a sample server for managing users and sessions.
-
 // @host localhost:8083
 // @BasePath /
+// @schemes http
 
 func main() {
 	_, filename, _, ok := runtime.Caller(0)
