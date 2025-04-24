@@ -7,12 +7,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// swagger:model HTTPResponse
 type HTTPResponse struct {
 	Success bool              `json:"success"`
 	Errors  map[string]string `json:"errors"`
 	Data    map[string]any    `json:"data,omitempty"`
 	Status  int               `json:"status"`
+}
+
+type PersonReg struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type PersonAuth struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type PersonDelete struct {
+	Password string `json:"password"`
 }
 
 func SendResponse(c *gin.Context, status int, success bool, data map[string]any, errors map[string]string) {
