@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -26,6 +27,8 @@ func Middleware_Logging(next http.Handler) http.Handler {
 			traceID = uuid.New().String()
 		}
 		ctx := context.WithValue(r.Context(), "traceID", traceID)
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
 		r = r.WithContext(ctx)
 		logRequest(r, "Logging", traceID, false, "")
 		next.ServeHTTP(w, r)
