@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	_ "github.com/niktin06sash/MicroserviceProject/API_service/docs"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	swaggerFiles "github.com/swaggo/files"

@@ -60,10 +60,10 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 			Success: false,
 			Data:    nil,
 			Errors:  maparesponse,
-			Status:  http.StatusBadGateway,
+			Status:  http.StatusInternalServerError,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadGateway)
+		w.WriteHeader(http.StatusInternalServerError)
 		if err := json.NewEncoder(w).Encode(response); err != nil {
 			log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Failed to send response: %v", traceID, err)
 		}

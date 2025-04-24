@@ -1,18 +1,22 @@
 package handlers
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
+)
 
-//@Summary Register a new user
-//@Description Register a new user by sending user data to the target service.
-//@Tags User Management
-//@Accept json
-//@Produce json
-//@Param input body PersonReg true "User registration data"
-//@Success 200 {object} map[string]string "User successfully registered"
-//@Failure 400 {object} map[string]string "Invalid input data"
-//@Failure 403 {object} map[string]string "Forbidden"
-//@Failure 500 {object} map[string]string "Internal server error"
-//@Router /api/reg [post]
+// @Summary Register a new user
+// @Description Register a new user by sending user data to the target service.
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Param Cookie header string false "Session ID for authorization"
+// @Param request body response.PersonReg true "User registration data"
+// @Success 200 {object} response.HTTPResponse "User successfully registered"
+// @Failure 400 {object} response.HTTPResponse "Invalid input data"
+// @Failure 403 {object} response.HTTPResponse "Forbidden"
+// @Failure 500 {object} response.HTTPResponse "Internal server error"
+// @Router /api/reg [post]
 func (h *Handler) Registration(c *gin.Context) {
 	h.ProxyHTTP(c)
 }
@@ -22,11 +26,12 @@ func (h *Handler) Registration(c *gin.Context) {
 // @Tags User Management
 // @Accept json
 // @Produce json
-// @Param input body PersonAuth true "User credentials"
-// @Success 200 {object} HTTPResponse "Authentication successful"
-// @Failure 400 {object} HTTPResponse "Invalid input data"
-// @Failure 403 {object} HTTPResponse "Forbidden"
-// @Failure 500 {object} HTTPResponse "Internal server error"
+// @Param Cookie header string false "Session ID for authorization"
+// @Param input body response.PersonAuth true "User credentials"
+// @Success 200 {object} response.HTTPResponse "Authentication successful"
+// @Failure 400 {object} response.HTTPResponse "Invalid input data"
+// @Failure 403 {object} response.HTTPResponse "Forbidden"
+// @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/auth [post]
 func (h *Handler) Authentication(c *gin.Context) {
 	h.ProxyHTTP(c)
@@ -37,12 +42,12 @@ func (h *Handler) Authentication(c *gin.Context) {
 // @Tags User Management
 // @Accept json
 // @Produce json
-// @Param session cookie string true "Session ID for authorization"
-// @Param input body PersonDelete true "User credentials"
-// @Success 200 {object} HTTPResponse "User successfully deleted"
-// @Failure 400 {object} HTTPResponse"Invalid input data"
-// @Failure 401 {object} HTTPResponse "Unathorized"
-// @Failure 500 {object} HTTPResponse "Internal server error"
+// @Param Cookie header string true "Session ID for authorization"
+// @Param input body response.PersonDelete true "User credentials"
+// @Success 200 {object} response.HTTPResponse "User successfully deleted"
+// @Failure 400 {object} response.HTTPResponse"Invalid input data"
+// @Failure 401 {object} response.HTTPResponse "Unathorized"
+// @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/del [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
 	h.ProxyHTTP(c)
