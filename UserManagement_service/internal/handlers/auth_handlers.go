@@ -19,7 +19,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Registration: Invalid request method(expected Post but it was sent %v)", traceID, r.Method)
 		maparesponse["ClientError"] = erro.ErrorNotPost.Error()
-		br := response.NewErrorResponse(maparesponse, http.StatusMethodNotAllowed)
+		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID, "Registration", r.Context())
 		return
 	}
@@ -72,7 +72,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Authentication: Invalid request method(expected Post but it was sent %v)", traceID, r.Method)
 		maparesponse["ClientError"] = erro.ErrorNotPost.Error()
-		br := response.NewErrorResponse(maparesponse, http.StatusMethodNotAllowed)
+		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID, "Authentication", r.Context())
 		return
 	}
