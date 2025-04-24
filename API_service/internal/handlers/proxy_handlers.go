@@ -50,7 +50,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		req.Header.Set("X-Trace-ID", traceID)
 	}
 	proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, err error) {
-		traceID := req.Context().Value("traceID").(string)
+		traceID := c.MustGet("traceID").(string)
 		log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Proxy error: %s", traceID, err)
 		if req.Context().Err() != nil {
 			log.Printf("[WARN] [API-Service] [ProxyHTTP] [TraceID: %v] Context canceled or deadline exceeded", traceID)
