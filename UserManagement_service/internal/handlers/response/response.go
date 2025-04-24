@@ -1,6 +1,7 @@
 package response
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -34,8 +35,19 @@ func NewErrorResponse(errors map[string]string, status int) HTTPResponse {
 		Status:  status,
 	}
 }
-func SendResponse(w http.ResponseWriter, resp HTTPResponse, traceid string, place string) {
+func SendResponse(w http.ResponseWriter, resp HTTPResponse, traceid string, place string, ctx context.Context) {
 	w.Header().Set("Content-Type", "application/json")
+	if ctx.Err() != nil {
+		log.Printf("[WARN] [UserManagement] [TraceID: %s] %s: Context canceled or deadline exceeded", traceid, place)
+		w.WriteHeader(http.StatusInternalServerError)
+		if err := json.NewEncoder(w).Encode(NewErrorResponse(
+			map[string]string{"InternalServerError": "Context deadline exceeded"},
+			http.StatusInternalServerError,
+		)); err != nil {
+			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Failed to send timeout response: %v", traceid, place, err)
+		}
+		return
+	}
 	w.WriteHeader(resp.Status)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Failed to encode response: %v", traceid, place, err)
