@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// swagger:model HTTPResponse
 type HTTPResponse struct {
 	Success bool              `json:"success"`
 	Errors  map[string]string `json:"errors"`
