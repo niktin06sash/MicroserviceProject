@@ -27,7 +27,7 @@ func Middleware_Logging() gin.HandlerFunc {
 		c.Set("traceID", traceID)
 
 		ctx := c.Request.Context()
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
 
 		c.Request = c.Request.WithContext(ctx)
