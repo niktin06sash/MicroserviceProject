@@ -63,7 +63,7 @@ func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFu
 			c.Next()
 			return
 		}
-		_, errv := retryAuthorized(c, grpcClient, sessionID, traceID, "Not-Authority")
+		_, errv := retryAuthorized_Not(c, grpcClient, sessionID, traceID, "Not-Authority")
 		if errv != nil {
 			switch errv.GetTypeError() {
 			case erro.ClientErrorType:
