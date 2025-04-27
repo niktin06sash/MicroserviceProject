@@ -39,7 +39,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		req.Host = target.Host
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
-		req.URL.Path = c.Request.URL.Path
+		req.URL.Path = target.Path
 		if userID, exists := c.Get("userID"); exists {
 			req.Header.Set("X-User-ID", userID.(string))
 		}
