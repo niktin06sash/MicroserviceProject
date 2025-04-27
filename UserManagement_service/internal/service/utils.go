@@ -13,6 +13,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -84,6 +85,8 @@ func retryOperationGrpc(ctx context.Context, operation func(context.Context) (in
 	var response interface{}
 	var err error
 	for i := 1; i <= 3; i++ {
+		md := metadata.Pairs("traceID", traceID)
+		ctx = metadata.NewOutgoingContext(ctx, md)
 		if ctxresponse, shouldReturn := checkContext(ctx, errorMap); shouldReturn {
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Context cancelled before operation: %v", traceID, place, ctx.Err())
 			return nil, ctxresponse
@@ -93,15 +96,9 @@ func retryOperationGrpc(ctx context.Context, operation func(context.Context) (in
 			st, _ := status.FromError(err)
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Operation attempt %d failed: %v", traceID, place, i, st.Message())
 			switch st.Code() {
-			case codes.Internal:
-				time.Sleep(time.Duration(i) * time.Second)
-				continue
-			case codes.Unavailable:
+			case codes.Internal, codes.Unavailable, codes.Canceled:
 				log.Printf("[WARN] [UserManagement] [TraceID: %s] %s: Server unavailable, retrying (%d)...", traceID, place, i)
 				time.Sleep(time.Duration(i) * time.Second)
-				continue
-			case codes.Canceled:
-				log.Printf("[WARN] [UserManagement] [TraceID: %s] %s: Server unavailable, retrying (%d)...", traceID, place, i)
 				continue
 			default:
 				errorMap["ClientError"] = err

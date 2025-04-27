@@ -12,7 +12,6 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
-	"google.golang.org/grpc/metadata"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -81,8 +80,6 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		return serviceresponse
 	}
 	userID = bdresponse.UserId
-	md := metadata.Pairs("traceID", traceid)
-	ctx = metadata.NewOutgoingContext(ctx, md)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
 		return as.GrpcClient.CreateSession(ctx, userID.String())
 	}, traceid, registrateMap, "RegistrateAndLogin")
@@ -120,8 +117,6 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 		return serviceresponse
 	}
 	userID := bdresponse.UserId
-	md := metadata.Pairs("traceID", traceid)
-	ctx = metadata.NewOutgoingContext(ctx, md)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
 		return as.GrpcClient.CreateSession(ctx, userID.String())
 	}, traceid, authenticateMap, "AuthenticateAndLogin")
@@ -166,8 +161,6 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	md := metadata.Pairs("traceID", traceid)
-	ctx = metadata.NewOutgoingContext(ctx, md)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
 		return as.GrpcClient.DeleteSession(ctx, sessionID)
 	}, traceid, deletemap, "DeleteAccount")
