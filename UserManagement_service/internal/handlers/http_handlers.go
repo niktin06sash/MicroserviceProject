@@ -30,5 +30,6 @@ func (h *Handler) InitRoutes() *mux.Router {
 	authNotGroup.HandleFunc("/reg", h.Registration).Methods("POST")
 	authNotGroup.HandleFunc("/auth", h.Authentication).Methods("POST")
 	authGroup.HandleFunc("/del", h.DeleteAccount).Methods("DELETE")
+	authGroup.HandleFunc("/logout", h.Logout).Methods("DELETE")
 	return m
 }

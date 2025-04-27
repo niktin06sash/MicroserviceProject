@@ -27,6 +27,6 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	r.POST("/api/reg", middleware.Middleware_AuthorizedNot(h.GRPCclient), h.Registration)
 	r.POST("/api/auth", middleware.Middleware_AuthorizedNot(h.GRPCclient), h.Authentication)
 	r.DELETE("/api/del", middleware.Middleware_Authorized(h.GRPCclient), h.DeleteUser)
-	r.POST("/api/logout", middleware.Middleware_Authorized(h.GRPCclient), h.ProxyGrpc)
+	r.POST("/api/logout", middleware.Middleware_Authorized(h.GRPCclient), h.Logout)
 	return r
 }
