@@ -52,6 +52,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] RegistrateAndLogin: Panic occurred: %v", traceid, r)
 			if isTransactionActive {
 				rollbackTransaction(as.Dbtxmanager, tx, traceid, "RegistrateAndLogin")
+				isTransactionActive = false
 			}
 		}
 		if isTransactionActive {
@@ -148,6 +149,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Panic occurred: %v", traceid, r)
 			if isTransactionActive {
 				rollbackTransaction(as.Dbtxmanager, tx, traceid, "DeleteAccount")
+				isTransactionActive = false
 			}
 		}
 		if isTransactionActive {
@@ -173,6 +175,11 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		return serviceresponse
 	}
 	sessionresponse := grpcresponse.(*proto.DeleteSessionResponse)
+	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Error committing transaction: %v", traceid, err)
+		deletemap["InternalServerError"] = erro.ErrorCommitTransaction
+		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
+	}
 	isTransactionActive = false
 	return &ServiceResponse{
 		Success: sessionresponse.Success,
