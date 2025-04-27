@@ -152,6 +152,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		}
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, traceid, "DeleteAccount")
+			isTransactionActive = false
 		} else {
 			log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: Transaction was successfully committed", traceid)
 			log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: The user has successfully deleted his account with all data!", traceid)

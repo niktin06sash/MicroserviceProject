@@ -79,6 +79,6 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteUser: %v", traceid, err)
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType}
 	}
-	log.Printf("[INFO] [UserManagement] [TraceID: %s]: Successful delete person!", traceid)
+	log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteUser: Successful delete person!", traceid)
 	return &DBRepositoryResponse{Success: true}
 }
