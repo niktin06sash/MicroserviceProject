@@ -1,20 +1,19 @@
 package middleware
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
-	"google.golang.org/grpc/metadata"
 )
 
 func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
-		cookie, err := c.Cookie("session")
+		sessionID, err := c.Cookie("session")
 		if err != nil {
 			logRequest(c.Request, "Authority", traceID, true, err.Error())
 			maparesponse["ClientError"] = "Required Session in Cookie"
@@ -22,25 +21,23 @@ func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc 
 			c.Abort()
 			return
 		}
+		grpcresponse, errv := retryAuthorized(c, grpcClient, sessionID, traceID, "Authority")
+		if errv != nil {
+			switch errv.GetTypeError() {
+			case erro.ClientErrorType:
+				logRequest(c.Request, "Authority", traceID, true, "Unauthorized-request for authorized users")
+				maparesponse["ClientError"] = errv.Error()
+				response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse)
+				c.Abort()
+				return
 
-		sessionID := cookie
-		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
-		md := metadata.Pairs("traceID", traceID)
-		ctx = metadata.NewOutgoingContext(ctx, md)
-		err = response.CheckContext(ctx, traceID, "Authority")
-		if err != nil {
-			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
-			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
-			c.Abort()
-			return
-		}
-		grpcresponse, err := grpcClient.ValidateSession(ctx, sessionID)
-		if err != nil || !grpcresponse.Success {
-			logRequest(c.Request, "Authority", traceID, true, "Unauthorized-request for authorized users")
-			maparesponse["ClientError"] = "Invalid Session Data!"
-			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse)
-			c.Abort()
-			return
+			case erro.ServerErrorType:
+				logRequest(c.Request, "Authority", traceID, true, "Internal server error during authorization")
+				maparesponse["InternalServerError"] = errv.Error()
+				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+				c.Abort()
+				return
+			}
 		}
 		logRequest(c.Request, "Authority", traceID, false, "Successful authorization verification")
 		c.Set("userID", grpcresponse.UserID)
@@ -60,31 +57,29 @@ func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFu
 			c.Abort()
 			return
 		}
-		cookie, err := c.Cookie("session")
+		sessionID, err := c.Cookie("session")
 		if err != nil {
 			logRequest(c.Request, "Not-Authority", traceID, false, "Successful unauthorization verification")
 			c.Next()
 			return
 		}
+		_, errv := retryAuthorized(c, grpcClient, sessionID, traceID, "Not-Authority")
+		if errv != nil {
+			switch errv.GetTypeError() {
+			case erro.ClientErrorType:
+				logRequest(c.Request, "Authority", traceID, true, "Authorized-request for unauthorized users")
+				maparesponse["ClientError"] = errv.Error()
+				response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse)
+				c.Abort()
+				return
 
-		sessionID := cookie
-		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
-		md := metadata.Pairs("traceID", traceID)
-		ctx = metadata.NewOutgoingContext(ctx, md)
-		err = response.CheckContext(ctx, traceID, "Not-Authority")
-		if err != nil {
-			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
-			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
-			c.Abort()
-			return
-		}
-		grpcresponse, err := grpcClient.ValidateSession(ctx, sessionID)
-		if err == nil || grpcresponse.Success {
-			logRequest(c.Request, "Not-Authority", traceID, true, "Authorized-request for unauthorized users")
-			maparesponse["ClientError"] = "Invalid Session Data!"
-			response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse)
-			c.Abort()
-			return
+			case erro.ServerErrorType:
+				logRequest(c.Request, "Authority", traceID, true, "Internal server error during authorization")
+				maparesponse["InternalServerError"] = errv.Error()
+				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+				c.Abort()
+				return
+			}
 		}
 		logRequest(c.Request, "Not-Authority", traceID, false, "Successful unauthorization verification")
 		c.Next()
