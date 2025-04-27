@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -23,9 +24,10 @@ func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc 
 		}
 
 		sessionID := cookie
+		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
 		md := metadata.Pairs("traceID", traceID)
-		ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
-		err = response.CheckContext(c.Request.Context(), traceID, "Authority")
+		ctx = metadata.NewOutgoingContext(ctx, md)
+		err = response.CheckContext(ctx, traceID, "Authority")
 		if err != nil {
 			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
 			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
@@ -34,7 +36,7 @@ func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc 
 		}
 		grpcresponse, err := grpcClient.ValidateSession(ctx, sessionID)
 		if err != nil || !grpcresponse.Success {
-			logRequest(c.Request, "Authority", traceID, true, err.Error())
+			logRequest(c.Request, "Authority", traceID, true, "Unauthorized-request for authorized users")
 			maparesponse["ClientError"] = "Invalid Session Data!"
 			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse)
 			c.Abort()
@@ -66,9 +68,10 @@ func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFu
 		}
 
 		sessionID := cookie
+		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
 		md := metadata.Pairs("traceID", traceID)
-		ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
-		err = response.CheckContext(c.Request.Context(), traceID, "Not-Authority")
+		ctx = metadata.NewOutgoingContext(ctx, md)
+		err = response.CheckContext(ctx, traceID, "Not-Authority")
 		if err != nil {
 			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
 			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
@@ -77,7 +80,7 @@ func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFu
 		}
 		grpcresponse, err := grpcClient.ValidateSession(ctx, sessionID)
 		if err == nil || grpcresponse.Success {
-			logRequest(c.Request, "Not-Authority", traceID, true, err.Error())
+			logRequest(c.Request, "Not-Authority", traceID, true, "Authorized-request for unauthorized users")
 			maparesponse["ClientError"] = "Invalid Session Data!"
 			response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse)
 			c.Abort()
