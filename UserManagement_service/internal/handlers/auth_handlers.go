@@ -14,6 +14,7 @@ import (
 )
 
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
 	if r.Method != http.MethodPost {
@@ -67,6 +68,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
 	if r.Method != http.MethodPost {
@@ -120,6 +122,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
 	sessionID, ok := r.Context().Value("sessionID").(string)
@@ -161,7 +164,6 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		response.SendResponse(w, br, traceID, "DeleteAccount", r.Context())
 		return
 	}
-	defer r.Body.Close()
 	var data map[string]string
 	if err := json.Unmarshal(passwordBytes, &data); err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid password format or empty password", traceID)
@@ -201,4 +203,62 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	response.DeleteSessionCookie(w)
 	response.SendResponse(w, br, traceID, "DeleteAccount", r.Context())
 	log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: Person with id: %v has successfully delete account with all data", traceID, userID)
+}
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	maparesponse := make(map[string]string)
+	traceID := r.Context().Value("traceID").(string)
+	sessionID, ok := r.Context().Value("sessionID").(string)
+	if !ok {
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Logout: Session ID not found in context", traceID)
+		maparesponse["InternalServerError"] = erro.ErrorMissingSessionID.Error()
+		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
+		response.SendResponse(w, br, traceID, "Logout", r.Context())
+		return
+	}
+	userIDStr, ok := r.Context().Value("userID").(string)
+	if !ok {
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Logout: User ID not found in context", traceID)
+		maparesponse["InternalServerError"] = erro.ErrorMissingUserID.Error()
+		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
+		response.SendResponse(w, br, traceID, "Logout", r.Context())
+		return
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Logout: Invalid User ID format: %v", traceID, err)
+		maparesponse["InternalServerError"] = erro.ErrorMissingUserID.Error()
+		br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
+		response.SendResponse(w, br, traceID, "Logout", r.Context())
+		return
+	}
+	if r.Method != http.MethodDelete {
+		log.Printf("[ERROR] [UserManagement] [TraceID: %s] Logout: Invalid request method(expected Delete but it was sent %v)", traceID, r.Method)
+		maparesponse["ClientError"] = erro.ErrorNotDelete.Error()
+		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
+		response.SendResponse(w, br, traceID, "Logout", r.Context())
+		return
+	}
+	logresponse := h.services.Logout(r.Context(), sessionID)
+	if !logresponse.Success {
+		stringMap := response.ConvertErrorsToString(logresponse.Errors)
+		switch logresponse.Type {
+		case erro.ClientErrorType:
+			br := response.NewErrorResponse(stringMap, http.StatusBadRequest)
+			response.SendResponse(w, br, traceID, "Logout", r.Context())
+		case erro.ServerErrorType:
+			br := response.NewErrorResponse(stringMap, http.StatusInternalServerError)
+			response.SendResponse(w, br, traceID, "Logout", r.Context())
+		default:
+			log.Printf("[ERROR] [UserManagement] [TraceID: %s] Logout: Unknown error type", traceID)
+			maparesponse["InternalServerError"] = erro.ErrorInternalServer.Error()
+			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
+			response.SendResponse(w, br, traceID, "Logout", r.Context())
+		}
+		return
+	}
+	br := response.NewSuccessResponse(nil, http.StatusOK)
+	response.DeleteSessionCookie(w)
+	response.SendResponse(w, br, traceID, "Logout", r.Context())
+	log.Printf("[INFO] [UserManagement] [TraceID: %s] Logout: Person with id: %v has successfully logged out of the account", traceID, userID)
 }

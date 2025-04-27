@@ -178,3 +178,16 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		Success: sessionresponse.Success,
 	}
 }
+func (as *AuthService) Logout(ctx context.Context, sessionID string) *ServiceResponse {
+	authenticateMap := make(map[string]error)
+	traceid := ctx.Value("traceID").(string)
+	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
+		return as.GrpcClient.DeleteSession(ctx, sessionID)
+	}, traceid, authenticateMap, "Logout")
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	sessionresponse := grpcresponse.(*proto.DeleteSessionResponse)
+	log.Printf("[INFO] [UserManagement] [TraceID: %s] Logout: The user has successfully logged out of the account!", traceid)
+	return &ServiceResponse{Success: sessionresponse.Success}
+}

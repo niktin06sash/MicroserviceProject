@@ -18,6 +18,7 @@ type UserAuthentication interface {
 	RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
 	AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
 	DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse
+	Logout(ctx context.Context, sessionID string) *ServiceResponse
 }
 type Service struct {
 	UserAuthentication

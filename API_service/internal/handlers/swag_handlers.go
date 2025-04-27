@@ -42,10 +42,23 @@ func (h *Handler) Authentication(c *gin.Context) {
 // @Produce json
 // @Param input body response.PersonDelete true "User credentials"
 // @Success 200 {object} response.HTTPResponse "User successfully deleted"
-// @Failure 400 {object} response.HTTPResponse"Invalid input data"
+// @Failure 400 {object} response.HTTPResponse "Invalid input data"
 // @Failure 401 {object} response.HTTPResponse "Unauthorized"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/del [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
+	h.ProxyHTTP(c)
+}
+
+// @Summary Logout a user
+// @Description Logout a user by sending a request with session.
+// @Tags User Management
+// @Produce json
+// @Success 200 {object} response.HTTPResponse "User successfully logout"
+// @Failure 400 {object} response.HTTPResponse "Invalid input data"
+// @Failure 401 {object} response.HTTPResponse "Unauthorized"
+// @Failure 500 {object} response.HTTPResponse "Internal server error"
+// @Router /api/logout [delete]
+func (h *Handler) Logout(c *gin.Context) {
 	h.ProxyHTTP(c)
 }
