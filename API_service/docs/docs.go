@@ -31,12 +31,6 @@ const docTemplate = `{
                 "summary": "Authenticate a user",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Session ID for authorization",
-                        "name": "Cookie",
-                        "in": "header"
-                    },
-                    {
                         "description": "User credentials",
                         "name": "input",
                         "in": "body",
@@ -89,13 +83,6 @@ const docTemplate = `{
                 "summary": "Delete a user",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Session ID for authorization",
-                        "name": "Cookie",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
                         "description": "User credentials",
                         "name": "input",
                         "in": "body",
@@ -119,7 +106,7 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "Unathorized",
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/response.HTTPResponse"
                         }
@@ -147,12 +134,6 @@ const docTemplate = `{
                 ],
                 "summary": "Register a new user",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID for authorization",
-                        "name": "Cookie",
-                        "in": "header"
-                    },
                     {
                         "description": "User registration data",
                         "name": "request",

@@ -10,7 +10,6 @@ import (
 // @Tags User Management
 // @Accept json
 // @Produce json
-// @Param Cookie header string false "Session ID for authorization"
 // @Param request body response.PersonReg true "User registration data"
 // @Success 200 {object} response.HTTPResponse "User successfully registered"
 // @Failure 400 {object} response.HTTPResponse "Invalid input data"
@@ -26,7 +25,6 @@ func (h *Handler) Registration(c *gin.Context) {
 // @Tags User Management
 // @Accept json
 // @Produce json
-// @Param Cookie header string false "Session ID for authorization"
 // @Param input body response.PersonAuth true "User credentials"
 // @Success 200 {object} response.HTTPResponse "Authentication successful"
 // @Failure 400 {object} response.HTTPResponse "Invalid input data"
@@ -42,11 +40,10 @@ func (h *Handler) Authentication(c *gin.Context) {
 // @Tags User Management
 // @Accept json
 // @Produce json
-// @Param Cookie header string true "Session ID for authorization"
 // @Param input body response.PersonDelete true "User credentials"
 // @Success 200 {object} response.HTTPResponse "User successfully deleted"
 // @Failure 400 {object} response.HTTPResponse"Invalid input data"
-// @Failure 401 {object} response.HTTPResponse "Unathorized"
+// @Failure 401 {object} response.HTTPResponse "Unauthorized"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/del [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {

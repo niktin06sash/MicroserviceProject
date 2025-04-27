@@ -48,10 +48,6 @@ paths:
       - application/json
       description: Authenticate a user by sending credentials to the target service.
       parameters:
-      - description: Session ID for authorization
-        in: header
-        name: Cookie
-        type: string
       - description: User credentials
         in: body
         name: input
@@ -87,11 +83,6 @@ paths:
       description: Delete a user by sending a DELETE request with session and user
         ID.
       parameters:
-      - description: Session ID for authorization
-        in: header
-        name: Cookie
-        required: true
-        type: string
       - description: User credentials
         in: body
         name: input
@@ -110,7 +101,7 @@ paths:
           schema:
             $ref: '#/definitions/response.HTTPResponse'
         "401":
-          description: Unathorized
+          description: Unauthorized
           schema:
             $ref: '#/definitions/response.HTTPResponse'
         "500":
@@ -126,10 +117,6 @@ paths:
       - application/json
       description: Register a new user by sending user data to the target service.
       parameters:
-      - description: Session ID for authorization
-        in: header
-        name: Cookie
-        type: string
       - description: User registration data
         in: body
         name: request
