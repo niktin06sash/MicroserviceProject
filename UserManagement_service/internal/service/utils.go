@@ -31,15 +31,15 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool, trac
 				switch err.Tag() {
 				case "email":
 					log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: Email format error", traceid, place)
-					erors["ClientError"] = erro.ErrorNotEmail
+					erors[err.Field()] = erro.ErrorNotEmail
 				case "min":
 					errv := fmt.Errorf("%s is too short", err.Field())
 					log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: %s format error", traceid, place, errv)
-					erors["ClientError"] = errv
+					erors[err.Field()] = errv
 				default:
 					errv := fmt.Errorf("%s is Null", err.Field())
 					log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: %s format error", traceid, place, errv)
-					erors["ClientError"] = errv
+					erors[err.Field()] = errv
 				}
 			}
 			return erors
