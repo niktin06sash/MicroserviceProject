@@ -74,7 +74,7 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteUser: %v", traceid, err)
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword, Type: erro.ClientErrorType}
 	}
-	_, err = tx.ExecContext(ctx, "DELETE FROM userZ where userId = $1", userId)
+	_, err = tx.ExecContext(ctx, "DELETE FROM userZ where userid = $1", userId)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteUser: %v", traceid, err)
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType}
