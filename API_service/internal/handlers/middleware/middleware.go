@@ -15,8 +15,7 @@ type RateLimiterEntry struct {
 }
 type Middleware struct {
 	grpcClient   client.GrpcClientService
-	rateLimiters map[string]*RateLimiterEntry
-	mu           sync.Mutex
+	rateLimiters sync.Map
 	stopclean    chan (struct{})
 }
 type MiddlewareService interface {
@@ -30,7 +29,7 @@ type MiddlewareService interface {
 func NewMiddleware(grpcClient client.GrpcClientService) *Middleware {
 	m := &Middleware{
 		grpcClient:   grpcClient,
-		rateLimiters: make(map[string]*RateLimiterEntry),
+		rateLimiters: sync.Map{},
 		stopclean:    make(chan struct{}),
 	}
 	go cleanLimit(m)

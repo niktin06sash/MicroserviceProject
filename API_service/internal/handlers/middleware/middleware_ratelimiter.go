@@ -28,21 +28,20 @@ func (m *Middleware) Stop() {
 	close(m.stopclean)
 }
 func getLimit(m *Middleware, ip string) *rate.Limiter {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if entry, exist := m.rateLimiters[ip]; exist {
-		entry.LastUsed = time.Now()
-		return entry.Limiter
+	if entry, exist := m.rateLimiters.Load(ip); exist {
+		e := entry.(*RateLimiterEntry)
+		return e.Limiter
 	}
-	limiter := rate.NewLimiter(5, 3)
-	m.rateLimiters[ip] = &RateLimiterEntry{
+	limiter := rate.NewLimiter(0.25, 5)
+	newEntry := &RateLimiterEntry{
 		Limiter:  limiter,
 		LastUsed: time.Now(),
 	}
+	m.rateLimiters.Store(ip, newEntry)
 	return limiter
 }
 func cleanLimit(m *Middleware) {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 	for {
 		select {
@@ -50,13 +49,17 @@ func cleanLimit(m *Middleware) {
 			log.Println("[INFO] [API-Service] [RateLimiter] Successful completion of RateLimiter")
 			return
 		case <-ticker.C:
-			m.mu.Lock()
-			defer m.mu.Unlock()
-			for ip, entry := range m.rateLimiters {
-				if time.Since(entry.LastUsed) >= 5*time.Second {
-					delete(m.rateLimiters, ip)
+			log.Println("[INFO] [API-Service] [RateLimiter] Successful cleaning has started...")
+			m.rateLimiters.Range(func(key, value any) bool {
+				ip := key.(string)
+				entry := value.(*RateLimiterEntry)
+				if time.Since(entry.LastUsed) >= 1*time.Minute {
+					m.rateLimiters.Delete(ip)
+					log.Printf("[INFO] [API-Service] [RateLimiter] Deleted IP: %s", ip)
 				}
-			}
+				return true
+			})
+			log.Println("[INFO] [API-Service] [RateLimiter] Successful cleaning!")
 		}
 	}
 }
