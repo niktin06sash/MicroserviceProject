@@ -71,6 +71,3 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Successful HTTP-request to %s", traceID, targetURL)
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
-func (h *Handler) ProxyGrpc(c *gin.Context) {
-
-}

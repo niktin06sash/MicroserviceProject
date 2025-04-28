@@ -3,30 +3,30 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/docs"
-	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Handler struct {
-	GRPCclient client.GrpcClientService
+	Middleware middleware.MiddlewareService
 	Routes     map[string]string
 }
 
-func NewHandler(grpc *client.GrpcClient, routes map[string]string) *Handler {
+func NewHandler(middleware middleware.MiddlewareService, routes map[string]string) *Handler {
 	return &Handler{
-		GRPCclient: grpc,
+		Middleware: middleware,
 		Routes:     routes,
 	}
 }
 func (h *Handler) InitRoutes() *gin.Engine {
 	r := gin.New()
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	r.Use(middleware.Middleware_Logging())
-	r.POST("/api/reg", middleware.Middleware_AuthorizedNot(h.GRPCclient), h.Registration)
-	r.POST("/api/auth", middleware.Middleware_AuthorizedNot(h.GRPCclient), h.Authentication)
-	r.DELETE("/api/del", middleware.Middleware_Authorized(h.GRPCclient), h.DeleteUser)
-	r.DELETE("/api/logout", middleware.Middleware_Authorized(h.GRPCclient), h.Logout)
+	r.Use(h.Middleware.Logging())
+	r.Use(h.Middleware.RateLimiter())
+	r.POST("/api/reg", h.Middleware.AuthorizedNot(), h.Registration)
+	r.POST("/api/auth", h.Middleware.AuthorizedNot(), h.Authentication)
+	r.DELETE("/api/del", h.Middleware.Authorized(), h.DeleteUser)
+	r.DELETE("/api/logout", h.Middleware.Authorized(), h.Logout)
 	return r
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/server"
@@ -71,7 +72,8 @@ func main() {
 	}
 	grpcclient := client.NewGrpcClient(config.Session)
 	defer grpcclient.Close()
-	handler := handlers.NewHandler(grpcclient, config.Routes)
+	middleware := middleware.NewMiddleware(grpcclient)
+	handler := handlers.NewHandler(middleware, config.Routes)
 	srv := &server.Server{}
 	port := config.Server.Port
 	if port == "" {

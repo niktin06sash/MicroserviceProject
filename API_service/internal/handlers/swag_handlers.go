@@ -14,6 +14,7 @@ import (
 // @Success 200 {object} response.HTTPResponse "User successfully registered"
 // @Failure 400 {object} response.HTTPResponse "Invalid input data"
 // @Failure 403 {object} response.HTTPResponse "Forbidden"
+// @Failure 429 {object} response.HTTPResponse "Too many requests"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/reg [post]
 func (h *Handler) Registration(c *gin.Context) {
@@ -29,6 +30,7 @@ func (h *Handler) Registration(c *gin.Context) {
 // @Success 200 {object} response.HTTPResponse "Authentication successful"
 // @Failure 400 {object} response.HTTPResponse "Invalid input data"
 // @Failure 403 {object} response.HTTPResponse "Forbidden"
+// @Failure 429 {object} response.HTTPResponse "Too many requests"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/auth [post]
 func (h *Handler) Authentication(c *gin.Context) {
@@ -44,6 +46,7 @@ func (h *Handler) Authentication(c *gin.Context) {
 // @Success 200 {object} response.HTTPResponse "User successfully deleted"
 // @Failure 400 {object} response.HTTPResponse "Invalid input data"
 // @Failure 401 {object} response.HTTPResponse "Unauthorized"
+// @Failure 429 {object} response.HTTPResponse "Too many requests"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/del [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
@@ -57,6 +60,7 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 // @Success 200 {object} response.HTTPResponse "User successfully logout"
 // @Failure 400 {object} response.HTTPResponse "Invalid input data"
 // @Failure 401 {object} response.HTTPResponse "Unauthorized"
+// @Failure 429 {object} response.HTTPResponse "Too many requests"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/logout [delete]
 func (h *Handler) Logout(c *gin.Context) {
