@@ -41,7 +41,7 @@ func getLimit(m *Middleware, ip string) *rate.Limiter {
 	return limiter
 }
 func cleanLimit(m *Middleware) {
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 	for {
 		select {
@@ -53,7 +53,7 @@ func cleanLimit(m *Middleware) {
 			m.rateLimiters.Range(func(key, value any) bool {
 				ip := key.(string)
 				entry := value.(*RateLimiterEntry)
-				if time.Since(entry.LastUsed) >= 1*time.Minute {
+				if time.Since(entry.LastUsed) >= 5*time.Minute {
 					m.rateLimiters.Delete(ip)
 					log.Printf("[INFO] [API-Service] [RateLimiter] Deleted IP: %s", ip)
 				}
