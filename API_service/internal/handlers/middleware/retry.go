@@ -62,11 +62,10 @@ func retryAuthorized_Not(c *gin.Context, client client.GrpcClientService, sessio
 		protoresponse, err = client.ValidateSession(ctx, sessionID)
 		if err != nil {
 			st, _ := status.FromError(err)
-			trymessage := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
-			logRequest(c.Request, place, traceID, true, trymessage)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				logRequest(c.Request, place, traceID, true, "Server unavailable, retrying...")
+				trymessage := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
+				logRequest(c.Request, place, traceID, true, trymessage)
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
