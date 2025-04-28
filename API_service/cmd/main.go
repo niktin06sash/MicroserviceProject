@@ -97,7 +97,7 @@ func main() {
 	case err := <-serverError:
 		log.Fatalf("[ERROR] [API-Service] Service startup failed: %v", err)
 	}
-
+	middleware.Stop()
 	shutdownTimeout := 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
