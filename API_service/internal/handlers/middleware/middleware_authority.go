@@ -4,12 +4,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 )
 
-func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc {
+func (m *Middleware) Authorized() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
@@ -21,7 +20,7 @@ func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc 
 			c.Abort()
 			return
 		}
-		grpcresponse, errv := retryAuthorized(c, grpcClient, sessionID, traceID, "Authority")
+		grpcresponse, errv := retryAuthorized(c, m.grpcClient, sessionID, traceID, "Authority")
 		if errv != nil {
 			switch errv.GetTypeError() {
 			case erro.ClientErrorType:
@@ -46,7 +45,7 @@ func Middleware_Authorized(grpcClient client.GrpcClientService) gin.HandlerFunc 
 	}
 }
 
-func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFunc {
+func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
@@ -63,7 +62,7 @@ func Middleware_AuthorizedNot(grpcClient client.GrpcClientService) gin.HandlerFu
 			c.Next()
 			return
 		}
-		_, errv := retryAuthorized_Not(c, grpcClient, sessionID, traceID, "Not-Authority")
+		_, errv := retryAuthorized_Not(c, m.grpcClient, sessionID, traceID, "Not-Authority")
 		if errv != nil {
 			switch errv.GetTypeError() {
 			case erro.ClientErrorType:
