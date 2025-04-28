@@ -60,10 +60,6 @@ func retryAuthorized_Not(c *gin.Context, client client.GrpcClientService, sessio
 			return nil, erro.CustomError{ErrorName: "Context Error", ErrorType: erro.ServerErrorType}
 		}
 		protoresponse, err = client.ValidateSession(ctx, sessionID)
-		if err == nil && !protoresponse.Success {
-			logRequest(c.Request, place, traceID, false, "User is not authorized, proceeding...")
-			return protoresponse, nil
-		}
 		if err != nil {
 			st, _ := status.FromError(err)
 			trymessage := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
@@ -74,7 +70,7 @@ func retryAuthorized_Not(c *gin.Context, client client.GrpcClientService, sessio
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
-				return protoresponse, erro.CustomError{ErrorName: "Invalid Session Data", ErrorType: erro.ClientErrorType}
+				return protoresponse, nil
 			}
 		}
 		if protoresponse.Success {

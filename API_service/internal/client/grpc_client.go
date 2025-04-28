@@ -7,7 +7,9 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/configs"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 type GrpcClientService interface {
@@ -38,7 +40,10 @@ func (g *GrpcClient) ValidateSession(ctx context.Context, sessionid string) (*pb
 	req := &pb.ValidateSessionRequest{SessionID: sessionid}
 	resp, err := g.client.ValidateSession(ctx, req)
 	if err != nil {
-		log.Printf("[ERROR] [API-Service] [TraceID: %s] CreateSession: Request error to GRPC-Session Client: %v", traceid, err)
+		st, _ := status.FromError(err)
+		if st.Code() != codes.InvalidArgument {
+			log.Printf("[ERROR] [API-Service] [TraceID: %s] CreateSession: Request error to GRPC-Session Client: %v", traceid, err)
+		}
 		return nil, err
 	}
 	log.Printf("[INFO] [API-Service] [TraceID: %s] CreateSession: Successful request to GRPC-Session Client", traceid)
@@ -49,7 +54,10 @@ func (g *GrpcClient) DeleteSession(ctx context.Context, sessionid string) (*pb.D
 	req := &pb.DeleteSessionRequest{SessionID: sessionid}
 	resp, err := g.client.DeleteSession(ctx, req)
 	if err != nil {
-		log.Printf("[ERROR] [API-Service] [TraceID: %s] DeleteSession: Request error to GRPC-Session Client: %v", traceid, err)
+		st, _ := status.FromError(err)
+		if st.Code() != codes.InvalidArgument {
+			log.Printf("[ERROR] [API-Service] [TraceID: %s] DeleteSession: Request error to GRPC-Session Client: %v", traceid, err)
+		}
 		return nil, err
 	}
 	log.Printf("[INFO] [API-Service] [TraceID: %s] DeleteSession: Successful request to GRPC-Session Client", traceid)
