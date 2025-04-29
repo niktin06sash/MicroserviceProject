@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	mock_client "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client/mocks"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	mock_repository "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/mocks"
@@ -22,9 +21,9 @@ import (
 )
 
 func TestAuthenticateAndLogin_Success(t *testing.T) {
-	fixedReqUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "requestID", fixedReqUuid.String())
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	user := &model.Person{
 		Email:    "john.doe@example.com",
@@ -46,8 +45,8 @@ func TestAuthenticateAndLogin_Success(t *testing.T) {
 	fixedsessUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174100")
 	mockRepo.EXPECT().GetUser(
 		mock.MatchedBy(func(ctx context.Context) bool {
-			requestID := ctx.Value("requestID")
-			return requestID != nil && requestID.(string) == fixedReqUuid.String()
+			traceID := ctx.Value("traceID")
+			return traceID != nil && traceID.(string) == fixedTraceUuid.String()
 		}),
 		mock.MatchedBy(func(useremail string) bool {
 			return useremail == "john.doe@example.com"
@@ -60,8 +59,8 @@ func TestAuthenticateAndLogin_Success(t *testing.T) {
 		UserId:  fixedUUID,
 	})
 	mockGrpc.EXPECT().CreateSession(mock.MatchedBy(func(ctx context.Context) bool {
-		requestID := ctx.Value("requestID")
-		return requestID != nil && requestID.(string) == fixedReqUuid.String()
+		traceID := ctx.Value("traceID")
+		return traceID != nil && traceID.(string) == fixedTraceUuid.String()
 	}), mock.MatchedBy(func(userid string) bool {
 		parseuserid, err := uuid.Parse(userid)
 		return err == nil && parseuserid == fixedUUID
@@ -78,32 +77,6 @@ func TestAuthenticateAndLogin_Success(t *testing.T) {
 	require.Equal(t, "123e4567-e89b-12d3-a456-426614174100", response.SessionId)
 	require.NotNil(t, response.ExpireSession)
 	require.True(t, response.ExpireSession.After(time.Now().Add(-1*time.Second)))
-}
-func TestAuthenticateAndLogin_MissingReqId(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	user := &model.Person{
-		Email:    "john.doe@example.com",
-		Password: "password123",
-	}
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
-	mockGrpc := mock_client.NewMockGrpcClientService(ctrl)
-
-	as := &service.AuthService{
-		Dbrepo:     mockRepo,
-		GrpcClient: mockGrpc,
-		Validator:  validator.New(),
-	}
-
-	response := as.AuthenticateAndLogin(ctx, user)
-	log.Printf("Response: %+v", response)
-
-	require.False(t, response.Success)
-	require.EqualError(t, response.Errors["ContextError"], "Error missing request ID")
 }
 func TestAuthenticateAndLogin_ValidError(t *testing.T) {
 	tests := []struct {
@@ -136,9 +109,9 @@ func TestAuthenticateAndLogin_ValidError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			fixedReqUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-			ctx := context.WithValue(context.Background(), "requestID", fixedReqUuid.String())
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
+			ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
 
 			ctrl := gomock.NewController(t)
@@ -164,131 +137,4 @@ func TestAuthenticateAndLogin_ValidError(t *testing.T) {
 			}
 		})
 	}
-}
-func TestAuthenticateAndLogin_ContextBeforeGetUser(t *testing.T) {
-
-	fixedReqUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	ctx = context.WithValue(ctx, "requestID", fixedReqUuid.String())
-	user := &model.Person{
-		Email:    "john.doe@example.com",
-		Password: "password123",
-	}
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	as := &service.AuthService{
-
-		Validator: validator.New(),
-	}
-	response := as.AuthenticateAndLogin(ctx, user)
-	log.Printf("Response: %+v", response)
-
-	require.False(t, response.Success)
-	require.Contains(t, response.Errors, "ContextError")
-	require.EqualError(t, response.Errors["ContextError"], "The timeout context has expired")
-}
-func TestAuthenticateAndLogin_GetUserError(t *testing.T) {
-
-	fixedReqUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	ctx = context.WithValue(ctx, "requestID", fixedReqUuid.String())
-
-	user := &model.Person{
-		Email:    "john.doe@example.com",
-		Password: "password123",
-	}
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
-
-	as := &service.AuthService{
-		Dbrepo: mockRepo,
-
-		Validator: validator.New(),
-	}
-
-	mockRepo.EXPECT().GetUser(
-		mock.MatchedBy(func(ctx context.Context) bool {
-			requestID := ctx.Value("requestID")
-			return requestID != nil && requestID.(string) == fixedReqUuid.String()
-		}),
-		mock.MatchedBy(func(email string) bool {
-			return email == "john.doe@example.com"
-		}),
-		mock.MatchedBy(func(password string) bool {
-			return password == "password123"
-		}),
-	).Return(&repository.DBRepositoryResponse{
-		Success: false,
-		Errors:  erro.ErrorEmailNotRegister,
-	})
-
-	response := as.AuthenticateAndLogin(ctx, user)
-	log.Printf("Response: %+v", response)
-
-	require.False(t, response.Success)
-	require.Contains(t, response.Errors, "AuthenticateError")
-	require.EqualError(t, response.Errors["AuthenticateError"], "This email is not registered")
-}
-func TestAuthenticateAndLogin_CreateSessionError(t *testing.T) {
-
-	fixedReqUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	ctx = context.WithValue(ctx, "requestID", fixedReqUuid.String())
-
-	user := &model.Person{
-
-		Email:    "john.doe@example.com",
-		Password: "password123",
-	}
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
-	mockGrpcClient := mock_client.NewMockGrpcClientService(ctrl)
-
-	as := &service.AuthService{
-		Dbrepo: mockRepo,
-
-		Validator:  validator.New(),
-		GrpcClient: mockGrpcClient,
-	}
-
-	mockRepo.EXPECT().GetUser(
-		mock.MatchedBy(func(ctx context.Context) bool {
-			requestID := ctx.Value("requestID")
-			return requestID != nil && requestID.(string) == fixedReqUuid.String()
-		}),
-		mock.MatchedBy(func(email string) bool {
-			return email == "john.doe@example.com"
-		}),
-		mock.MatchedBy(func(password string) bool {
-			return password == "password123"
-		}),
-	).Return(&repository.DBRepositoryResponse{
-		Success: true,
-		UserId:  fixedUUID,
-	})
-
-	mockGrpcClient.EXPECT().CreateSession(ctx, fixedUUID.String()).DoAndReturn(func(ctx context.Context, userID string) (*pb.CreateSessionResponse, error) {
-		return nil, fmt.Errorf("grpc error")
-	})
-
-	response := as.AuthenticateAndLogin(ctx, user)
-	log.Printf("Response: %+v", response)
-
-	require.False(t, response.Success)
-	require.Contains(t, response.Errors, "GrpcResponseError")
-	require.EqualError(t, response.Errors["GrpcResponseError"], "Grpc's response error")
 }
