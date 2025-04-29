@@ -65,6 +65,20 @@ func (mr *MockUserAuthenticationMockRecorder) DeleteAccount(ctx, sessionID, user
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAccount", reflect.TypeOf((*MockUserAuthentication)(nil).DeleteAccount), ctx, sessionID, userid, password)
 }
 
+// Logout mocks base method.
+func (m *MockUserAuthentication) Logout(ctx context.Context, sessionID string) *service.ServiceResponse {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Logout", ctx, sessionID)
+	ret0, _ := ret[0].(*service.ServiceResponse)
+	return ret0
+}
+
+// Logout indicates an expected call of Logout.
+func (mr *MockUserAuthenticationMockRecorder) Logout(ctx, sessionID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logout", reflect.TypeOf((*MockUserAuthentication)(nil).Logout), ctx, sessionID)
+}
+
 // RegistrateAndLogin mocks base method.
 func (m *MockUserAuthentication) RegistrateAndLogin(ctx context.Context, user *model.Person) *service.ServiceResponse {
 	m.ctrl.T.Helper()
