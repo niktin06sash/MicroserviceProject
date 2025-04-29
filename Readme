@@ -1,3 +1,10 @@
+/////////////////////////////////////////////////////////////////////////
+Client --> API-Gateway
+API-Gateway --> SessionManagement; API-Gateway --> UserManagement  
+UserManagement --> SessionManagement
+SessionManagement --> API-Gateway
+API-Gateway -->  Client
+/////////////////////////////////////////////////////////////////////////
 1. API-Gateway
 Обрабатывает входящие запросы, выполняет маршрутизацию и базовую авторизацию.
 Основные функции:
