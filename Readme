@@ -1,7 +1,43 @@
-План:
-Клиент отправляет запрос на http://api-service(reg/auth)
-Api_Service получает его и проксирует его на обработчик REST API микросервиса UserManagement(регистрация/аутентфикация)
-UserManagement инвалидирует запрос(создает пользователя в базе данных или получает его данные из базы данных)
-UserManagement отправляет Grpc-запрос на SessionManagement(отвечает за генерацию и хранение сессии)
-UserManagement получает ответ и возвращает данные пользователя в Api_Service(возможно откат транзакции в базе данных)
-Клиент получает данные сессии, сохраняет ее в Cookie и использует при следующих запросах
+1. API-Gateway
+Обрабатывает входящие запросы, выполняет маршрутизацию и базовую авторизацию.
+Основные функции:
+    • Middleware:
+        ◦ Logging (traceID, таймауты)
+        ◦ Rate-Limiter
+        ◦ Authorization через SessionManagement
+    • Проксирование: /reg, /auth, /logout, /delete → UserManagement
+    • Graceful Shutdown
+Технологии: Gin, gRPC, Swagger
+/////////////////////////////////////////////////////////////////////////
+2. UserManagement
+Управляет пользователями (регистрация/аутентификация/удаление).
+Эндпоинты:
+    • POST /reg
+    • POST /auth
+    • DELETE /logout
+    • DELETE /delete
+Бизнес-логика:
+    • RegistrateAndLogin
+    • AuthenticateAndLogin
+    • Logout
+    • DeleteAccount
+Технологии: REST API, PostgreSQL, gRPC, bcrypt
+/////////////////////////////////////////////////////////////////////////
+3. SessionManagement
+Управляет сессиями пользователей.
+gRPC методы:
+    • CreateSession
+    • ValidateSession
+    • DeleteSession
+Хранение: Redis с TTL
+Технологии: gRPC, Redis, Zap Logger
+/////////////////////////////////////////////////////////////////////////
+Общие характеристики:
+    • Конфигурация: config.yml (Viper)
+    • Логирование: стандартная библиотека/Zap
+    • Модульность: разделение на пакеты
+    • Обработка ошибок и разделение их на клиентские и серверные
+Особенности реализации:
+    • Retry-логика для всех внешних вызовов
+    • Timeout handling
+    • Graceful shutdown во всех сервисах
