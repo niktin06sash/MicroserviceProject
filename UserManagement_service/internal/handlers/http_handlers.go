@@ -10,11 +10,11 @@ import (
 )
 
 type Handler struct {
-	services *service.Service
+	Services *service.Service
 }
 
 func NewHandler(services *service.Service) *Handler {
-	return &Handler{services: services}
+	return &Handler{Services: services}
 }
 func (h *Handler) InitRoutes() *mux.Router {
 	m := mux.NewRouter()
