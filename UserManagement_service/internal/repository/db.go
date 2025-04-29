@@ -29,6 +29,10 @@ type DBInterface interface {
 
 type DBObject struct{}
 
+func NewDatabaseConnection(cfg configs.DatabaseConfig) (*sql.DB, error) {
+	dbObject := &DBObject{}
+	return ConnectToDb(cfg, dbObject)
+}
 func (d *DBObject) Open(driverName, connectionString string) (*sql.DB, error) {
 	db, err := sql.Open(driverName, connectionString)
 	if err != nil {
