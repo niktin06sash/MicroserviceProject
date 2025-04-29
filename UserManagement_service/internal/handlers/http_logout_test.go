@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -19,8 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDeleteAccount_MissingUserID(t *testing.T) {
-	req := httptest.NewRequest(http.MethodDelete, "/delete", nil)
+func TestLogout_MissingUserID(t *testing.T) {
+	req := httptest.NewRequest(http.MethodDelete, "/logout", nil)
 	ctx := context.WithValue(req.Context(), "traceID", uuid.New().String())
 	ctx = context.WithValue(ctx, "sessionID", uuid.New().String())
 	req = req.WithContext(ctx)
@@ -28,7 +27,7 @@ func TestDeleteAccount_MissingUserID(t *testing.T) {
 
 	recorder := httptest.NewRecorder()
 
-	handler.DeleteAccount(recorder, req)
+	handler.Logout(recorder, req)
 
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
 
@@ -39,15 +38,15 @@ func TestDeleteAccount_MissingUserID(t *testing.T) {
 	assert.Equal(t, false, response.Success)
 	assert.Equal(t, map[string]string{"InternalServerError": erro.ErrorMissingUserID.Error()}, response.Errors)
 }
-func TestDeleteAccount_MissingSessionID(t *testing.T) {
-	req := httptest.NewRequest(http.MethodDelete, "/delete", nil)
+func TestLogout_MissingSessionID(t *testing.T) {
+	req := httptest.NewRequest(http.MethodDelete, "/logout", nil)
 	ctx := context.WithValue(req.Context(), "traceID", uuid.New().String())
 	req = req.WithContext(ctx)
 	handler := handlers.Handler{}
 
 	recorder := httptest.NewRecorder()
 
-	handler.DeleteAccount(recorder, req)
+	handler.Logout(recorder, req)
 
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
 
@@ -58,11 +57,10 @@ func TestDeleteAccount_MissingSessionID(t *testing.T) {
 	assert.Equal(t, false, response.Success)
 	assert.Equal(t, map[string]string{"InternalServerError": erro.ErrorMissingSessionID.Error()}, response.Errors)
 }
-func TestDeleteAccount(t *testing.T) {
+func TestLogout(t *testing.T) {
 	tests := []struct {
 		testname             string
 		method               string
-		reqbody              string
 		sessionID            string
 		userID               string
 		mockservice          func(r *mock_service.MockUserAuthentication)
@@ -72,12 +70,11 @@ func TestDeleteAccount(t *testing.T) {
 		{
 			testname:  "Success",
 			method:    http.MethodDelete,
-			reqbody:   `{"password": "qwerty1234"}`,
 			sessionID: "123e4567-e89b-12d3-a456-426614174000",
 			userID:    "123e4567-e89b-12d3-a456-426614174000",
 			mockservice: func(r *mock_service.MockUserAuthentication) {
 				r.EXPECT().
-					DeleteAccount(gomock.Any(), "123e4567-e89b-12d3-a456-426614174000", uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"), "qwerty1234").
+					Logout(gomock.Any(), "123e4567-e89b-12d3-a456-426614174000").
 					Return(&service.ServiceResponse{
 						Success: true,
 					})
@@ -92,7 +89,6 @@ func TestDeleteAccount(t *testing.T) {
 			method:             http.MethodGet,
 			userID:             "123e4567-e89b-12d3-a456-426614174000",
 			sessionID:          "123e4567-e89b-12d3-a456-426614174000",
-			reqbody:            "",
 			expectedStatuscode: http.StatusBadRequest,
 			expectedResponseData: response.HTTPResponse{
 				Success: false,
@@ -102,76 +98,24 @@ func TestDeleteAccount(t *testing.T) {
 			},
 		},
 		{
-			testname:           "UnmarshalError",
-			method:             http.MethodDelete,
-			reqbody:            `{"password": 1234}`,
-			sessionID:          "123e4567-e89b-12d3-a456-426614174000",
-			userID:             "123e4567-e89b-12d3-a456-426614174000",
-			expectedStatuscode: http.StatusBadRequest,
-			expectedResponseData: response.HTTPResponse{
-				Success: false,
-				Errors: map[string]string{
-					"ClientError": erro.ErrorUnmarshal.Error(),
-				},
-			},
-		},
-		{
-			testname:           "UnmarshalErrorRequired",
-			method:             http.MethodDelete,
-			reqbody:            `{"password": ""}`,
-			sessionID:          "123e4567-e89b-12d3-a456-426614174000",
-			userID:             "123e4567-e89b-12d3-a456-426614174000",
-			expectedStatuscode: http.StatusBadRequest,
-			expectedResponseData: response.HTTPResponse{
-				Success: false,
-				Errors: map[string]string{
-					"ClientError": erro.ErrorUnmarshal.Error(),
-				},
-			},
-		},
-		{
-			testname:  "InvalidPassword",
-			method:    http.MethodDelete,
-			reqbody:   `{"password": "wrongpassword"}`,
-			sessionID: "123e4567-e89b-12d3-a456-426614174000",
-			userID:    "123e4567-e89b-12d3-a456-426614174000",
-			mockservice: func(r *mock_service.MockUserAuthentication) {
-				r.EXPECT().
-					DeleteAccount(gomock.Any(), "123e4567-e89b-12d3-a456-426614174000", uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"), "wrongpassword").
-					Return(&service.ServiceResponse{
-						Success: false,
-						Errors:  map[string]error{"ClientError": erro.ErrorInvalidPassword},
-						Type:    erro.ClientErrorType,
-					})
-			},
-			expectedStatuscode: http.StatusBadRequest,
-			expectedResponseData: response.HTTPResponse{
-				Success: false,
-				Errors: map[string]string{
-					"ClientError": erro.ErrorInvalidPassword.Error(),
-				},
-			},
-		},
-		{
 			testname:  "InternalServerError",
 			method:    http.MethodDelete,
-			reqbody:   `{"password": "qwerty1234"}`,
 			sessionID: "123e4567-e89b-12d3-a456-426614174000",
 			userID:    "123e4567-e89b-12d3-a456-426614174000",
 			mockservice: func(r *mock_service.MockUserAuthentication) {
 				r.EXPECT().
-					DeleteAccount(gomock.Any(), "123e4567-e89b-12d3-a456-426614174000", uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"), "qwerty1234").
+					Logout(gomock.Any(), "123e4567-e89b-12d3-a456-426614174000").
 					Return(&service.ServiceResponse{
 						Success: false,
-						Errors:  map[string]error{"InternalServerError": erro.ErrorStartTransaction},
+						Errors:  map[string]error{"InternalServerError": erro.ErrorContextTimeout},
 						Type:    erro.ServerErrorType,
 					})
 			},
 			expectedStatuscode: http.StatusInternalServerError,
 			expectedResponseData: response.HTTPResponse{
-				Success: true,
+				Success: false,
 				Errors: map[string]string{
-					"InternalServerError": erro.ErrorStartTransaction.Error(),
+					"InternalServerError": erro.ErrorContextTimeout.Error(),
 				},
 			},
 		},
@@ -189,9 +133,7 @@ func TestDeleteAccount(t *testing.T) {
 
 			services := &service.Service{UserAuthentication: mockService}
 			handler := handlers.Handler{Services: services}
-
-			reqBody := bytes.NewBufferString(test.reqbody)
-			req := httptest.NewRequest(test.method, "/delete", reqBody)
+			req := httptest.NewRequest(test.method, "/logout", nil)
 			req.Header.Set("Content-Type", "application/json")
 			ctx := context.WithValue(req.Context(), "traceID", uuid.New().String())
 			ctx = context.WithValue(ctx, "userID", test.userID)
@@ -200,7 +142,7 @@ func TestDeleteAccount(t *testing.T) {
 
 			recorder := httptest.NewRecorder()
 
-			handler.DeleteAccount(recorder, req)
+			handler.Logout(recorder, req)
 
 			assert.Equal(t, test.expectedStatuscode, recorder.Code)
 

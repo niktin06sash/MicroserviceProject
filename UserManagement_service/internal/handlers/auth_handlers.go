@@ -41,7 +41,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 		response.SendResponse(w, br, traceID, "Registration", r.Context())
 		return
 	}
-	regresponse := h.services.RegistrateAndLogin(r.Context(), &newperk)
+	regresponse := h.Services.RegistrateAndLogin(r.Context(), &newperk)
 	if !regresponse.Success {
 		stringMap := response.ConvertErrorsToString(regresponse.Errors)
 		switch regresponse.Type {
@@ -95,7 +95,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 		response.SendResponse(w, br, traceID, "Authentication", r.Context())
 		return
 	}
-	auresponse := h.services.AuthenticateAndLogin(r.Context(), &newperk)
+	auresponse := h.Services.AuthenticateAndLogin(r.Context(), &newperk)
 	if !auresponse.Success {
 		stringMap := response.ConvertErrorsToString(auresponse.Errors)
 		switch auresponse.Type {
@@ -167,7 +167,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	var data map[string]string
 	if err := json.Unmarshal(passwordBytes, &data); err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid password format or empty password", traceID)
-		maparesponse["ClientError"] = erro.ErrorInvalidPassword.Error()
+		maparesponse["ClientError"] = erro.ErrorUnmarshal.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID, "DeleteAccount", r.Context())
 		return
@@ -175,13 +175,13 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	password, ok := data["password"]
 	if !ok || password == "" {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Password is missing or empty", traceID)
-		maparesponse["ClientError"] = erro.ErrorInvalidPassword.Error()
+		maparesponse["ClientError"] = erro.ErrorUnmarshal.Error()
 		br := response.NewErrorResponse(maparesponse, http.StatusBadRequest)
 		response.SendResponse(w, br, traceID, "DeleteAccount", r.Context())
 		return
 	}
 	defer r.Body.Close()
-	delresponse := h.services.DeleteAccount(r.Context(), sessionID, userID, string(password))
+	delresponse := h.Services.DeleteAccount(r.Context(), sessionID, userID, string(password))
 	if !delresponse.Success {
 		stringMap := response.ConvertErrorsToString(delresponse.Errors)
 		switch delresponse.Type {
@@ -239,7 +239,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		response.SendResponse(w, br, traceID, "Logout", r.Context())
 		return
 	}
-	logresponse := h.services.Logout(r.Context(), sessionID)
+	logresponse := h.Services.Logout(r.Context(), sessionID)
 	if !logresponse.Success {
 		stringMap := response.ConvertErrorsToString(logresponse.Errors)
 		switch logresponse.Type {
