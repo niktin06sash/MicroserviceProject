@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	mock_client "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client/mocks"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	mock_repository "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/mocks"
@@ -80,9 +81,10 @@ func TestAuthenticateAndLogin_Success(t *testing.T) {
 }
 func TestAuthenticateAndLogin_ValidError(t *testing.T) {
 	tests := []struct {
-		name          string
-		user          *model.Person
-		expectedError map[string]error
+		name              string
+		user              *model.Person
+		expectedError     map[string]error
+		expectedTypeError erro.ErrorType
 	}{
 		{
 			name: "Invalid email format",
@@ -93,6 +95,7 @@ func TestAuthenticateAndLogin_ValidError(t *testing.T) {
 			expectedError: map[string]error{
 				"Email": fmt.Errorf("This email format is not supported"),
 			},
+			expectedTypeError: erro.ClientErrorType,
 		},
 		{
 			name: "Password too short",
@@ -103,6 +106,7 @@ func TestAuthenticateAndLogin_ValidError(t *testing.T) {
 			expectedError: map[string]error{
 				"Password": fmt.Errorf("Password is too short"),
 			},
+			expectedTypeError: erro.ClientErrorType,
 		},
 	}
 
@@ -131,6 +135,7 @@ func TestAuthenticateAndLogin_ValidError(t *testing.T) {
 			log.Printf("Response: %+v", response)
 
 			require.False(t, response.Success)
+			require.Equal(t, tt.expectedTypeError, response.Type)
 			for field, expectedErr := range tt.expectedError {
 				require.Contains(t, response.Errors, field)
 				require.EqualError(t, response.Errors[field], expectedErr.Error())

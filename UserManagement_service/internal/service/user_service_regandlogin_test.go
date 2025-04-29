@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	mock_client "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client/mocks"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	mock_repository "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/mocks"
@@ -89,9 +90,10 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 }
 func TestRegistrateAndLogin_ValidError(t *testing.T) {
 	tests := []struct {
-		name          string
-		user          *model.Person
-		expectedError map[string]error
+		name              string
+		user              *model.Person
+		expectedError     map[string]error
+		expectedTypeError erro.ErrorType
 	}{
 		{
 			name: "Invalid email format",
@@ -103,6 +105,7 @@ func TestRegistrateAndLogin_ValidError(t *testing.T) {
 			expectedError: map[string]error{
 				"Email": fmt.Errorf("This email format is not supported"),
 			},
+			expectedTypeError: erro.ClientErrorType,
 		},
 		{
 			name: "Password too short",
@@ -114,6 +117,7 @@ func TestRegistrateAndLogin_ValidError(t *testing.T) {
 			expectedError: map[string]error{
 				"Password": fmt.Errorf("Password is too short"),
 			},
+			expectedTypeError: erro.ClientErrorType,
 		},
 		{
 			name: "Missing name",
@@ -125,6 +129,7 @@ func TestRegistrateAndLogin_ValidError(t *testing.T) {
 			expectedError: map[string]error{
 				"Name": fmt.Errorf("Name is Null"),
 			},
+			expectedTypeError: erro.ClientErrorType,
 		},
 	}
 
@@ -156,6 +161,7 @@ func TestRegistrateAndLogin_ValidError(t *testing.T) {
 			log.Printf("Response: %+v", response)
 
 			require.False(t, response.Success)
+			require.Equal(t, tt.expectedTypeError, response.Type)
 			for field, expectedErr := range tt.expectedError {
 				require.Contains(t, response.Errors, field)
 				require.EqualError(t, response.Errors[field], expectedErr.Error())
@@ -166,6 +172,7 @@ func TestRegistrateAndLogin_ValidError(t *testing.T) {
 func TestRegistrateAndLogin_BeginTxError(t *testing.T) {
 
 	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
+	expectedTypeError := erro.ServerErrorType
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -194,6 +201,7 @@ func TestRegistrateAndLogin_BeginTxError(t *testing.T) {
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
 	require.EqualError(t, response.Errors["InternalServerError"], "Transaction creation error")
+	require.Equal(t, expectedTypeError, response.Type)
 }
 
 /*func TestRegistrateAndLogin_ContextBeforeCreateSession(t *testing.T) {
