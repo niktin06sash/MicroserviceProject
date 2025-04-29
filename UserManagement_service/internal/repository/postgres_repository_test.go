@@ -18,12 +18,13 @@ import (
 func TestCreateUser(t *testing.T) {
 	var fundamentUuid = uuid.New()
 	tests := []struct {
-		name            string
-		user            *model.Person
-		mockSetup       func(mock sqlmock.Sqlmock)
-		expectedSuccess bool
-		expectedUserId  uuid.UUID
-		expectedErrors  error
+		name              string
+		user              *model.Person
+		mockSetup         func(mock sqlmock.Sqlmock)
+		expectedSuccess   bool
+		expectedUserId    uuid.UUID
+		expectedErrors    error
+		expectedTypeError erro.ErrorType
 	}{
 		{
 			name: "Success",
@@ -55,9 +56,10 @@ func TestCreateUser(t *testing.T) {
 					WithArgs(sqlmock.AnyArg(), "testuser", "test@example.com", "password123").
 					WillReturnError(sql.ErrNoRows)
 			},
-			expectedSuccess: false,
-			expectedUserId:  uuid.Nil,
-			expectedErrors:  erro.ErrorUniqueEmail,
+			expectedSuccess:   false,
+			expectedUserId:    uuid.Nil,
+			expectedErrors:    erro.ErrorUniqueEmail,
+			expectedTypeError: erro.ClientErrorType,
 		},
 		{
 			name: "DB Error",
@@ -72,9 +74,10 @@ func TestCreateUser(t *testing.T) {
 					WithArgs(sqlmock.AnyArg(), "testuser", "test@example.com", "password123").
 					WillReturnError(errors.New("database connection error"))
 			},
-			expectedSuccess: false,
-			expectedUserId:  uuid.Nil,
-			expectedErrors:  erro.ErrorDbRepositoryError,
+			expectedSuccess:   false,
+			expectedUserId:    uuid.Nil,
+			expectedErrors:    erro.ErrorDbRepositoryError,
+			expectedTypeError: erro.ServerErrorType,
 		},
 	}
 
@@ -103,7 +106,7 @@ func TestCreateUser(t *testing.T) {
 			assert.Equal(t, tt.expectedSuccess, response.Success)
 			assert.Equal(t, tt.expectedUserId, response.UserId)
 			assert.Equal(t, tt.expectedErrors, response.Errors)
-
+			assert.Equal(t, tt.expectedTypeError, response.Type)
 			if err := mock.ExpectationsWereMet(); err != nil {
 				t.Errorf("there were unfulfilled expectations: %s", err)
 			}
@@ -114,13 +117,14 @@ func TestGetUser(t *testing.T) {
 	var fundamentUuid = uuid.New()
 
 	tests := []struct {
-		name            string
-		useremail       string
-		userpassword    string
-		mockSetup       func(mock sqlmock.Sqlmock)
-		expectedSuccess bool
-		expectedUserId  uuid.UUID
-		expectedErrors  error
+		name              string
+		useremail         string
+		userpassword      string
+		mockSetup         func(mock sqlmock.Sqlmock)
+		expectedSuccess   bool
+		expectedUserId    uuid.UUID
+		expectedErrors    error
+		expectedTypeError erro.ErrorType
 	}{
 		{
 			name:         "Success",
@@ -155,9 +159,10 @@ func TestGetUser(t *testing.T) {
 					WithArgs("nonexistent@example.com").
 					WillReturnError(sql.ErrNoRows)
 			},
-			expectedSuccess: false,
-			expectedUserId:  uuid.Nil,
-			expectedErrors:  erro.ErrorEmailNotRegister,
+			expectedSuccess:   false,
+			expectedUserId:    uuid.Nil,
+			expectedErrors:    erro.ErrorEmailNotRegister,
+			expectedTypeError: erro.ClientErrorType,
 		},
 		{
 			name:         "Invalid Password",
@@ -177,9 +182,10 @@ func TestGetUser(t *testing.T) {
 							AddRow(fundamentUuid, string(hashedPassword)),
 					)
 			},
-			expectedSuccess: false,
-			expectedUserId:  uuid.Nil,
-			expectedErrors:  erro.ErrorInvalidPassword,
+			expectedSuccess:   false,
+			expectedUserId:    uuid.Nil,
+			expectedErrors:    erro.ErrorInvalidPassword,
+			expectedTypeError: erro.ClientErrorType,
 		},
 		{
 			name:         "Database Error",
@@ -192,9 +198,10 @@ func TestGetUser(t *testing.T) {
 					WithArgs("test@example.com").
 					WillReturnError(erro.ErrorDbRepositoryError)
 			},
-			expectedSuccess: false,
-			expectedUserId:  uuid.Nil,
-			expectedErrors:  erro.ErrorDbRepositoryError,
+			expectedSuccess:   false,
+			expectedUserId:    uuid.Nil,
+			expectedErrors:    erro.ErrorDbRepositoryError,
+			expectedTypeError: erro.ServerErrorType,
 		},
 	}
 
@@ -215,6 +222,7 @@ func TestGetUser(t *testing.T) {
 			assert.Equal(t, tt.expectedSuccess, response.Success)
 			assert.Equal(t, tt.expectedUserId, response.UserId)
 			assert.Equal(t, tt.expectedErrors, response.Errors)
+			assert.Equal(t, tt.expectedTypeError, response.Type)
 			if err := mock.ExpectationsWereMet(); err != nil {
 				t.Errorf("there were unfulfilled expectations: %s", err)
 			}
@@ -225,12 +233,13 @@ func TestDeleteUser(t *testing.T) {
 	var fundamentUuid = uuid.New()
 
 	tests := []struct {
-		name            string
-		userid          uuid.UUID
-		userpassword    string
-		mockSetup       func(mock sqlmock.Sqlmock)
-		expectedSuccess bool
-		expectedErrors  error
+		name              string
+		userid            uuid.UUID
+		userpassword      string
+		mockSetup         func(mock sqlmock.Sqlmock)
+		expectedSuccess   bool
+		expectedErrors    error
+		expectedTypeError erro.ErrorType
 	}{
 		{
 			name:         "Success",
@@ -269,8 +278,9 @@ func TestDeleteUser(t *testing.T) {
 					WithArgs(fundamentUuid).
 					WillReturnError(sql.ErrNoRows)
 			},
-			expectedSuccess: false,
-			expectedErrors:  erro.ErrorFoundUser,
+			expectedSuccess:   false,
+			expectedErrors:    erro.ErrorFoundUser,
+			expectedTypeError: erro.ClientErrorType,
 		},
 		{
 			name:         "Invalid Password",
@@ -290,8 +300,9 @@ func TestDeleteUser(t *testing.T) {
 							AddRow(string(hashedPassword)),
 					)
 			},
-			expectedSuccess: false,
-			expectedErrors:  erro.ErrorInvalidPassword,
+			expectedSuccess:   false,
+			expectedErrors:    erro.ErrorInvalidPassword,
+			expectedTypeError: erro.ClientErrorType,
 		},
 		{
 			name:         "Database Error(DELETE)",
@@ -317,8 +328,9 @@ func TestDeleteUser(t *testing.T) {
 					WithArgs(fundamentUuid).
 					WillReturnError(erro.ErrorDbRepositoryError)
 			},
-			expectedSuccess: false,
-			expectedErrors:  erro.ErrorDbRepositoryError,
+			expectedSuccess:   false,
+			expectedErrors:    erro.ErrorDbRepositoryError,
+			expectedTypeError: erro.ServerErrorType,
 		},
 		{
 			name:         "Database Error(SELECT)",
@@ -331,8 +343,9 @@ func TestDeleteUser(t *testing.T) {
 					WithArgs(fundamentUuid).
 					WillReturnError(erro.ErrorDbRepositoryError)
 			},
-			expectedSuccess: false,
-			expectedErrors:  erro.ErrorDbRepositoryError,
+			expectedSuccess:   false,
+			expectedErrors:    erro.ErrorDbRepositoryError,
+			expectedTypeError: erro.ServerErrorType,
 		},
 	}
 
@@ -358,6 +371,7 @@ func TestDeleteUser(t *testing.T) {
 			response := repo.DeleteUser(ctx, tx, tt.userid, tt.userpassword)
 			assert.Equal(t, tt.expectedSuccess, response.Success)
 			assert.Equal(t, tt.expectedErrors, response.Errors)
+			assert.Equal(t, tt.expectedTypeError, response.Type)
 			if err := mock.ExpectationsWereMet(); err != nil {
 				t.Errorf("there were unfulfilled expectations: %s", err)
 			}
