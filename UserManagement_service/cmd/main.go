@@ -56,13 +56,12 @@ func main() {
 		log.Fatalf("[ERROR] [UserManagement] Unable to decode into struct, %v", err)
 	}
 
-	dbObject := &repository.DBObject{}
-	db, err := repository.ConnectToDb(config.Database, dbObject)
+	db, err := repository.NewDatabaseConnection(config.Database)
 	if err != nil {
 		log.Fatalf("[ERROR] [UserManagement] Failed to connect to database: %v", err)
 		return
 	}
-	defer dbObject.Close(db)
+	defer db.Close()
 	brokersString := config.Kafka.BootstrapServers
 	brokers := strings.Split(brokersString, ",")
 	kafkaProducer, err := kafka.NewKafkaProducer(brokers)
