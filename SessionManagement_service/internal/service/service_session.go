@@ -86,6 +86,13 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 		)
 		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
 	}
+	if _, err := uuid.Parse(req.SessionID); err != nil {
+		s.logger.Error("CreateSession: Error UUID-Parse userID",
+			zap.String("traceID", traceID),
+			zap.Error(err),
+		)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid sessionID format: %v", err)
+	}
 	response := s.repo.GetSession(ctx, req.SessionID)
 	if !response.Success {
 		return nil, response.Errors
@@ -106,6 +113,13 @@ func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessio
 			zap.Error(erro.ErrorRequiredSessionId),
 		)
 		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
+	}
+	if _, err := uuid.Parse(req.SessionID); err != nil {
+		s.logger.Error("CreateSession: Error UUID-Parse userID",
+			zap.String("traceID", traceID),
+			zap.Error(err),
+		)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid sessionID format: %v", err)
 	}
 	response := s.repo.DeleteSession(ctx, req.SessionID)
 	if !response.Success {
