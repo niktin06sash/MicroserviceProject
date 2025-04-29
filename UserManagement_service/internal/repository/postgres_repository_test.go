@@ -92,7 +92,7 @@ func TestCreateUser(t *testing.T) {
 				t.Fatalf("failed to begin transaction: %v", err)
 			}
 			requestID := uuid.New().String()
-			ctx := context.WithValue(context.Background(), "requestID", requestID)
+			ctx := context.WithValue(context.Background(), "traceID", requestID)
 			if tt.mockSetup != nil {
 				tt.mockSetup(mock)
 			}
@@ -127,12 +127,10 @@ func TestGetUser(t *testing.T) {
 			useremail:    "test@example.com",
 			userpassword: "password123",
 			mockSetup: func(mock sqlmock.Sqlmock) {
-
 				hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 				if err != nil {
 					t.Fatalf("failed to hash password: %v", err)
 				}
-
 				mock.ExpectQuery(
 					`(?i)SELECT userid, userpassword FROM userZ WHERE useremail = \$1`,
 				).
@@ -166,12 +164,10 @@ func TestGetUser(t *testing.T) {
 			useremail:    "test@example.com",
 			userpassword: "wrongpassword",
 			mockSetup: func(mock sqlmock.Sqlmock) {
-
 				hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 				if err != nil {
 					t.Fatalf("failed to hash password: %v", err)
 				}
-
 				mock.ExpectQuery(
 					`(?i)SELECT userid, userpassword FROM userZ WHERE useremail = \$1`,
 				).
@@ -209,19 +205,16 @@ func TestGetUser(t *testing.T) {
 				t.Fatalf("failed to open sqlmock database: %v", err)
 			}
 			defer db.Close()
-			requestID := uuid.New().String()
-			ctx := context.WithValue(context.Background(), "requestID", requestID)
+			traceID := uuid.New().String()
+			ctx := context.WithValue(context.Background(), "traceID", traceID)
 			if tt.mockSetup != nil {
 				tt.mockSetup(mock)
 			}
-
 			repo := NewAuthPostgresRepo(db)
 			response := repo.GetUser(ctx, tt.useremail, tt.userpassword)
-
 			assert.Equal(t, tt.expectedSuccess, response.Success)
 			assert.Equal(t, tt.expectedUserId, response.UserId)
 			assert.Equal(t, tt.expectedErrors, response.Errors)
-
 			if err := mock.ExpectationsWereMet(); err != nil {
 				t.Errorf("there were unfulfilled expectations: %s", err)
 			}
@@ -248,7 +241,6 @@ func TestDeleteUser(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to hash password: %v", err)
 				}
-
 				mock.ExpectQuery(
 					`(?i)SELECT userpassword FROM userZ WHERE userid = \$1`,
 				).
@@ -257,7 +249,6 @@ func TestDeleteUser(t *testing.T) {
 						sqlmock.NewRows([]string{"userpassword"}).
 							AddRow(string(hashedPassword)),
 					)
-
 				mock.ExpectExec(
 					`(?i)DELETE FROM userZ WHERE userId = \$1`,
 				).
@@ -290,7 +281,6 @@ func TestDeleteUser(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to hash password: %v", err)
 				}
-
 				mock.ExpectQuery(
 					`(?i)SELECT userpassword FROM userZ WHERE userid = \$1`,
 				).
@@ -312,7 +302,6 @@ func TestDeleteUser(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to hash password: %v", err)
 				}
-
 				mock.ExpectQuery(
 					`(?i)SELECT userpassword FROM userZ WHERE userid = \$1`,
 				).
@@ -354,24 +343,21 @@ func TestDeleteUser(t *testing.T) {
 				t.Fatalf("failed to open sqlmock database: %v", err)
 			}
 			defer db.Close()
-
 			mock.ExpectBegin()
 			tx, err := db.Begin()
 			if err != nil {
 				t.Fatalf("failed to begin transaction: %v", err)
 			}
-			requestID := uuid.New().String()
-			ctx := context.WithValue(context.Background(), "requestID", requestID)
+
+			traceID := uuid.New().String()
+			ctx := context.WithValue(context.Background(), "traceID", traceID)
 			if tt.mockSetup != nil {
 				tt.mockSetup(mock)
 			}
-
 			repo := NewAuthPostgresRepo(db)
 			response := repo.DeleteUser(ctx, tx, tt.userid, tt.userpassword)
-
 			assert.Equal(t, tt.expectedSuccess, response.Success)
 			assert.Equal(t, tt.expectedErrors, response.Errors)
-
 			if err := mock.ExpectationsWereMet(); err != nil {
 				t.Errorf("there were unfulfilled expectations: %s", err)
 			}
