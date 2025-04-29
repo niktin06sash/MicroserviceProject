@@ -21,6 +21,10 @@ type RedisObject struct {
 	Logger *logger.SessionLogger
 }
 
+func NewRedisConnection(cfg configs.RedisConfig, logger *logger.SessionLogger) (*redis.Client, error) {
+	redisobject := &RedisObject{Logger: logger}
+	return ConnectToRedis(cfg, redisobject)
+}
 func (r *RedisObject) Open(host string, port int, password string, db int) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", host, port),

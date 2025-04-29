@@ -52,15 +52,12 @@ func main() {
 		logger.Fatal("SessionManagement: Failed to get current file path", zap.Error(err))
 	}
 
-	redisobject := &repository.RedisObject{
-		Logger: logger,
-	}
-	redis, err := repository.ConnectToRedis(config.Redis, redisobject)
+	redis, err := repository.NewRedisConnection(config.Redis, logger)
 	if err != nil {
 		logger.Fatal("SessionManagement: Failed to connect to database", zap.Error(err))
 		return
 	}
-	defer redisobject.Close(redis)
+	defer redis.Close()
 	/*brokersString := config.Kafka.BootstrapServers
 	brokers := strings.Split(brokersString, ",")
 	kafkaProducer, err := kafka.NewKafkaProducer(brokers)
