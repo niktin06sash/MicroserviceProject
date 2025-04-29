@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	mock_client "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client/mocks"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	mock_repository "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/mocks"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
@@ -81,6 +82,7 @@ func TestDeleteAccount_Success(t *testing.T) {
 	require.True(t, response.Success)
 }
 func TestDeleteAccount_BeginTxError(t *testing.T) {
+	expectedTypeError := erro.ServerErrorType
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
 	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
@@ -107,4 +109,5 @@ func TestDeleteAccount_BeginTxError(t *testing.T) {
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
 	require.EqualError(t, response.Errors["InternalServerError"], "Transaction creation error")
+	require.Equal(t, expectedTypeError, response.Type)
 }
