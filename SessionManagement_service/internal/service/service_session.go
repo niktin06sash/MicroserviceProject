@@ -87,7 +87,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
 	}
 	if _, err := uuid.Parse(req.SessionID); err != nil {
-		s.logger.Error("CreateSession: Error UUID-Parse userID",
+		s.logger.Error("ValidateSession: Error UUID-Parse sessionID",
 			zap.String("traceID", traceID),
 			zap.Error(err),
 		)
@@ -115,7 +115,7 @@ func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessio
 		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
 	}
 	if _, err := uuid.Parse(req.SessionID); err != nil {
-		s.logger.Error("CreateSession: Error UUID-Parse userID",
+		s.logger.Error("DeleteSession: Error UUID-Parse sessionID",
 			zap.String("traceID", traceID),
 			zap.Error(err),
 		)
