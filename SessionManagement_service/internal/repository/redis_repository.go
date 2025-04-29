@@ -139,6 +139,16 @@ func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string)
 	}
 	err = redisrepo.Client.Del(ctx, sessionID).Err()
 	if err != nil {
+		if err == redis.Nil {
+			redisrepo.logger.Warn("DeleteSession: Session not found",
+				zap.String("traceID", traceID),
+				zap.String("sessionID", sessionID),
+			)
+			return &RepositoryResponse{
+				Success: false,
+				Errors:  status.Errorf(codes.InvalidArgument, "Session not found"),
+			}
+		}
 		redisrepo.logger.Error("DeleteSession: Del session Error",
 			zap.String("traceID", traceID),
 			zap.Error(err),
