@@ -32,7 +32,7 @@ func Middleware_Logging(next http.Handler) http.Handler {
 		deadline, err := time.Parse(time.RFC3339, deadlinectx)
 		if err != nil {
 			log.Printf("[ERROR] [UserManagement] Failed to parse X-Deadline: %v", err)
-			deadline = time.Now().Add(10 * time.Second)
+			deadline = time.Now().Add(15 * time.Second)
 		}
 		ctx, cancel := context.WithDeadline(ctx, deadline)
 		defer cancel()
