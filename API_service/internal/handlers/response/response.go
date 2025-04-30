@@ -3,6 +3,7 @@ package response
 import (
 	"context"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,7 +34,18 @@ type PersonDelete struct {
 	Password string `json:"password"`
 }
 
-func SendResponse(c *gin.Context, status int, success bool, data map[string]any, errors map[string]string) {
+func SendResponse(c *gin.Context, status int, success bool, data map[string]any, errors map[string]string, traceid string, place string) {
+	err := CheckContext(c, traceid, place)
+	if err != nil {
+		response := HTTPResponse{
+			Success: false,
+			Data:    nil,
+			Errors:  map[string]string{"InternalServerError": "Context deadline exceeded"},
+			Status:  http.StatusInternalServerError,
+		}
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	}
 	response := HTTPResponse{
 		Success: success,
 		Data:    data,
@@ -41,6 +53,7 @@ func SendResponse(c *gin.Context, status int, success bool, data map[string]any,
 		Status:  status,
 	}
 	c.JSON(status, response)
+	log.Printf("[INFO] [API-Service] [%s] [TraceID: %s]: Succesfull send response to client", traceid, place)
 }
 func CheckContext(ctx context.Context, traceID string, place string) error {
 	select {

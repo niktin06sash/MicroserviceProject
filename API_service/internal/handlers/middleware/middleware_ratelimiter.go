@@ -17,7 +17,7 @@ func (m *Middleware) RateLimiter() gin.HandlerFunc {
 		limiter := getLimit(m, ip)
 		if !limiter.Allow() {
 			logRequest(c.Request, "RateLimiter", traceID, false, "Too many requests")
-			response.SendResponse(c, http.StatusTooManyRequests, false, nil, map[string]string{"ClientError": "Too Many Requests"})
+			response.SendResponse(c, http.StatusTooManyRequests, false, nil, map[string]string{"ClientError": "Too Many Requests"}, traceID, "RateLimiter")
 			c.Abort()
 			return
 		}
