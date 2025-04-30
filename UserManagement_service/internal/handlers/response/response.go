@@ -15,46 +15,37 @@ type HTTPResponse struct {
 	Status  int               `json:"status"`
 }
 
-func NewSuccessResponse(data map[string]any, status int) HTTPResponse {
-	if data == nil {
-		data = make(map[string]any)
-	}
-	return HTTPResponse{
-		Success: true,
-		Data:    data,
-		Status:  status,
-	}
-}
-func NewErrorResponse(errors map[string]string, status int) HTTPResponse {
-	if errors == nil {
-		errors = make(map[string]string)
-	}
-	return HTTPResponse{
-		Success: false,
-		Errors:  errors,
-		Status:  status,
-	}
-}
-func SendResponse(w http.ResponseWriter, resp HTTPResponse, traceid string, place string, ctx context.Context) {
+func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data map[string]any, errors map[string]string, status int, traceid string, place string) {
 	w.Header().Set("Content-Type", "application/json")
 	if ctx.Err() != nil {
 		log.Printf("[WARN] [UserManagement] [TraceID: %s] %s: Context canceled or deadline exceeded", traceid, place)
 		w.WriteHeader(http.StatusInternalServerError)
-		if err := json.NewEncoder(w).Encode(NewErrorResponse(
-			map[string]string{"InternalServerError": "Context deadline exceeded"},
-			http.StatusInternalServerError,
-		)); err != nil {
+		badreq := HTTPResponse{
+			Success: false,
+			Errors:  map[string]string{"InternalServerError": "Context deadline exceeded"},
+			Status:  http.StatusInternalServerError,
+		}
+		if err := json.NewEncoder(w).Encode(badreq); err != nil {
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Failed to send timeout response: %v", traceid, place, err)
 		}
 		return
+	}
+	resp := HTTPResponse{
+		Success: success,
+		Errors:  errors,
+		Data:    data,
+		Status:  status,
 	}
 	w.WriteHeader(resp.Status)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Failed to encode response: %v", traceid, place, err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(NewErrorResponse(map[string]string{
-			"InternalServerError": "EncoderResponse Error",
-		}, resp.Status))
+		badreq := HTTPResponse{
+			Success: false,
+			Errors:  map[string]string{"InternalServerError": "EncoderResponse Error"},
+			Status:  http.StatusInternalServerError,
+		}
+		json.NewEncoder(w).Encode(badreq)
 	}
 	log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: Succesfull send response to client", traceid, place)
 }
