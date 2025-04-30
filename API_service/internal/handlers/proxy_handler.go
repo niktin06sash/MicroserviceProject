@@ -19,20 +19,20 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	targetURL, ok := h.Routes[reqpath]
 	if !ok {
 		maparesponse["ClientError"] = "Page not found"
-		response.SendResponse(c, http.StatusNotFound, false, nil, maparesponse)
+		response.SendResponse(c, http.StatusNotFound, false, nil, maparesponse, traceID, "ProxyHTTP")
 		return
 	}
 	target, err := url.Parse(targetURL)
 	if err != nil {
 		log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %s] URL-Parse Error: %s", traceID, err)
 		maparesponse["InternalServerError"] = "Url-Parse Error"
-		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "ProxyHTTP")
 		return
 	}
 	err = response.CheckContext(c.Request.Context(), traceID, "ProxyHTTP")
 	if err != nil {
 		maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
-		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "ProxyHTTP")
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)

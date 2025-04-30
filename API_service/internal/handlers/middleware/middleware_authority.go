@@ -16,7 +16,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		if err != nil {
 			logRequest(c.Request, "Authority", traceID, true, err.Error())
 			maparesponse["ClientError"] = "Required Session in Cookie"
-			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse)
+			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, "Authority")
 			c.Abort()
 			return
 		}
@@ -26,14 +26,14 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 			case erro.ClientErrorType:
 				logRequest(c.Request, "Authority", traceID, true, "Unauthorized-request for authorized users")
 				maparesponse["ClientError"] = errv.Error()
-				response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse)
+				response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, "Authority")
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
 				logRequest(c.Request, "Authority", traceID, true, "Internal server error during authorization")
 				maparesponse["InternalServerError"] = errv.Error()
-				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Authority")
 				c.Abort()
 				return
 			}
@@ -52,7 +52,7 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		err := response.CheckContext(c.Request.Context(), traceID, "Not-Authority")
 		if err != nil {
 			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
-			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Not-Authority")
 			c.Abort()
 			return
 		}
@@ -68,14 +68,14 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 			case erro.ClientErrorType:
 				logRequest(c.Request, "Authority", traceID, true, "Authorized-request for unauthorized users")
 				maparesponse["ClientError"] = errv.Error()
-				response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse)
+				response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse, traceID, "Not-Authority")
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
 				logRequest(c.Request, "Authority", traceID, true, "Internal server error during authorization")
 				maparesponse["InternalServerError"] = errv.Error()
-				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse)
+				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Not-Authority")
 				c.Abort()
 				return
 			}
