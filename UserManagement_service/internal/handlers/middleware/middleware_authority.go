@@ -16,16 +16,14 @@ func Middleware_Authorized(next http.Handler) http.Handler {
 		if userID == "" {
 			logRequest(r, "Authority", traceID, true, "Required User-ID")
 			maparesponse["InternalServerError"] = erro.ErrorRequiredUserID.Error()
-			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, traceID, "Authority", r.Context())
+			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, "Authority")
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID == "" {
 			logRequest(r, "Authority", traceID, true, "Required Session-ID")
 			maparesponse["InternalServerError"] = erro.ErrorRequiredSessionID.Error()
-			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, traceID, "Authority", r.Context())
+			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, "Authority")
 			return
 		}
 		ctx := context.WithValue(r.Context(), "userID", userID)
@@ -43,16 +41,14 @@ func Middleware_AuthorizedNot(next http.Handler) http.Handler {
 		if userID != "" {
 			logRequest(r, "Not-Authority", traceID, true, "Not-Required User-ID")
 			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
-			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, traceID, "Not-Authority", r.Context())
+			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, "Authority")
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID != "" {
 			logRequest(r, "Not-Authority", traceID, true, "Not-Required Session-ID")
 			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
-			br := response.NewErrorResponse(maparesponse, http.StatusInternalServerError)
-			response.SendResponse(w, br, traceID, "Not-Authority", r.Context())
+			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, "Authority")
 			return
 		}
 		logRequest(r, "Non-Authority", traceID, false, "Successful unauthorization verification")
