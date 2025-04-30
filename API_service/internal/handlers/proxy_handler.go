@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
@@ -36,6 +37,12 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.Director = func(req *http.Request) {
+		deadline, ok := c.Request.Context().Deadline()
+		if !ok {
+			log.Println("[WARN] [API-Gateway] Failed to get deadline from context")
+			deadline = time.Now().Add(20 * time.Second)
+		}
+		req.Header.Set("X-Deadline", deadline.Format(time.RFC3339))
 		req.Host = target.Host
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
