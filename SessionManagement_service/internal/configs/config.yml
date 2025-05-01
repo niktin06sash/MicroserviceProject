@@ -4,4 +4,14 @@ redis:
   host: localhost   
   port: 6379        
   password: ""      
-  db: 0             
+  db: 0
+kafka:
+  bootstrap_servers: "localhost:9092" 
+  retry_backoff_ms: 500
+  batch_size: 16384
+  acks: "all" 
+  topics:
+    info_log: "info-log-topic"
+    error_log: "error-log-topic"
+    warn_log: "warn-log-topic"
+  group_id: "session-service-group"               

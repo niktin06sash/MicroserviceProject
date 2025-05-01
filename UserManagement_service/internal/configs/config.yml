@@ -9,12 +9,14 @@ database:
   name: fc2
   sslmode: disable      
 kafka:
-  bootstrap_servers: "localhost:9092"  
+  bootstrap_servers: "localhost:9092"
+  retry_backoff_ms: 500
+  batch_size: 16384
+  acks: "all"  
   topics:
-    user_authenticate: "user-authenticate-topic"
-    user_registered: "user-registered-topic"
-    user_logged_out: "user-logged-out-topic"
-    user_delete: "user-delete-topic"
-  group_id: "auth-service-group"  
+    info_log: "info-log-topic"
+    error_log: "error-log-topic"
+    warn_log: "warn-log-topic"
+  group_id: "service-group"  
 session_service:
   grpc_address: "localhost:50052"

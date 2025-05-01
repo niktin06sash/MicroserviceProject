@@ -22,15 +22,17 @@ type DatabaseConfig struct {
 }
 type KafkaConfig struct {
 	BootstrapServers string      `mapstructure:"bootstrap_servers"`
+	RetryBackoffMs   int         `mapstructure:"retry_backoff_ms"`
+	BatchSize        int         `mapstructure:"batch_size"`
+	Acks             string      `mapstructure:"acks"`
 	Topics           KafkaTopics `mapstructure:"topics"`
 	GroupID          string      `mapstructure:"group_id"`
 }
 
 type KafkaTopics struct {
-	SessionStarted  string `mapstructure:"session_started"`
-	UserRegistered  string `mapstructure:"user_registered"`
-	UserLoggedOut   string `mapstructure:"user_logged_out"`
-	UserDeleteTopic string `mapstructure:"user_delete_topic"`
+	InfoLog  string `mapstructure:"info-log"`
+	ErrorLog string `mapstructure:"error-log"`
+	WarnLog  string `mapstructure:"warn-log"`
 }
 type SessionServiceConfig struct {
 	GrpcAddress string `mapstructure:"grpc_address"`
