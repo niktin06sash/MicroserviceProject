@@ -17,6 +17,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/server"
 	"github.com/spf13/viper"
 )
@@ -70,6 +71,8 @@ func main() {
 	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
 		log.Fatalf("[ERROR] [API-Service] Key file not found: %s", keyFile)
 	}
+	kafkaprod := kafka.NewKafkaProducer(config.Kafka)
+	defer kafkaprod.Close()
 	grpcclient := client.NewGrpcClient(config.SessionService)
 	defer grpcclient.Close()
 	middleware := middleware.NewMiddleware(grpcclient)
