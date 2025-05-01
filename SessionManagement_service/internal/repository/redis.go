@@ -13,7 +13,7 @@ import (
 type RedisInterface interface {
 	Open(host string, port int, password string, db int) (*redis.Client, error)
 	Ping(client *redis.Client) error
-	Close(client *redis.Client) error
+	Close(client *redis.Client)
 	GetLogger() *logger.SessionLogger
 }
 
@@ -39,8 +39,9 @@ func (r *RedisObject) Ping(client *redis.Client) error {
 	return err
 }
 
-func (r *RedisObject) Close(client *redis.Client) error {
-	return client.Close()
+func (r *RedisObject) Close(client *redis.Client) {
+	client.Close()
+	r.Logger.Info("SessionManagement: Successful close Redis-Client!")
 }
 func (r *RedisObject) GetLogger() *logger.SessionLogger {
 	return r.Logger

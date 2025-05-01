@@ -56,6 +56,7 @@ func (d *DBObject) Close(db *sql.DB) {
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] Sql-Close error: %v", err)
 	}
+	log.Println("[INFO] [UserManagement] Successful Sql-Close")
 }
 
 func BuildConnectionString(cfg configs.DatabaseConfig) string {

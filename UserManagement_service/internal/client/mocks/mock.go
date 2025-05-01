@@ -36,11 +36,9 @@ func (m *MockGrpcClientService) EXPECT() *MockGrpcClientServiceMockRecorder {
 }
 
 // Close mocks base method.
-func (m *MockGrpcClientService) Close() error {
+func (m *MockGrpcClientService) Close() {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close")
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "Close")
 }
 
 // Close indicates an expected call of Close.
