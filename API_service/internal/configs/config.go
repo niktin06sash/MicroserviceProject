@@ -1,10 +1,11 @@
 package configs
 
 type Config struct {
-	Server  ServerConfig         `mapstructure:"server"`
-	Session SessionServiceConfig `mapstructure:"session_service"`
-	Routes  map[string]string    `mapstructure:"routes"`
-	SSL     SSLConfig            `mapstructure:"ssl"`
+	Server         ServerConfig         `mapstructure:"server"`
+	SessionService SessionServiceConfig `mapstructure:"session_service"`
+	Kafka          KafkaConfig          `mapstructure:"kafka"`
+	Routes         map[string]string    `mapstructure:"routes"`
+	SSL            SSLConfig            `mapstructure:"ssl"`
 }
 type ServerConfig struct {
 	Port string `mapstructure:"port"`
@@ -15,4 +16,17 @@ type SessionServiceConfig struct {
 type SSLConfig struct {
 	CertFile string `mapstructure:"cert_file"`
 	KeyFile  string `mapstructure:"key_file"`
+}
+type KafkaConfig struct {
+	BootstrapServers string      `mapstructure:"bootstrap_servers"`
+	RetryBackoffMs   int         `mapstructure:"retry_backoff_ms"`
+	BatchSize        int         `mapstructure:"batch_size"`
+	Acks             string      `mapstructure:"acks"`
+	Topics           KafkaTopics `mapstructure:"topics"`
+	GroupID          string      `mapstructure:"group_id"`
+}
+type KafkaTopics struct {
+	InfoLog  string `mapstructure:"info-log"`
+	ErrorLog string `mapstructure:"error-log"`
+	WarnLog  string `mapstructure:"warn-log"`
 }

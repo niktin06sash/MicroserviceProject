@@ -7,7 +7,16 @@ routes:
    /api/auth: "http://localhost:8082/auth"
    /api/del: "http://localhost:8082/del"
    /api/logout: "http://localhost:8082/logout"
-
+kafka:
+  bootstrap_servers: "localhost:9092"
+  retry_backoff_ms: 500
+  batch_size: 16384
+  acks: "all"  
+  topics:
+    info_log: "info-log-topic"
+    error_log: "error-log-topic"
+    warn_log: "warn-log-topic"
+  group_id: "service-group"  
 ssl:
   cert_file: "cert1.pem"
   key_file: "key1.pem"

@@ -2,8 +2,8 @@ package configs
 
 type Config struct {
 	Server ServerConfig `mapstructure:"server"`
-
-	Redis RedisConfig `mapstructure:"redis"`
+	Kafka  KafkaConfig  `mapstructure:"kafka"`
+	Redis  RedisConfig  `mapstructure:"redis"`
 }
 
 type ServerConfig struct {
@@ -15,4 +15,17 @@ type RedisConfig struct {
 	Port     int    `mapstructure:"port"`
 	Password string `mapstructure:"password"`
 	DB       int    `mapstructure:"db"`
+}
+type KafkaConfig struct {
+	BootstrapServers string      `mapstructure:"bootstrap_servers"`
+	RetryBackoffMs   int         `mapstructure:"retry_backoff_ms"`
+	BatchSize        int         `mapstructure:"batch_size"`
+	Acks             string      `mapstructure:"acks"`
+	Topics           KafkaTopics `mapstructure:"topics"`
+	GroupID          string      `mapstructure:"group_id"`
+}
+type KafkaTopics struct {
+	InfoLog  string `mapstructure:"info-log"`
+	ErrorLog string `mapstructure:"error-log"`
+	WarnLog  string `mapstructure:"warn-log"`
 }
