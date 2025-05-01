@@ -43,4 +43,5 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 
 func (kf *KafkaProducer) Close() {
 	kf.writer.Close()
+	log.Println("[INFO] [API-Service] Successful close Kafka-Producer")
 }
