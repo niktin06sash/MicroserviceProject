@@ -14,7 +14,7 @@ import (
 type GrpcClientService interface {
 	CreateSession(ctx context.Context, userID string) (*pb.CreateSessionResponse, error)
 	DeleteSession(ctx context.Context, sessionID string) (*pb.DeleteSessionResponse, error)
-	Close() error
+	Close()
 }
 type GrpcClient struct {
 	client pb.SessionServiceClient
@@ -31,8 +31,9 @@ func NewGrpcClient(cfg configs.SessionServiceConfig) *GrpcClient {
 	log.Println("[INFO] [UserManagement] Successful connect to GRPC-Session Client")
 	return &GrpcClient{client: client, conn: conn}
 }
-func (g *GrpcClient) Close() error {
-	return g.conn.Close()
+func (g *GrpcClient) Close() {
+	g.conn.Close()
+	log.Println("[INFO] [UserManagement] Successful close GRPC-Session Client")
 }
 func (g *GrpcClient) CreateSession(ctx context.Context, userd string) (*pb.CreateSessionResponse, error) {
 	traceid := ctx.Value("traceID").(string)
