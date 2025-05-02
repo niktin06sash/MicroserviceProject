@@ -22,8 +22,8 @@ func NewHandler(middleware middleware.MiddlewareService, routes map[string]strin
 func (h *Handler) InitRoutes() *gin.Engine {
 	r := gin.New()
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	r.Use(h.Middleware.Logging())
 	r.Use(h.Middleware.RateLimiter())
+	r.Use(h.Middleware.Logging())
 	r.POST("/api/reg", h.Middleware.AuthorizedNot(), h.Registration)
 	r.POST("/api/auth", h.Middleware.AuthorizedNot(), h.Authentication)
 	r.DELETE("/api/del", h.Middleware.Authorized(), h.DeleteUser)
