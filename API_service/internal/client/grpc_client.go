@@ -12,7 +12,6 @@ import (
 
 type GrpcClientService interface {
 	ValidateSession(ctx context.Context, sessionid string) (*pb.ValidateSessionResponse, error)
-	Close()
 }
 type GrpcClient struct {
 	client pb.SessionServiceClient
