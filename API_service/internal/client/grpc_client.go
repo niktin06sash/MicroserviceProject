@@ -34,9 +34,5 @@ func (g *GrpcClient) Close() {
 }
 func (g *GrpcClient) ValidateSession(ctx context.Context, sessionid string) (*pb.ValidateSessionResponse, error) {
 	req := &pb.ValidateSessionRequest{SessionID: sessionid}
-	resp, err := g.client.ValidateSession(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
+	return g.client.ValidateSession(ctx, req)
 }
