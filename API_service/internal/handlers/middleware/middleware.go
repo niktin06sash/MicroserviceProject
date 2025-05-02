@@ -25,7 +25,6 @@ type MiddlewareService interface {
 	Logging() gin.HandlerFunc
 	Authorized() gin.HandlerFunc
 	AuthorizedNot() gin.HandlerFunc
-	Stop()
 }
 
 func NewMiddleware(grpcClient client.GrpcClientService, kafkaProducer kafka.KafkaProducerService) *Middleware {
