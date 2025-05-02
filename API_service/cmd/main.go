@@ -76,7 +76,7 @@ func main() {
 	grpcclient := client.NewGrpcClient(config.SessionService)
 	defer grpcclient.Close()
 	middleware := middleware.NewMiddleware(grpcclient, kafkaprod)
-	handler := handlers.NewHandler(middleware, config.Routes)
+	handler := handlers.NewHandler(middleware, kafkaprod, config.Routes)
 	srv := &server.Server{}
 	port := config.Server.Port
 	if port == "" {

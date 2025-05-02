@@ -17,7 +17,7 @@ func (m *Middleware) RateLimiter() gin.HandlerFunc {
 		ip := c.Request.RemoteAddr
 		limiter := getLimit(m, ip)
 		if !limiter.Allow() {
-			m.kafkaProducer.NewAPILog(kafka.APILog{
+			m.KafkaProducer.NewAPILog(kafka.APILog{
 				Level:     kafka.LogLevelWarn,
 				Place:     "RateLimiter",
 				TraceID:   traceID,

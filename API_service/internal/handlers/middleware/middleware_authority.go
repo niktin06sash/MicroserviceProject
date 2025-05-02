@@ -16,7 +16,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		traceID := c.MustGet("traceID").(string)
 		sessionID, err := c.Cookie("session")
 		if err != nil {
-			m.kafkaProducer.NewAPILog(kafka.APILog{
+			m.KafkaProducer.NewAPILog(kafka.APILog{
 				Level:     kafka.LogLevelWarn,
 				Place:     "Authority",
 				TraceID:   traceID,
@@ -35,7 +35,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		if errv != nil {
 			switch errv.GetTypeError() {
 			case erro.ClientErrorType:
-				m.kafkaProducer.NewAPILog(kafka.APILog{
+				m.KafkaProducer.NewAPILog(kafka.APILog{
 					Level:     kafka.LogLevelWarn,
 					Place:     "Authority",
 					TraceID:   traceID,
@@ -51,7 +51,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 				return
 
 			case erro.ServerErrorType:
-				m.kafkaProducer.NewAPILog(kafka.APILog{
+				m.KafkaProducer.NewAPILog(kafka.APILog{
 					Level:     kafka.LogLevelError,
 					Place:     "Authority",
 					TraceID:   traceID,
@@ -67,7 +67,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 				return
 			}
 		}
-		m.kafkaProducer.NewAPILog(kafka.APILog{
+		m.KafkaProducer.NewAPILog(kafka.APILog{
 			Level:     kafka.LogLevelInfo,
 			Place:     "Authority",
 			TraceID:   traceID,
@@ -96,7 +96,7 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		}
 		sessionID, err := c.Cookie("session")
 		if err != nil {
-			m.kafkaProducer.NewAPILog(kafka.APILog{
+			m.KafkaProducer.NewAPILog(kafka.APILog{
 				Level:     kafka.LogLevelInfo,
 				Place:     "Not-Authority",
 				TraceID:   traceID,
@@ -113,7 +113,7 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		if errv != nil {
 			switch errv.GetTypeError() {
 			case erro.ClientErrorType:
-				m.kafkaProducer.NewAPILog(kafka.APILog{
+				m.KafkaProducer.NewAPILog(kafka.APILog{
 					Level:     kafka.LogLevelWarn,
 					Place:     "Not-Authority",
 					TraceID:   traceID,
@@ -129,7 +129,7 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 				return
 
 			case erro.ServerErrorType:
-				m.kafkaProducer.NewAPILog(kafka.APILog{
+				m.KafkaProducer.NewAPILog(kafka.APILog{
 					Level:     kafka.LogLevelError,
 					Place:     "Not-Authority",
 					TraceID:   traceID,
@@ -145,7 +145,7 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 				return
 			}
 		}
-		m.kafkaProducer.NewAPILog(kafka.APILog{
+		m.KafkaProducer.NewAPILog(kafka.APILog{
 			Level:     kafka.LogLevelInfo,
 			Place:     "Not-Authority",
 			TraceID:   traceID,
