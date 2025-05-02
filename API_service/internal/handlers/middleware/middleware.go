@@ -16,7 +16,7 @@ type RateLimiterEntry struct {
 }
 type Middleware struct {
 	grpcClient    client.GrpcClientService
-	kafkaProducer kafka.KafkaProducerService
+	KafkaProducer kafka.KafkaProducerService
 	rateLimiters  sync.Map
 	stopclean     chan (struct{})
 }
@@ -31,7 +31,7 @@ type MiddlewareService interface {
 func NewMiddleware(grpcClient client.GrpcClientService, kafkaProducer kafka.KafkaProducerService) *Middleware {
 	m := &Middleware{
 		grpcClient:    grpcClient,
-		kafkaProducer: kafkaProducer,
+		KafkaProducer: kafkaProducer,
 		rateLimiters:  sync.Map{},
 		stopclean:     make(chan struct{}),
 	}

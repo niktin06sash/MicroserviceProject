@@ -23,7 +23,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 		md := metadata.Pairs("traceID", traceID)
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		if err = response.CheckContext(ctx, traceID, place); err != nil {
-			middleware.kafkaProducer.NewAPILog(kafka.APILog{
+			middleware.KafkaProducer.NewAPILog(kafka.APILog{
 				Level:     kafka.LogLevelError,
 				Place:     place,
 				TraceID:   traceID,
@@ -37,7 +37,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
 		if err == nil && protoresponse.Success {
-			middleware.kafkaProducer.NewAPILog(kafka.APILog{
+			middleware.KafkaProducer.NewAPILog(kafka.APILog{
 				Level:     kafka.LogLevelInfo,
 				Place:     place,
 				TraceID:   traceID,
@@ -52,7 +52,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 		if err != nil {
 			st, _ := status.FromError(err)
 			trymessage := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
-			middleware.kafkaProducer.NewAPILog(kafka.APILog{
+			middleware.KafkaProducer.NewAPILog(kafka.APILog{
 				Level:     kafka.LogLevelWarn,
 				Place:     place,
 				TraceID:   traceID,
@@ -65,7 +65,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
 				logmsg := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
-				middleware.kafkaProducer.NewAPILog(kafka.APILog{
+				middleware.KafkaProducer.NewAPILog(kafka.APILog{
 					Level:     kafka.LogLevelWarn,
 					Place:     place,
 					TraceID:   traceID,
@@ -82,7 +82,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 			}
 		}
 	}
-	middleware.kafkaProducer.NewAPILog(kafka.APILog{
+	middleware.KafkaProducer.NewAPILog(kafka.APILog{
 		Level:     kafka.LogLevelError,
 		Place:     place,
 		TraceID:   traceID,
@@ -102,7 +102,7 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 		md := metadata.Pairs("traceID", traceID)
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		if err = response.CheckContext(ctx, traceID, place); err != nil {
-			middleware.kafkaProducer.NewAPILog(kafka.APILog{
+			middleware.KafkaProducer.NewAPILog(kafka.APILog{
 				Level:     kafka.LogLevelError,
 				Place:     place,
 				TraceID:   traceID,
@@ -120,7 +120,7 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
 				trymessage := fmt.Sprintf("Operation attempt %d failed: %v, (%s)", i, st.Message(), err)
-				middleware.kafkaProducer.NewAPILog(kafka.APILog{
+				middleware.KafkaProducer.NewAPILog(kafka.APILog{
 					Level:     kafka.LogLevelWarn,
 					Place:     place,
 					TraceID:   traceID,
@@ -143,7 +143,7 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			}
 		}
 	}
-	middleware.kafkaProducer.NewAPILog(kafka.APILog{
+	middleware.KafkaProducer.NewAPILog(kafka.APILog{
 		Level:     kafka.LogLevelError,
 		Place:     place,
 		TraceID:   traceID,

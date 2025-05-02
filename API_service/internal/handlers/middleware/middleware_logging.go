@@ -20,7 +20,7 @@ func (mw *Middleware) Logging() gin.HandlerFunc {
 		defer cancel()
 
 		c.Request = c.Request.WithContext(ctx)
-		mw.kafkaProducer.NewAPILog(kafka.APILog{
+		mw.KafkaProducer.NewAPILog(kafka.APILog{
 			Level:     kafka.LogLevelInfo,
 			Place:     "Logging",
 			TraceID:   traceID,

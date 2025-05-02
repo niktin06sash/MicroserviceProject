@@ -4,19 +4,22 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/docs"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Handler struct {
-	Middleware middleware.MiddlewareService
-	Routes     map[string]string
+	Middleware    middleware.MiddlewareService
+	Routes        map[string]string
+	KafkaProducer kafka.KafkaProducerService
 }
 
-func NewHandler(middleware middleware.MiddlewareService, routes map[string]string) *Handler {
+func NewHandler(middleware middleware.MiddlewareService, kafkaproducer kafka.KafkaProducerService, routes map[string]string) *Handler {
 	return &Handler{
-		Middleware: middleware,
-		Routes:     routes,
+		Middleware:    middleware,
+		Routes:        routes,
+		KafkaProducer: kafkaproducer,
 	}
 }
 func (h *Handler) InitRoutes() *gin.Engine {

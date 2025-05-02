@@ -19,7 +19,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	targetURL, ok := h.Routes[reqpath]
 	if !ok {
 		maparesponse["ClientError"] = "Page not found"
-		response.SendResponse(c, http.StatusNotFound, false, nil, maparesponse, traceID, "ProxyHTTP")
+		response.SendResponse(c, http.StatusBadRequest, false, nil, maparesponse, traceID, "ProxyHTTP")
 		return
 	}
 	target, err := url.Parse(targetURL)
