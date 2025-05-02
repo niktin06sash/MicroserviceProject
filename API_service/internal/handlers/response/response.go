@@ -2,7 +2,6 @@ package response
 
 import (
 	"context"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
@@ -42,16 +41,7 @@ func SendResponse(c *gin.Context, status int, success bool, data map[string]any,
 		Status:  status,
 	}
 	c.JSON(status, response)
-	kafkaprod.NewAPILog(kafka.APILog{
-		Level:     kafka.LogLevelInfo,
-		Place:     place,
-		TraceID:   traceid,
-		IP:        c.Request.RemoteAddr,
-		Method:    c.Request.Method,
-		Path:      c.Request.URL.Path,
-		Timestamp: time.Now().Format(time.RFC3339),
-		Message:   "Succesfull send response to client",
-	})
+	kafkaprod.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
 }
 func CheckContext(ctx context.Context, traceID string, place string) error {
 	select {

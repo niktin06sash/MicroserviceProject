@@ -12,7 +12,7 @@ import (
 func (mw *Middleware) Logging() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		traceID := uuid.New().String()
-
+		var place = "Logging"
 		c.Set("traceID", traceID)
 
 		ctx := c.Request.Context()
@@ -20,16 +20,7 @@ func (mw *Middleware) Logging() gin.HandlerFunc {
 		defer cancel()
 
 		c.Request = c.Request.WithContext(ctx)
-		mw.KafkaProducer.NewAPILog(kafka.APILog{
-			Level:     kafka.LogLevelInfo,
-			Place:     "Logging",
-			TraceID:   traceID,
-			IP:        c.Request.RemoteAddr,
-			Method:    c.Request.Method,
-			Path:      c.Request.URL.Path,
-			Timestamp: time.Now().Format(time.RFC3339),
-			Message:   "",
-		})
+		mw.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "")
 		c.Next()
 	}
 }

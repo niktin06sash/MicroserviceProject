@@ -23,76 +23,31 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 		md := metadata.Pairs("traceID", traceID)
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		if err = response.CheckContext(ctx, traceID, place); err != nil {
-			middleware.KafkaProducer.NewAPILog(kafka.APILog{
-				Level:     kafka.LogLevelError,
-				Place:     place,
-				TraceID:   traceID,
-				IP:        c.Request.RemoteAddr,
-				Method:    c.Request.Method,
-				Path:      c.Request.URL.Path,
-				Timestamp: time.Now().Format(time.RFC3339),
-				Message:   "Context cancelled before operation",
-			})
+			fmterr := fmt.Sprintf("Context error: %v", err)
+			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
 			return nil, &erro.CustomError{ErrorName: "Context Error", ErrorType: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
 		if err == nil && protoresponse.Success {
-			middleware.KafkaProducer.NewAPILog(kafka.APILog{
-				Level:     kafka.LogLevelInfo,
-				Place:     place,
-				TraceID:   traceID,
-				IP:        c.Request.RemoteAddr,
-				Method:    c.Request.Method,
-				Path:      c.Request.URL.Path,
-				Timestamp: time.Now().Format(time.RFC3339),
-				Message:   "Successful gRPC request",
-			})
 			return protoresponse, nil
 		}
 		if err != nil {
 			st, _ := status.FromError(err)
-			trymessage := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
-			middleware.KafkaProducer.NewAPILog(kafka.APILog{
-				Level:     kafka.LogLevelWarn,
-				Place:     place,
-				TraceID:   traceID,
-				IP:        c.Request.RemoteAddr,
-				Method:    c.Request.Method,
-				Path:      c.Request.URL.Path,
-				Timestamp: time.Now().Format(time.RFC3339),
-				Message:   trymessage,
-			})
+			fmterr := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
+			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				logmsg := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
-				middleware.KafkaProducer.NewAPILog(kafka.APILog{
-					Level:     kafka.LogLevelWarn,
-					Place:     place,
-					TraceID:   traceID,
-					IP:        c.Request.RemoteAddr,
-					Method:    c.Request.Method,
-					Path:      c.Request.URL.Path,
-					Timestamp: time.Now().Format(time.RFC3339),
-					Message:   logmsg,
-				})
+				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
+				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
-				return protoresponse, &erro.CustomError{ErrorName: "Invalid Session Data", ErrorType: erro.ClientErrorType}
+				return nil, &erro.CustomError{ErrorName: "Invalid Session Data", ErrorType: erro.ClientErrorType}
 			}
 		}
 	}
-	middleware.KafkaProducer.NewAPILog(kafka.APILog{
-		Level:     kafka.LogLevelError,
-		Place:     place,
-		TraceID:   traceID,
-		IP:        c.Request.RemoteAddr,
-		Method:    c.Request.Method,
-		Path:      c.Request.URL.Path,
-		Timestamp: time.Now().Format(time.RFC3339),
-		Message:   "All retry attempts failed",
-	})
-	return protoresponse, &erro.CustomError{ErrorName: "All retry attempts failed", ErrorType: erro.ServerErrorType}
+	middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
+	return nil, &erro.CustomError{ErrorName: "All retry attempts failed", ErrorType: erro.ServerErrorType}
 }
 func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, *erro.CustomError) {
 	var err error
@@ -102,34 +57,19 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 		md := metadata.Pairs("traceID", traceID)
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		if err = response.CheckContext(ctx, traceID, place); err != nil {
-			middleware.KafkaProducer.NewAPILog(kafka.APILog{
-				Level:     kafka.LogLevelError,
-				Place:     place,
-				TraceID:   traceID,
-				IP:        c.Request.RemoteAddr,
-				Method:    c.Request.Method,
-				Path:      c.Request.URL.Path,
-				Timestamp: time.Now().Format(time.RFC3339),
-				Message:   "Context cancelled before operation",
-			})
+			fmterr := fmt.Sprintf("Context error: %v", err)
+			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
 			return nil, &erro.CustomError{ErrorName: "Context Error", ErrorType: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
 		if err != nil {
 			st, _ := status.FromError(err)
+			fmterr := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
+			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				trymessage := fmt.Sprintf("Operation attempt %d failed: %v, (%s)", i, st.Message(), err)
-				middleware.KafkaProducer.NewAPILog(kafka.APILog{
-					Level:     kafka.LogLevelWarn,
-					Place:     place,
-					TraceID:   traceID,
-					IP:        c.Request.RemoteAddr,
-					Method:    c.Request.Method,
-					Path:      c.Request.URL.Path,
-					Timestamp: time.Now().Format(time.RFC3339),
-					Message:   trymessage,
-				})
+				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
+				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
@@ -137,21 +77,9 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			}
 		}
 		if protoresponse.Success {
-			return protoresponse, &erro.CustomError{
-				ErrorName: "Already authorized",
-				ErrorType: erro.ClientErrorType,
-			}
+			return nil, &erro.CustomError{ErrorName: "Already authorized", ErrorType: erro.ClientErrorType}
 		}
 	}
-	middleware.KafkaProducer.NewAPILog(kafka.APILog{
-		Level:     kafka.LogLevelError,
-		Place:     place,
-		TraceID:   traceID,
-		IP:        c.Request.RemoteAddr,
-		Method:    c.Request.Method,
-		Path:      c.Request.URL.Path,
-		Timestamp: time.Now().Format(time.RFC3339),
-		Message:   "All retry attempts failed",
-	})
-	return protoresponse, &erro.CustomError{ErrorName: "All retry attempts failed", ErrorType: erro.ServerErrorType}
+	middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
+	return nil, &erro.CustomError{ErrorName: "All retry attempts failed", ErrorType: erro.ServerErrorType}
 }

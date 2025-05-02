@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -33,7 +34,7 @@ type KafkaProducer struct {
 	logchan chan APILog
 }
 type KafkaProducerService interface {
-	NewAPILog(log APILog)
+	NewAPILog(c *http.Request, level, place, traceid, msg string)
 }
 
 func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
@@ -77,11 +78,21 @@ func (kf *KafkaProducer) Close() {
 	close(kf.logchan)
 	log.Println("[INFO] [API-Service] [KafkaProducer] Successful close Kafka-Producer")
 }
-func (kf *KafkaProducer) NewAPILog(logg APILog) {
+func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg string) {
+	newlog := APILog{
+		Level:     level,
+		Place:     place,
+		TraceID:   traceid,
+		IP:        c.RemoteAddr,
+		Method:    c.Method,
+		Path:      c.URL.Path,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Message:   msg,
+	}
 	select {
-	case kf.logchan <- logg:
+	case kf.logchan <- newlog:
 	default:
-		log.Printf("[WARN] [API-Service] [KafkaProducer] Log channel is full, dropping log: %+v", logg)
+		log.Printf("[WARN] [API-Service] [KafkaProducer] Log channel is full, dropping log: %+v", newlog)
 	}
 }
 func (kf *KafkaProducer) sendLogs() {
