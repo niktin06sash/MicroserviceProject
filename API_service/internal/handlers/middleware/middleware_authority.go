@@ -27,7 +27,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 				Message:   err.Error(),
 			})
 			maparesponse["ClientError"] = "Required Session in Cookie"
-			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, "Authority")
+			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, "Authority", m.KafkaProducer)
 			c.Abort()
 			return
 		}
@@ -46,7 +46,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 					Message:   "Unauthorized-request for authorized users",
 				})
 				maparesponse["ClientError"] = errv.Error()
-				response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, "Authority")
+				response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, "Authority", m.KafkaProducer)
 				c.Abort()
 				return
 
@@ -62,7 +62,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 					Message:   "Internal server error during authorization",
 				})
 				maparesponse["InternalServerError"] = errv.Error()
-				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Authority")
+				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Authority", m.KafkaProducer)
 				c.Abort()
 				return
 			}
@@ -90,7 +90,7 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		err := response.CheckContext(c.Request.Context(), traceID, "Not-Authority")
 		if err != nil {
 			maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
-			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Not-Authority")
+			response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Not-Authority", m.KafkaProducer)
 			c.Abort()
 			return
 		}
@@ -124,7 +124,7 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 					Message:   "Authorized-request for unauthorized users",
 				})
 				maparesponse["ClientError"] = errv.Error()
-				response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse, traceID, "Not-Authority")
+				response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse, traceID, "Not-Authority", m.KafkaProducer)
 				c.Abort()
 				return
 
@@ -140,7 +140,7 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 					Message:   "Internal server error during authorization",
 				})
 				maparesponse["InternalServerError"] = errv.Error()
-				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Not-Authority")
+				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Not-Authority", m.KafkaProducer)
 				c.Abort()
 				return
 			}

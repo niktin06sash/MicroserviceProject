@@ -2,10 +2,10 @@ package response
 
 import (
 	"context"
-	"log"
-	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 )
 
 // swagger:model HTTPResponse
@@ -34,18 +34,7 @@ type PersonDelete struct {
 	Password string `json:"password"`
 }
 
-func SendResponse(c *gin.Context, status int, success bool, data map[string]any, errors map[string]string, traceid string, place string) {
-	err := CheckContext(c, traceid, place)
-	if err != nil {
-		response := HTTPResponse{
-			Success: false,
-			Data:    nil,
-			Errors:  map[string]string{"InternalServerError": "Context deadline exceeded"},
-			Status:  http.StatusInternalServerError,
-		}
-		c.JSON(http.StatusInternalServerError, response)
-		return
-	}
+func SendResponse(c *gin.Context, status int, success bool, data map[string]any, errors map[string]string, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
 	response := HTTPResponse{
 		Success: success,
 		Data:    data,
@@ -53,13 +42,21 @@ func SendResponse(c *gin.Context, status int, success bool, data map[string]any,
 		Status:  status,
 	}
 	c.JSON(status, response)
-	log.Printf("[INFO] [API-Service] [%s] [TraceID: %s]: Succesfull send response to client", traceid, place)
+	kafkaprod.NewAPILog(kafka.APILog{
+		Level:     kafka.LogLevelInfo,
+		Place:     place,
+		TraceID:   traceid,
+		IP:        c.Request.RemoteAddr,
+		Method:    c.Request.Method,
+		Path:      c.Request.URL.Path,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Message:   "Succesfull send response to client",
+	})
 }
 func CheckContext(ctx context.Context, traceID string, place string) error {
 	select {
 	case <-ctx.Done():
 		err := ctx.Err()
-		log.Printf("[ERROR] [API-Service] [%s] [TraceID: %s] ContextError: %s", place, traceID, err)
 		return err
 	default:
 		return nil
