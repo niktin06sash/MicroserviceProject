@@ -13,21 +13,13 @@ import (
 
 func (m *Middleware) RateLimiter() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var place = "RateLimiter"
 		traceID := c.MustGet("traceID").(string)
 		ip := c.Request.RemoteAddr
 		limiter := getLimit(m, ip)
 		if !limiter.Allow() {
-			m.KafkaProducer.NewAPILog(kafka.APILog{
-				Level:     kafka.LogLevelWarn,
-				Place:     "RateLimiter",
-				TraceID:   traceID,
-				IP:        c.Request.RemoteAddr,
-				Method:    c.Request.Method,
-				Path:      c.Request.URL.Path,
-				Timestamp: time.Now().Format(time.RFC3339),
-				Message:   "Too many requests",
-			})
-			response.SendResponse(c, http.StatusTooManyRequests, false, nil, map[string]string{"ClientError": "Too Many Requests"}, traceID, "RateLimiter", m.KafkaProducer)
+			m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Too many requests")
+			response.SendResponse(c, http.StatusTooManyRequests, false, nil, map[string]string{"ClientError": "Too Many Requests"}, traceID, place, m.KafkaProducer)
 			c.Abort()
 			return
 		}
