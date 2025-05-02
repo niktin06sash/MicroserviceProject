@@ -30,9 +30,9 @@ type KafkaConfig struct {
 }
 
 type KafkaTopics struct {
-	InfoLog  string `mapstructure:"info-log"`
-	ErrorLog string `mapstructure:"error-log"`
-	WarnLog  string `mapstructure:"warn-log"`
+	InfoLog  string `mapstructure:"user-info-log-topic"`
+	ErrorLog string `mapstructure:"user-error-log-topic"`
+	WarnLog  string `mapstructure:"user-warn-log-topic"`
 }
 type SessionServiceConfig struct {
 	GrpcAddress string `mapstructure:"grpc_address"`

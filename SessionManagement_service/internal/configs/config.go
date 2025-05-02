@@ -25,7 +25,7 @@ type KafkaConfig struct {
 	GroupID          string      `mapstructure:"group_id"`
 }
 type KafkaTopics struct {
-	InfoLog  string `mapstructure:"info-log"`
-	ErrorLog string `mapstructure:"error-log"`
-	WarnLog  string `mapstructure:"warn-log"`
+	InfoLog  string `mapstructure:"session-info-log-topic"`
+	ErrorLog string `mapstructure:"session-error-log-topic"`
+	WarnLog  string `mapstructure:"session-warn-log-topic"`
 }
