@@ -75,7 +75,7 @@ func main() {
 	defer kafkaprod.Close()
 	grpcclient := client.NewGrpcClient(config.SessionService)
 	defer grpcclient.Close()
-	middleware := middleware.NewMiddleware(grpcclient)
+	middleware := middleware.NewMiddleware(grpcclient, kafkaprod)
 	handler := handlers.NewHandler(middleware, config.Routes)
 	srv := &server.Server{}
 	port := config.Server.Port
