@@ -19,7 +19,6 @@ const (
 
 type APILog struct {
 	Level     string `json:"level"`
-	Service   string `json:"service"`
 	Place     string `json:"place"`
 	TraceID   string `json:"trace_id"`
 	IP        string `json:"ip"`
