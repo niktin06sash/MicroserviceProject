@@ -77,6 +77,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 
 func (kf *KafkaProducer) Close() {
 	kf.writer.Close()
+	close(kf.logchan)
 	log.Println("[INFO] [API-Service] [KafkaProducer] Successful close Kafka-Producer")
 }
 func (kf *KafkaProducer) NewAPILog(logg APILog) {
@@ -92,7 +93,7 @@ func (kf *KafkaProducer) sendLogs() {
 		data, err := json.Marshal(logg)
 		if err != nil {
 			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to marshal log: %v", err)
-			continue
+			return
 		}
 		retries := 3
 		for i := 0; i < retries; i++ {
