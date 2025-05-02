@@ -2,10 +2,12 @@ package middleware
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 )
 
 func (m *Middleware) Authorized() gin.HandlerFunc {
@@ -14,31 +16,67 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		traceID := c.MustGet("traceID").(string)
 		sessionID, err := c.Cookie("session")
 		if err != nil {
-			logRequest(c.Request, "Authority", traceID, true, err.Error())
+			m.kafkaProducer.NewAPILog(kafka.APILog{
+				Level:     kafka.LogLevelWarn,
+				Place:     "Authority",
+				TraceID:   traceID,
+				IP:        c.Request.RemoteAddr,
+				Method:    c.Request.Method,
+				Path:      c.Request.URL.Path,
+				Timestamp: time.Now().Format(time.RFC3339),
+				Message:   err.Error(),
+			})
 			maparesponse["ClientError"] = "Required Session in Cookie"
 			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, "Authority")
 			c.Abort()
 			return
 		}
-		grpcresponse, errv := retryAuthorized(c, m.grpcClient, sessionID, traceID, "Authority")
+		grpcresponse, errv := retryAuthorized(c, m, sessionID, traceID, "Authority")
 		if errv != nil {
 			switch errv.GetTypeError() {
 			case erro.ClientErrorType:
-				logRequest(c.Request, "Authority", traceID, true, "Unauthorized-request for authorized users")
+				m.kafkaProducer.NewAPILog(kafka.APILog{
+					Level:     kafka.LogLevelWarn,
+					Place:     "Authority",
+					TraceID:   traceID,
+					IP:        c.Request.RemoteAddr,
+					Method:    c.Request.Method,
+					Path:      c.Request.URL.Path,
+					Timestamp: time.Now().Format(time.RFC3339),
+					Message:   "Unauthorized-request for authorized users",
+				})
 				maparesponse["ClientError"] = errv.Error()
 				response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, "Authority")
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				logRequest(c.Request, "Authority", traceID, true, "Internal server error during authorization")
+				m.kafkaProducer.NewAPILog(kafka.APILog{
+					Level:     kafka.LogLevelError,
+					Place:     "Authority",
+					TraceID:   traceID,
+					IP:        c.Request.RemoteAddr,
+					Method:    c.Request.Method,
+					Path:      c.Request.URL.Path,
+					Timestamp: time.Now().Format(time.RFC3339),
+					Message:   "Internal server error during authorization",
+				})
 				maparesponse["InternalServerError"] = errv.Error()
 				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Authority")
 				c.Abort()
 				return
 			}
 		}
-		logRequest(c.Request, "Authority", traceID, false, "Successful authorization verification")
+		m.kafkaProducer.NewAPILog(kafka.APILog{
+			Level:     kafka.LogLevelInfo,
+			Place:     "Authority",
+			TraceID:   traceID,
+			IP:        c.Request.RemoteAddr,
+			Method:    c.Request.Method,
+			Path:      c.Request.URL.Path,
+			Timestamp: time.Now().Format(time.RFC3339),
+			Message:   "Successful authorization verification",
+		})
 		c.Set("userID", grpcresponse.UserID)
 		c.Set("sessionID", sessionID)
 		c.Next()
@@ -58,29 +96,65 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		}
 		sessionID, err := c.Cookie("session")
 		if err != nil {
-			logRequest(c.Request, "Not-Authority", traceID, false, "Successful unauthorization verification")
+			m.kafkaProducer.NewAPILog(kafka.APILog{
+				Level:     kafka.LogLevelInfo,
+				Place:     "Not-Authority",
+				TraceID:   traceID,
+				IP:        c.Request.RemoteAddr,
+				Method:    c.Request.Method,
+				Path:      c.Request.URL.Path,
+				Timestamp: time.Now().Format(time.RFC3339),
+				Message:   "Successful unauthorization verification",
+			})
 			c.Next()
 			return
 		}
-		_, errv := retryAuthorized_Not(c, m.grpcClient, sessionID, traceID, "Not-Authority")
+		_, errv := retryAuthorized_Not(c, m, sessionID, traceID, "Not-Authority")
 		if errv != nil {
 			switch errv.GetTypeError() {
 			case erro.ClientErrorType:
-				logRequest(c.Request, "Authority", traceID, true, "Authorized-request for unauthorized users")
+				m.kafkaProducer.NewAPILog(kafka.APILog{
+					Level:     kafka.LogLevelWarn,
+					Place:     "Not-Authority",
+					TraceID:   traceID,
+					IP:        c.Request.RemoteAddr,
+					Method:    c.Request.Method,
+					Path:      c.Request.URL.Path,
+					Timestamp: time.Now().Format(time.RFC3339),
+					Message:   "Authorized-request for unauthorized users",
+				})
 				maparesponse["ClientError"] = errv.Error()
 				response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse, traceID, "Not-Authority")
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				logRequest(c.Request, "Authority", traceID, true, "Internal server error during authorization")
+				m.kafkaProducer.NewAPILog(kafka.APILog{
+					Level:     kafka.LogLevelError,
+					Place:     "Not-Authority",
+					TraceID:   traceID,
+					IP:        c.Request.RemoteAddr,
+					Method:    c.Request.Method,
+					Path:      c.Request.URL.Path,
+					Timestamp: time.Now().Format(time.RFC3339),
+					Message:   "Internal server error during authorization",
+				})
 				maparesponse["InternalServerError"] = errv.Error()
 				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Not-Authority")
 				c.Abort()
 				return
 			}
 		}
-		logRequest(c.Request, "Not-Authority", traceID, false, "Successful unauthorization verification")
+		m.kafkaProducer.NewAPILog(kafka.APILog{
+			Level:     kafka.LogLevelInfo,
+			Place:     "Not-Authority",
+			TraceID:   traceID,
+			IP:        c.Request.RemoteAddr,
+			Method:    c.Request.Method,
+			Path:      c.Request.URL.Path,
+			Timestamp: time.Now().Format(time.RFC3339),
+			Message:   "Successful unauthorization verification",
+		})
 		c.Next()
 	}
 }

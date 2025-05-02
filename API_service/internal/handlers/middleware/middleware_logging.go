@@ -2,24 +2,13 @@ package middleware
 
 import (
 	"context"
-	"log"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 )
 
-func logRequest(r *http.Request, place string, requestID string, isError bool, errorMessage string) {
-	ip := r.RemoteAddr
-	method := r.Method
-	path := r.URL.Path
-	if isError {
-		log.Printf("[ERROR] [API-Service] [%s] [TraceID: %s] [IP: %s] [Method: %s] [Path: %s] Error: %s", place, requestID, ip, method, path, errorMessage)
-	} else {
-		log.Printf("[INFO] [API-Service] [%s] [TraceID: %s] [IP: %s] [Method: %s] [Path: %s] %s", place, requestID, ip, method, path, errorMessage)
-	}
-}
 func (mw *Middleware) Logging() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		traceID := uuid.New().String()
@@ -31,7 +20,16 @@ func (mw *Middleware) Logging() gin.HandlerFunc {
 		defer cancel()
 
 		c.Request = c.Request.WithContext(ctx)
-		logRequest(c.Request, "Logging", traceID, false, "")
+		mw.kafkaProducer.NewAPILog(kafka.APILog{
+			Level:     kafka.LogLevelInfo,
+			Place:     "Logging",
+			TraceID:   traceID,
+			IP:        c.Request.RemoteAddr,
+			Method:    c.Request.Method,
+			Path:      c.Request.URL.Path,
+			Timestamp: time.Now().Format(time.RFC3339),
+			Message:   "",
+		})
 		c.Next()
 	}
 }
