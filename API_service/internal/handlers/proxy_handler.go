@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 )
 
 func (h *Handler) ProxyHTTP(c *gin.Context) {
@@ -19,27 +20,56 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	targetURL, ok := h.Routes[reqpath]
 	if !ok {
 		maparesponse["ClientError"] = "Page not found"
-		response.SendResponse(c, http.StatusBadRequest, false, nil, maparesponse, traceID, "ProxyHTTP")
+		response.SendResponse(c, http.StatusBadRequest, false, nil, maparesponse, traceID, "ProxyHTTP", h.KafkaProducer)
 		return
 	}
 	target, err := url.Parse(targetURL)
 	if err != nil {
-		log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %s] URL-Parse Error: %s", traceID, err)
+		strerr := fmt.Sprintf("URL-Parse Error: %s", err)
+		h.KafkaProducer.NewAPILog(kafka.APILog{
+			Level:     kafka.LogLevelError,
+			Place:     "ProxyHTTP",
+			TraceID:   traceID,
+			IP:        c.Request.RemoteAddr,
+			Method:    c.Request.Method,
+			Path:      c.Request.URL.Path,
+			Timestamp: time.Now().Format(time.RFC3339),
+			Message:   strerr,
+		})
 		maparesponse["InternalServerError"] = "Url-Parse Error"
-		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "ProxyHTTP")
+		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "ProxyHTTP", h.KafkaProducer)
 		return
 	}
 	err = response.CheckContext(c.Request.Context(), traceID, "ProxyHTTP")
 	if err != nil {
+		h.KafkaProducer.NewAPILog(kafka.APILog{
+			Level:     kafka.LogLevelError,
+			Place:     "ProxyHTTP",
+			TraceID:   traceID,
+			IP:        c.Request.RemoteAddr,
+			Method:    c.Request.Method,
+			Path:      c.Request.URL.Path,
+			Timestamp: time.Now().Format(time.RFC3339),
+			Message:   err.Error(),
+		})
 		maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
-		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "ProxyHTTP")
+		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "ProxyHTTP", h.KafkaProducer)
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.Director = func(req *http.Request) {
 		deadline, ok := c.Request.Context().Deadline()
 		if !ok {
-			log.Println("[WARN] [API-Gateway] Failed to get deadline from context")
+			h.KafkaProducer.NewAPILog(kafka.APILog{
+				Level:     kafka.LogLevelWarn,
+				Place:     "ProxyHTTP",
+				TraceID:   traceID,
+				IP:        c.Request.RemoteAddr,
+				Method:    c.Request.Method,
+				Path:      c.Request.URL.Path,
+				Timestamp: time.Now().Format(time.RFC3339),
+				Message:   "Failed to get deadline from context",
+			})
 			deadline = time.Now().Add(20 * time.Second)
 		}
 		req.Header.Set("X-Deadline", deadline.Format(time.RFC3339))
@@ -58,10 +88,17 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	}
 	proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, err error) {
 		traceID := c.MustGet("traceID").(string)
-		log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Proxy error: %s", traceID, err)
-		if req.Context().Err() != nil {
-			log.Printf("[WARN] [API-Service] [ProxyHTTP] [TraceID: %v] Context canceled or deadline exceeded", traceID)
-		}
+		strerr := fmt.Sprintf("Proxy error: %s", err)
+		h.KafkaProducer.NewAPILog(kafka.APILog{
+			Level:     kafka.LogLevelError,
+			Place:     "ProxyHTTP",
+			TraceID:   traceID,
+			IP:        c.Request.RemoteAddr,
+			Method:    c.Request.Method,
+			Path:      c.Request.URL.Path,
+			Timestamp: time.Now().Format(time.RFC3339),
+			Message:   strerr,
+		})
 		maparesponse := map[string]string{"InternalServerError": "Proxy Error"}
 		response := response.HTTPResponse{
 			Success: false,
@@ -72,9 +109,29 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Failed to send response: %v", traceID, err)
+			strerr := fmt.Sprintf("Failed to send response: %s", err)
+			h.KafkaProducer.NewAPILog(kafka.APILog{
+				Level:     kafka.LogLevelError,
+				Place:     "ProxyHTTP",
+				TraceID:   traceID,
+				IP:        c.Request.RemoteAddr,
+				Method:    c.Request.Method,
+				Path:      c.Request.URL.Path,
+				Timestamp: time.Now().Format(time.RFC3339),
+				Message:   strerr,
+			})
 		}
 	}
-	log.Printf("[ERROR] [API-Service] [ProxyHTTP] [TraceID: %v] Successful HTTP-request to %s", traceID, targetURL)
+	resp := fmt.Sprintf("Successful HTTP-request to %s", targetURL)
+	h.KafkaProducer.NewAPILog(kafka.APILog{
+		Level:     kafka.LogLevelInfo,
+		Place:     "ProxyHTTP",
+		TraceID:   traceID,
+		IP:        c.Request.RemoteAddr,
+		Method:    c.Request.Method,
+		Path:      c.Request.URL.Path,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Message:   resp,
+	})
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
