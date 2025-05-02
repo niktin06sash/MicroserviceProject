@@ -64,6 +64,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 			})
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
+				logmsg := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
 				middleware.kafkaProducer.NewAPILog(kafka.APILog{
 					Level:     kafka.LogLevelWarn,
 					Place:     place,
@@ -72,7 +73,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 					Method:    c.Request.Method,
 					Path:      c.Request.URL.Path,
 					Timestamp: time.Now().Format(time.RFC3339),
-					Message:   "Server unavailable, retrying...",
+					Message:   logmsg,
 				})
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
@@ -118,7 +119,7 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			st, _ := status.FromError(err)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				trymessage := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
+				trymessage := fmt.Sprintf("Operation attempt %d failed: %v, (%s)", i, st.Message(), err)
 				middleware.kafkaProducer.NewAPILog(kafka.APILog{
 					Level:     kafka.LogLevelWarn,
 					Place:     place,
