@@ -33,9 +33,7 @@ type KafkaProducer struct {
 	logchan chan APILog
 }
 type KafkaProducerService interface {
-	Close()
 	NewAPILog(log APILog)
-	sendLogs()
 }
 
 func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
