@@ -21,6 +21,7 @@ const (
 
 type APILog struct {
 	Level     string `json:"level"`
+	Service   string `json:"service"`
 	Place     string `json:"place"`
 	TraceID   string `json:"trace_id"`
 	IP        string `json:"ip"`
@@ -92,6 +93,7 @@ func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg s
 	}
 	newlog := APILog{
 		Level:     level,
+		Service:   "API-Service",
 		Place:     place,
 		TraceID:   traceid,
 		IP:        c.RemoteAddr,
