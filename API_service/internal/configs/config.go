@@ -25,7 +25,7 @@ type KafkaConfig struct {
 	Topics           KafkaTopics `mapstructure:"topics"`
 }
 type KafkaTopics struct {
-	InfoLog  string `mapstructure:"info-log-topic"`
-	ErrorLog string `mapstructure:"error-log-topic"`
-	WarnLog  string `mapstructure:"warn-log-topic"`
+	InfoLog  string `mapstructure:"api-info-log-topic"`
+	ErrorLog string `mapstructure:"api-error-log-topic"`
+	WarnLog  string `mapstructure:"api-warn-log-topic"`
 }
