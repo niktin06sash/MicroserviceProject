@@ -22,10 +22,9 @@ type KafkaConfig struct {
 	BatchSize        int         `mapstructure:"batch_size"`
 	Acks             string      `mapstructure:"acks"`
 	Topics           KafkaTopics `mapstructure:"topics"`
-	GroupID          string      `mapstructure:"group_id"`
 }
 type KafkaTopics struct {
-	InfoLog  string `mapstructure:"session-info-log-topic"`
-	ErrorLog string `mapstructure:"session-error-log-topic"`
-	WarnLog  string `mapstructure:"session-warn-log-topic"`
+	InfoLog  string `mapstructure:"info-log-topic"`
+	ErrorLog string `mapstructure:"error-log-topic"`
+	WarnLog  string `mapstructure:"warn-log-topic"`
 }
