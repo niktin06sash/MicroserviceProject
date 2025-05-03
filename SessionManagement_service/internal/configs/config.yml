@@ -11,7 +11,7 @@ kafka:
   batch_size: 16384
   acks: "all" 
   topics:
-    info_log: "session-info-log-topic"
-    error_log: "session-error-log-topic"
-    warn_log: "session-warn-log-topic"
+    info_log: "info-log-topic"
+    error_log: "error-log-topic"
+    warn_log: "warn-log-topic"
               

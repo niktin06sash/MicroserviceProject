@@ -57,7 +57,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 	w := &kafka.Writer{
 		Addr:            kafka.TCP(brokers...),
 		Topic:           "",
-		Balancer:        &kafka.LeastBytes{},
+		Balancer:        &kafka.Hash{},
 		WriteTimeout:    10 * time.Second,
 		WriteBackoffMin: time.Duration(config.RetryBackoffMs) * time.Millisecond,
 		WriteBackoffMax: 5 * time.Second,
@@ -111,7 +111,7 @@ func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg s
 func (kf *KafkaProducer) sendLogs() {
 	for logg := range kf.logchan {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		topic := "api-" + strings.ToLower(logg.Level) + "-log-topic"
+		topic := strings.ToLower(logg.Level) + "-log-topic"
 		data, err := json.Marshal(logg)
 		if err != nil {
 			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to marshal log: %v", err)
