@@ -116,8 +116,7 @@ func (kf *KafkaProducer) sendLogs() {
 			cancel()
 			continue
 		}
-		retries := 3
-		for i := 0; i < retries; i++ {
+		for i := 0; i < 3; i++ {
 			err = kf.writer.WriteMessages(ctx, kafka.Message{
 				Topic: topic,
 				Value: data,
@@ -125,7 +124,7 @@ func (kf *KafkaProducer) sendLogs() {
 			if err == nil {
 				break
 			}
-			log.Printf("[WARN] [API-Service] [KafkaProducer] Retry %d/%d failed to send log: %v", i+1, retries, err)
+			log.Printf("[WARN] [API-Service] [KafkaProducer] Retry %d failed to send log: %v", i+1, err)
 			time.Sleep(1 * time.Second)
 		}
 		if err := ctx.Err(); err != nil {
