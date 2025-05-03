@@ -36,7 +36,7 @@ func NewDatabaseConnection(cfg configs.DatabaseConfig) (*sql.DB, error) {
 func (d *DBObject) Open(driverName, connectionString string) (*sql.DB, error) {
 	db, err := sql.Open(driverName, connectionString)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] Sql-Open error: %v", err)
+		log.Printf("[ERROR] [UserManagement] Postgre-Client-Open error: %v", err)
 		return nil, erro.ErrorDbOpen
 	}
 	return db, nil
@@ -45,7 +45,7 @@ func (d *DBObject) Open(driverName, connectionString string) (*sql.DB, error) {
 func (d *DBObject) Ping(db *sql.DB) error {
 	err := db.Ping()
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] Sql-Ping error: %v", err)
+		log.Printf("[ERROR] [UserManagement] Postgre-Client-Ping error: %v", err)
 		return erro.ErrorDbPing
 	}
 	return nil
@@ -54,9 +54,9 @@ func (d *DBObject) Ping(db *sql.DB) error {
 func (d *DBObject) Close(db *sql.DB) {
 	err := db.Close()
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] Sql-Close error: %v", err)
+		log.Printf("[ERROR] [UserManagement] Postgre-Client-Close error: %v", err)
 	}
-	log.Println("[INFO] [UserManagement] Successful Sql-Close")
+	log.Println("[INFO] [UserManagement] Successful close Postgre-Client")
 }
 
 func BuildConnectionString(cfg configs.DatabaseConfig) string {
