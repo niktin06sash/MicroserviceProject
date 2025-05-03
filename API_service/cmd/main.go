@@ -72,9 +72,7 @@ func main() {
 		log.Fatalf("[ERROR] [API-Service] Key file not found: %s", keyFile)
 	}
 	kafkaprod := kafka.NewKafkaProducer(config.Kafka)
-	defer kafkaprod.Close()
 	grpcclient := client.NewGrpcClient(config.SessionService)
-	defer grpcclient.Close()
 	middleware := middleware.NewMiddleware(grpcclient, kafkaprod)
 	handler := handlers.NewHandler(middleware, kafkaprod, config.Routes)
 	srv := &server.Server{}
@@ -112,6 +110,13 @@ func main() {
 	}
 
 	log.Println("[INFO] [API-Service] Service has shutted down successfully")
+	defer func() {
+		kafkaprod.Close()
+		grpcclient.Close()
+		buf := make([]byte, 10<<20)
+		n := runtime.Stack(buf, true)
+		log.Printf("Active goroutines:\n%s", buf[:n])
+	}()
 }
 func resolvePath(relativePath string, baseDir string) string {
 	if relativePath == "" {
