@@ -11,52 +11,41 @@ import (
 )
 
 type RedisInterface interface {
-	Open(host string, port int, password string, db int) (*redis.Client, error)
-	Ping(client *redis.Client) error
-	Close(client *redis.Client)
-	GetLogger() *logger.SessionLogger
+	Open(host string, port int, password string, db int) error
+	Ping() error
+	Close()
 }
 
 type RedisObject struct {
-	Logger *logger.SessionLogger
+	RedisClient *redis.Client
+	Logger      *logger.SessionLogger
 }
 
-func NewRedisConnection(cfg configs.RedisConfig, logger *logger.SessionLogger) (*redis.Client, error) {
+func NewRedisConnection(cfg configs.RedisConfig, logger *logger.SessionLogger) (*RedisObject, error) {
 	redisobject := &RedisObject{Logger: logger}
-	return ConnectToRedis(cfg, redisobject)
+	redisobject.Open(cfg.Host, cfg.Port, cfg.Password, cfg.DB)
+	err := redisobject.Ping()
+	if err != nil {
+		redisobject.Close()
+		return nil, fmt.Errorf("failed to establish database connection: %w", err)
+	}
+	redisobject.Logger.Info("SessionManagement: Successful connect to Redis-Client!")
+	return redisobject, nil
 }
-func (r *RedisObject) Open(host string, port int, password string, db int) (*redis.Client, error) {
-	client := redis.NewClient(&redis.Options{
+func (r *RedisObject) Open(host string, port int, password string, db int) {
+	r.RedisClient = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", host, port),
 		Password: password,
 		DB:       db,
 	})
-	return client, nil
 }
 
-func (r *RedisObject) Ping(client *redis.Client) error {
-	_, err := client.Ping(context.Background()).Result()
+func (r *RedisObject) Ping() error {
+	_, err := r.RedisClient.Ping(context.Background()).Result()
 	return err
 }
 
-func (r *RedisObject) Close(client *redis.Client) {
-	client.Close()
+func (r *RedisObject) Close() {
+	r.RedisClient.Close()
 	r.Logger.Info("SessionManagement: Successful close Redis-Client!")
-}
-func (r *RedisObject) GetLogger() *logger.SessionLogger {
-	return r.Logger
-}
-func ConnectToRedis(cfg configs.RedisConfig, redisInterface RedisInterface) (*redis.Client, error) {
-	logger := redisInterface.GetLogger()
-	client, err := redisInterface.Open(cfg.Host, cfg.Port, cfg.Password, cfg.DB)
-	if err != nil {
-		return nil, err
-	}
-	err = redisInterface.Ping(client)
-	if err != nil {
-		redisInterface.Close(client)
-		return nil, err
-	}
-	logger.Info("SessionManagement: Successful connect to Redis-Client!")
-	return client, nil
 }

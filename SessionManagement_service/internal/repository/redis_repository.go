@@ -17,7 +17,7 @@ import (
 )
 
 type AuthRedis struct {
-	Client *redis.Client
+	Client *RedisObject
 	logger *logger.SessionLogger
 }
 
@@ -39,7 +39,7 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
 	}
-	err = redisrepo.Client.HSet(ctx, session.SessionID, map[string]interface{}{
+	err = redisrepo.Client.RedisClient.HSet(ctx, session.SessionID, map[string]interface{}{
 		"UserID":         session.UserID,
 		"ExpirationTime": session.ExpirationTime.Format(time.RFC3339),
 	}).Err()
@@ -51,7 +51,7 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Hset session Error")}
 	}
 	expiration := time.Until(session.ExpirationTime)
-	err = redisrepo.Client.Expire(ctx, session.SessionID, expiration).Err()
+	err = redisrepo.Client.RedisClient.Expire(ctx, session.SessionID, expiration).Err()
 	if err != nil {
 		redisrepo.logger.Error("SetSession: Expire session error",
 			zap.String("traceID", traceID),
@@ -70,7 +70,7 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
 	}
-	result, err := redisrepo.Client.HGetAll(ctx, sessionID).Result()
+	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, sessionID).Result()
 	if err != nil {
 		if err == redis.Nil {
 			redisrepo.logger.Warn("GetSession: Session not found",
@@ -137,7 +137,7 @@ func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string)
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
 	}
-	err = redisrepo.Client.Del(ctx, sessionID).Err()
+	err = redisrepo.Client.RedisClient.Del(ctx, sessionID).Err()
 	if err != nil {
 		if err == redis.Nil {
 			redisrepo.logger.Warn("DeleteSession: Session not found",
@@ -160,6 +160,6 @@ func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string)
 	)
 	return &RepositoryResponse{Success: true}
 }
-func NewAuthRedis(client *redis.Client, log *logger.SessionLogger) *AuthRedis {
+func NewAuthRedis(client *RedisObject, log *logger.SessionLogger) *AuthRedis {
 	return &AuthRedis{Client: client, logger: log}
 }

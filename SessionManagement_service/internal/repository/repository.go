@@ -6,8 +6,6 @@ import (
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/logger"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
-
-	"github.com/redis/go-redis/v9"
 )
 
 //go:generate mockgen -source=repository.go -destination=mocks/mock.go
@@ -27,7 +25,7 @@ type RepositoryResponse struct {
 	Errors         error
 }
 
-func NewRepository(client *redis.Client, log *logger.SessionLogger) *Repository {
+func NewRepository(client *RedisObject, log *logger.SessionLogger) *Repository {
 	return &Repository{
 		RedisSessionRepos: NewAuthRedis(client, log),
 	}
