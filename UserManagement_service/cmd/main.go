@@ -24,7 +24,6 @@ import (
 )
 
 func main() {
-
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		log.Fatalf("[ERROR] [UserManagement] Failed to get current file path")
@@ -61,7 +60,6 @@ func main() {
 		log.Fatalf("[ERROR] [UserManagement] Failed to connect to database: %v", err)
 		return
 	}
-	defer db.Close()
 	brokersString := config.Kafka.BootstrapServers
 	brokers := strings.Split(brokersString, ",")
 	kafkaProducer, err := kafka.NewKafkaProducer(brokers)
@@ -72,7 +70,6 @@ func main() {
 	defer kafkaProducer.Close()
 	repositories := repository.NewRepository(db)
 	grpcclient := client.NewGrpcClient(config.SessionService)
-	defer grpcclient.Close()
 	service := service.NewService(repositories, kafkaProducer, grpcclient)
 	handlers := handlers.NewHandler(service)
 	srv := &server.Server{}
@@ -82,7 +79,6 @@ func main() {
 	}
 	serverError := make(chan error, 1)
 	go func() {
-
 		if err := srv.Run(port, handlers.InitRoutes()); err != nil {
 			serverError <- fmt.Errorf("server run failed: %w", err)
 			return
@@ -111,5 +107,11 @@ func main() {
 	}
 
 	log.Println("[INFO] [UserManagement] Service has shutted down successfully")
-
+	defer func() {
+		db.Close()
+		grpcclient.Close()
+		buf := make([]byte, 10<<20)
+		n := runtime.Stack(buf, true)
+		log.Printf("Active goroutines:\n%s", buf[:n])
+	}()
 }

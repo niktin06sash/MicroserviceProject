@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -57,7 +58,6 @@ func main() {
 		logger.Fatal("SessionManagement: Failed to connect to database", zap.Error(err))
 		return
 	}
-	defer redis.Close()
 	/*brokersString := config.Kafka.BootstrapServers
 	brokers := strings.Split(brokersString, ",")
 	kafkaProducer, err := kafka.NewKafkaProducer(brokers)
@@ -104,4 +104,10 @@ func main() {
 	}
 
 	logger.Info("SessionManagement: Service has shut down successfully")
+	defer func() {
+		redis.Close()
+		buf := make([]byte, 10<<20)
+		n := runtime.Stack(buf, true)
+		log.Printf("Active goroutines:\n%s", buf[:n])
+	}()
 }
