@@ -26,13 +26,12 @@ type KafkaConfig struct {
 	BatchSize        int         `mapstructure:"batch_size"`
 	Acks             string      `mapstructure:"acks"`
 	Topics           KafkaTopics `mapstructure:"topics"`
-	GroupID          string      `mapstructure:"group_id"`
 }
 
 type KafkaTopics struct {
-	InfoLog  string `mapstructure:"user-info-log-topic"`
-	ErrorLog string `mapstructure:"user-error-log-topic"`
-	WarnLog  string `mapstructure:"user-warn-log-topic"`
+	InfoLog  string `mapstructure:"info-log-topic"`
+	ErrorLog string `mapstructure:"error-log-topic"`
+	WarnLog  string `mapstructure:"warn-log-topic"`
 }
 type SessionServiceConfig struct {
 	GrpcAddress string `mapstructure:"grpc_address"`

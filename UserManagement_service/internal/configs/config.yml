@@ -14,9 +14,8 @@ kafka:
   batch_size: 16384
   acks: "all"  
   topics:
-    info_log: "user-info-log-topic"
-    error_log: "user-error-log-topic"
-    warn_log: "user-warn-log-topic"
-  group_id: "service-group"  
+    info_log: "info-log-topic"
+    error_log: "error-log-topic"
+    warn_log: "warn-log-topic"
 session_service:
   grpc_address: "localhost:50052"

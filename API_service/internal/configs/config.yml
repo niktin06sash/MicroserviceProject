@@ -13,10 +13,9 @@ kafka:
   batch_size: 16384
   acks: "all"  
   topics:
-    info_log: "api-info-log-topic"
-    error_log: "api-error-log-topic"
-    warn_log: "api-warn-log-topic"
-  group_id: "api-service-group"  
+    info_log: "info-log-topic"
+    error_log: "error-log-topic"
+    warn_log: "warn-log-topic"
 ssl:
   cert_file: "cert1.pem"
   key_file: "key1.pem"
