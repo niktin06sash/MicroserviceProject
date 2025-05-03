@@ -14,10 +14,10 @@ import (
 )
 
 type AuthPostgresRepo struct {
-	Db *sql.DB
+	Db *DBObject
 }
 
-func NewAuthPostgresRepo(db *sql.DB) *AuthPostgresRepo {
+func NewAuthPostgresRepo(db *DBObject) *AuthPostgresRepo {
 	return &AuthPostgresRepo{Db: db}
 }
 
@@ -42,7 +42,7 @@ func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	var userId uuid.UUID
-	err := repoap.Db.QueryRowContext(ctx, "SELECT userid, userpassword FROM userZ WHERE useremail = $1", useremail).Scan(&userId, &hashpass)
+	err := repoap.Db.DB.QueryRowContext(ctx, "SELECT userid, userpassword FROM userZ WHERE useremail = $1", useremail).Scan(&userId, &hashpass)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] GetUser: %v", traceid, err)
 		if errors.Is(err, sql.ErrNoRows) {

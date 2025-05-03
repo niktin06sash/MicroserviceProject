@@ -32,7 +32,7 @@ type DBRepositoryResponse struct {
 	Type    erro.ErrorType
 }
 
-func NewRepository(db *sql.DB) *Repository {
+func NewRepository(db *DBObject) *Repository {
 	return &Repository{
 		DBAuthenticateRepos:  NewAuthPostgresRepo(db),
 		DBTransactionManager: NewTxManagerRepo(db),
