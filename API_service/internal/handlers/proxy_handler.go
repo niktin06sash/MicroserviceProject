@@ -45,7 +45,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		deadline, ok := c.Request.Context().Deadline()
 		if !ok {
 			h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Failed to get deadline from context")
-			deadline = time.Now().Add(20 * time.Second)
+			deadline = time.Now().Add(15 * time.Second)
 		}
 		req.Header.Set("X-Deadline", deadline.Format(time.RFC3339))
 		req.Host = target.Host
