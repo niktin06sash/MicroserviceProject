@@ -119,6 +119,7 @@ func (kf *KafkaProducer) sendLogs() {
 		for i := 0; i < 3; i++ {
 			err = kf.writer.WriteMessages(ctx, kafka.Message{
 				Topic: topic,
+				Key:   []byte(logg.TraceID),
 				Value: data,
 			})
 			if err == nil {
