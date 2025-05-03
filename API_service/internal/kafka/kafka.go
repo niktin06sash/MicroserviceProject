@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/configs"
@@ -32,6 +33,7 @@ type APILog struct {
 type KafkaProducer struct {
 	writer  *kafka.Writer
 	logchan chan APILog
+	wg      *sync.WaitGroup
 }
 type KafkaProducerService interface {
 	NewAPILog(c *http.Request, level, place, traceid, msg string)
@@ -66,15 +68,20 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 	producer := &KafkaProducer{
 		writer:  w,
 		logchan: logs,
+		wg:      &sync.WaitGroup{},
 	}
-
-	go producer.sendLogs()
+	producer.wg.Add(1)
+	go func() {
+		defer producer.wg.Done()
+		producer.sendLogs()
+	}()
 	log.Println("[INFO] [API-Service] [KafkaProducer] Successful connect to Kafka-Producer")
 	return producer
 }
 
 func (kf *KafkaProducer) Close() {
 	kf.writer.Close()
+	kf.wg.Wait()
 	close(kf.logchan)
 	log.Println("[INFO] [API-Service] [KafkaProducer] Successful close Kafka-Producer")
 }
@@ -102,18 +109,14 @@ func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg s
 func (kf *KafkaProducer) sendLogs() {
 	for logg := range kf.logchan {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
 		topic := "api-" + strings.ToLower(logg.Level) + "-log-topic"
 		data, err := json.Marshal(logg)
 		if err != nil {
 			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to marshal log: %v", err)
+			cancel()
 			continue
 		}
 		retries := 3
-		if err := ctx.Err(); err != nil {
-			log.Printf("[WARN] [API-Service] [KafkaProducer] Context canceled or expired, dropping log: %v", err)
-			continue
-		}
 		for i := 0; i < retries; i++ {
 			err = kf.writer.WriteMessages(ctx, kafka.Message{
 				Topic: topic,
@@ -125,8 +128,16 @@ func (kf *KafkaProducer) sendLogs() {
 			log.Printf("[WARN] [API-Service] [KafkaProducer] Retry %d/%d failed to send log: %v", i+1, retries, err)
 			time.Sleep(1 * time.Second)
 		}
+		if err := ctx.Err(); err != nil {
+			log.Printf("[WARN] [API-Service] [KafkaProducer] Context canceled or expired, dropping log: %v", err)
+			cancel()
+			continue
+		}
 		if err != nil {
 			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to send log after all retries: %v", err)
+			cancel()
+			continue
 		}
+		cancel()
 	}
 }
