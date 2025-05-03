@@ -79,6 +79,10 @@ func (kf *KafkaProducer) Close() {
 	log.Println("[INFO] [API-Service] [KafkaProducer] Successful close Kafka-Producer")
 }
 func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg string) {
+	if err := c.Context().Err(); err != nil {
+		log.Printf("[WARN] [API-Service] [KafkaProducer] Context canceled or expired, dropping log: %v", err)
+		return
+	}
 	newlog := APILog{
 		Level:     level,
 		Place:     place,
@@ -97,17 +101,20 @@ func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg s
 }
 func (kf *KafkaProducer) sendLogs() {
 	for logg := range kf.logchan {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		topic := "api-" + strings.ToLower(logg.Level) + "-log-topic"
 		data, err := json.Marshal(logg)
 		if err != nil {
 			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to marshal log: %v", err)
-			return
+			continue
 		}
 		retries := 3
+		if err := ctx.Err(); err != nil {
+			log.Printf("[WARN] [API-Service] [KafkaProducer] Context canceled or expired, dropping log: %v", err)
+			continue
+		}
 		for i := 0; i < retries; i++ {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-
 			err = kf.writer.WriteMessages(ctx, kafka.Message{
 				Topic: topic,
 				Value: data,
