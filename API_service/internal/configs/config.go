@@ -1,5 +1,11 @@
 package configs
 
+import (
+	"log"
+
+	"github.com/spf13/viper"
+)
+
 type Config struct {
 	Server         ServerConfig         `mapstructure:"server"`
 	SessionService SessionServiceConfig `mapstructure:"session_service"`
@@ -28,4 +34,25 @@ type KafkaTopics struct {
 	InfoLog  string `mapstructure:"info_log"`
 	ErrorLog string `mapstructure:"error_log"`
 	WarnLog  string `mapstructure:"warn_log"`
+}
+
+func LoadConfig(path string) Config {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yml")
+	viper.AddConfigPath(path)
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Printf("[ERROR] [API-Service] Config file not found; using defaults or environment variables")
+		} else {
+			log.Fatalf("[ERROR] [API-Service] Error reading config file: %s", err)
+		}
+	}
+	var config Config
+	err = viper.Unmarshal(&config)
+	if err != nil {
+		log.Fatalf("[ERROR] [API-Service] Unable to decode into struct, %v", err)
+	}
+	return config
 }

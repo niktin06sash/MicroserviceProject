@@ -65,43 +65,32 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		RequiredAcks:    acks,
 	}
 	logs := make(chan APILog, 1000)
-
 	producer := &KafkaProducer{
 		writer:  w,
 		logchan: logs,
 		wg:      &sync.WaitGroup{},
 	}
-	producer.wg.Add(1)
-	go func() {
-		defer producer.wg.Done()
-		producer.sendLogs()
-	}()
 	startmsg := "Successful connect to Kafka-Producer"
-	log.Println("[INFO] [API-Service] [KafkaProducer] Successful connect to Kafka-Producer")
 	startlog := APILog{
 		Level:     LogLevelInfo,
 		Service:   "API-Service",
 		Timestamp: time.Now().Format(time.RFC3339),
 		Message:   startmsg,
 	}
-	data, err := json.Marshal(startlog)
-	if err != nil {
-		log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to marshal log: %v", err)
-	}
-	err = producer.writer.WriteMessages(context.Background(), kafka.Message{
-		Topic: config.Topics.InfoLog,
-		Value: data,
-	})
-	if err != nil {
-		log.Printf("[WARN] [API-Service] [KafkaProducer] Failed to send log: %v", err)
-	}
+	producer.wg.Add(1)
+	go func() {
+		defer producer.wg.Done()
+		producer.sendLogs()
+	}()
+	producer.logchan <- startlog
+	log.Println("[INFO] [API-Service] [KafkaProducer] Successful connect to Kafka-Producer")
 	return producer
 }
 
 func (kf *KafkaProducer) Close() {
-	kf.writer.Close()
 	close(kf.logchan)
 	kf.wg.Wait()
+	kf.writer.Close()
 	log.Println("[INFO] [API-Service] [KafkaProducer] Successful close Kafka-Producer")
 }
 func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg string) {
@@ -156,7 +145,6 @@ func (kf *KafkaProducer) sendLogs() {
 		if err != nil {
 			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to send log after all retries: %v", err)
 			cancel()
-			continue
 		}
 		cancel()
 	}

@@ -19,7 +19,6 @@ import (
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/server"
-	"github.com/spf13/viper"
 )
 
 // @title API-Gateway
@@ -34,32 +33,10 @@ func main() {
 	if !ok {
 		log.Fatal("[ERROR] [API-Service] Failed to get current file path")
 	}
-
 	cmdDir := filepath.Dir(filename)
-
 	projectRoot := filepath.Dir(filepath.Dir(cmdDir))
-
 	configDir := filepath.Join(projectRoot, "API_service/internal/configs")
-
-	viper.SetConfigName("config")
-	viper.SetConfigType("yml")
-	viper.AddConfigPath(configDir)
-
-	err := viper.ReadInConfig()
-	if err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Printf("[ERROR] [API-Service] Config file not found; using defaults or environment variables")
-		} else {
-			log.Fatalf("[ERROR] [API-Service] Error reading config file: %s", err)
-		}
-	}
-	var config configs.Config
-
-	err = viper.Unmarshal(&config)
-	if err != nil {
-		log.Fatalf("[ERROR] [API-Service] Unable to decode into struct, %v", err)
-	}
-
+	var config = configs.LoadConfig(configDir)
 	certFile := resolvePath(config.SSL.CertFile, configDir)
 	keyFile := resolvePath(config.SSL.KeyFile, configDir)
 	if certFile == "" || keyFile == "" {
