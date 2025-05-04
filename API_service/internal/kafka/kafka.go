@@ -76,14 +76,32 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		defer producer.wg.Done()
 		producer.sendLogs()
 	}()
+	startmsg := "Successful connect to Kafka-Producer"
 	log.Println("[INFO] [API-Service] [KafkaProducer] Successful connect to Kafka-Producer")
+	startlog := APILog{
+		Level:     LogLevelInfo,
+		Service:   "API-Service",
+		Timestamp: time.Now().Format(time.RFC3339),
+		Message:   startmsg,
+	}
+	data, err := json.Marshal(startlog)
+	if err != nil {
+		log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to marshal log: %v", err)
+	}
+	err = producer.writer.WriteMessages(context.Background(), kafka.Message{
+		Topic: config.Topics.InfoLog,
+		Value: data,
+	})
+	if err != nil {
+		log.Printf("[WARN] [API-Service] [KafkaProducer] Failed to send log: %v", err)
+	}
 	return producer
 }
 
 func (kf *KafkaProducer) Close() {
 	kf.writer.Close()
-	kf.wg.Wait()
 	close(kf.logchan)
+	kf.wg.Wait()
 	log.Println("[INFO] [API-Service] [KafkaProducer] Successful close Kafka-Producer")
 }
 func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg string) {

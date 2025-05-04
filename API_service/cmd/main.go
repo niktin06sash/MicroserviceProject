@@ -98,7 +98,6 @@ func main() {
 	case err := <-serverError:
 		log.Fatalf("[ERROR] [API-Service] Service startup failed: %v", err)
 	}
-	middleware.Stop()
 	shutdownTimeout := 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
@@ -111,8 +110,9 @@ func main() {
 
 	log.Println("[INFO] [API-Service] Service has shutted down successfully")
 	defer func() {
-		kafkaprod.Close()
+		middleware.Stop()
 		grpcclient.Close()
+		kafkaprod.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
 		log.Printf("Active goroutines:\n%s", buf[:n])
