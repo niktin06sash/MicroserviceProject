@@ -36,10 +36,10 @@ type KafkaTopics struct {
 	WarnLog  string `mapstructure:"warn_log"`
 }
 
-func LoadConfig(path string) Config {
+func LoadConfig() Config {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yml")
-	viper.AddConfigPath(path)
+	viper.AddConfigPath("internal/configs")
 
 	err := viper.ReadInConfig()
 	if err != nil {
@@ -54,5 +54,6 @@ func LoadConfig(path string) Config {
 	if err != nil {
 		log.Fatalf("[ERROR] [API-Service] Unable to decode into struct, %v", err)
 	}
+	log.Println("[INFO] [API-Service] Successful Load Config")
 	return config
 }
