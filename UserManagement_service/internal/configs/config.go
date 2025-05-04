@@ -1,5 +1,11 @@
 package configs
 
+import (
+	"log"
+
+	"github.com/spf13/viper"
+)
+
 type Config struct {
 	Server         ServerConfig         `mapstructure:"server"`
 	Database       DatabaseConfig       `mapstructure:"database"`
@@ -35,4 +41,25 @@ type KafkaTopics struct {
 }
 type SessionServiceConfig struct {
 	GrpcAddress string `mapstructure:"grpc_address"`
+}
+
+func LoadConfig() Config {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yml")
+	viper.AddConfigPath("internal/configs")
+	err := viper.ReadInConfig()
+	if err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Printf("[ERROR] [UserManagement] Config file not found; using defaults or environment variables")
+		} else {
+			log.Fatalf("[ERROR] [UserManagement] Error reading config file: %s", err)
+		}
+	}
+	var config Config
+	err = viper.Unmarshal(&config)
+	if err != nil {
+		log.Fatalf("[ERROR] [UserManagement] Unable to decode into struct, %v", err)
+	}
+	log.Println("[INFO] [UserManagement] Successful Load Config")
+	return config
 }
