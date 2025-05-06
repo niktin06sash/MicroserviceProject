@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	configs "github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/config"
+	configs "github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/configs"
 	"github.com/segmentio/kafka-go"
 )
 
