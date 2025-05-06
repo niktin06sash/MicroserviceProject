@@ -40,13 +40,9 @@ func main() {
 	service := service.NewService(repositories, kafkaProducer, grpcclient)
 	handlers := handlers.NewHandler(service)
 	srv := &server.Server{}
-	port := config.Server.Port
-	if port == "" {
-		port = "8082"
-	}
 	serverError := make(chan error, 1)
 	go func() {
-		if err := srv.Run(port, handlers.InitRoutes()); err != nil {
+		if err := srv.Run(config.Server.Port, handlers.InitRoutes()); err != nil {
 			serverError <- fmt.Errorf("server run failed: %w", err)
 			return
 		}
