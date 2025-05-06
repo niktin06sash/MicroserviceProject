@@ -118,7 +118,9 @@ func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg s
 func (kf *KafkaProducer) sendLogs() {
 	for logg := range kf.logchan {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+		defer func() {
+			cancel()
+		}()
 		topic := strings.ToLower(logg.Level) + "-log-topic"
 		data, err := json.Marshal(logg)
 		if err != nil {
@@ -144,7 +146,7 @@ func (kf *KafkaProducer) sendLogs() {
 			}
 		}
 		if err != nil {
-			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to send log after all retries: %v", err)
+			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to send log after all retries: %v, (%v)", err, logg)
 		}
 	}
 }
