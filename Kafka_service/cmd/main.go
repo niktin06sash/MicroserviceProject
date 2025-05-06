@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"syscall"
 
-	configs "github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/config"
+	configs "github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/kafka"
 )
 
