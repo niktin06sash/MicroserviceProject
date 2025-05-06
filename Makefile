@@ -1,6 +1,7 @@
 API_Service_DIR := API_service
 Session_Service_DIR := SessionManagement_service
 User_Service_DIR := UserManagement_service
+Kafka_Service_DIR := Kafka_service
 Swagger_DIR := $(API_Service_DIR)/docs
 
 .PHONY: all start stop clean swagger redis kafka run shutdown
@@ -22,6 +23,8 @@ redis:
 	@echo "Starting Redis CLI..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'wsl redis-cli'"
 start:
+	@echo "Starting Kafka Service..."
+	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(Kafka_Service_DIR); go run cmd/main.go'"
 	@echo "Starting API Service..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(API_Service_DIR); go run cmd/main.go'"
 	@echo "Starting Session Service..."
