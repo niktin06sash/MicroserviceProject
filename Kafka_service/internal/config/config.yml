@@ -9,3 +9,4 @@ kafka:
   session_timeout: 10000
   heartbeat_interval: 3000    
 logger:
+
