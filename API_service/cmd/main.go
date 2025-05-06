@@ -34,13 +34,9 @@ func main() {
 	middleware := middleware.NewMiddleware(grpcclient, kafkaprod)
 	handler := handlers.NewHandler(middleware, kafkaprod, config.Routes)
 	srv := &server.Server{}
-	port := config.Server.Port
-	if port == "" {
-		port = "8083"
-	}
 	serverError := make(chan error, 1)
 	go func() {
-		if err := srv.Run(port, handler.InitRoutes()); err != nil {
+		if err := srv.Run(config.Server.Port, handler.InitRoutes()); err != nil {
 			serverError <- fmt.Errorf("server run failed: %w", err)
 			return
 		}

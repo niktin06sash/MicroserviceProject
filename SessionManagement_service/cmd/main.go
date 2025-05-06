@@ -16,8 +16,6 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/server"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/service"
 	"go.uber.org/zap"
-
-	"github.com/spf13/viper"
 )
 
 func main() {
@@ -39,13 +37,9 @@ func main() {
 	repository := repository.NewRepository(redis, logger)
 	service := service.NewSessionAPI(repository, logger)
 	srv := server.NewGrpcServer(service, logger)
-	port := viper.GetString("server.port")
-	if port == "" {
-		port = "50051"
-	}
 	serverError := make(chan error, 1)
 	go func() {
-		if err := srv.Run(port); err != nil {
+		if err := srv.Run(config.Server.Port); err != nil {
 			serverError <- fmt.Errorf("server run failed: %w", err)
 			return
 		}
@@ -53,7 +47,6 @@ func main() {
 	}()
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
-
 	select {
 	case sig := <-quit:
 		logger.Info("SessionManagement: Service shutting down with signal", zap.String("signal", sig.String()))
