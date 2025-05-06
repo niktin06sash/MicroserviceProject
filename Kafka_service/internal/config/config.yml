@@ -1,0 +1,11 @@
+kafka:
+  bootstrap_servers: "localhost:9092"
+  group_id: "servers_log"
+  topics:
+    info_log: "info-log-topic"
+    error_log: "error-log-topic"
+    warn_log: "warn-log-topic"
+  enable_auto_commit: false 
+  session_timeout: 10000
+  heartbeat_interval: 3000    
+logger:
