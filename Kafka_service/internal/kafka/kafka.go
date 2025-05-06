@@ -25,16 +25,16 @@ func NewKafkaConsumer(config configs.KafkaConfig, topic string) *KafkaConsumer {
 		SessionTimeout:    config.SessionTimeout,
 		HeartbeatInterval: config.HearbeatInterval,
 	})
-	producer := &KafkaConsumer{
+	consumer := &KafkaConsumer{
 		reader: r,
 		wg:     &sync.WaitGroup{},
 	}
-	producer.wg.Add(1)
+	consumer.wg.Add(1)
 	go func() {
-		producer.startLogs()
+		consumer.startLogs()
 	}()
-	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", topic)
-	return producer
+	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", strings.ToUpper(consumer.reader.Config().Topic))
+	return consumer
 }
 func (kf *KafkaConsumer) Close() {
 	kf.wg.Wait()
@@ -48,9 +48,9 @@ func (kf *KafkaConsumer) startLogs() {
 		if err != nil {
 			log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to read log: %v", strings.ToUpper(kf.reader.Config().Topic), err)
 		}
-		log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Received log: %s", msg.Topic, string(msg.Value))
+		log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Received log: %s", strings.ToUpper(kf.reader.Config().Topic), string(msg.Value))
 		if err := kf.reader.CommitMessages(context.Background(), msg); err != nil {
-			log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to commit log: %v", msg.Topic, err)
+			log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to commit log: %v", strings.ToUpper(kf.reader.Config().Topic), err)
 		}
 	}
 }
