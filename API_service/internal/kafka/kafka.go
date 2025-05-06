@@ -118,34 +118,33 @@ func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg s
 func (kf *KafkaProducer) sendLogs() {
 	for logg := range kf.logchan {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		topic := strings.ToLower(logg.Level) + "-log-topic"
 		data, err := json.Marshal(logg)
 		if err != nil {
 			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to marshal log: %v", err)
-			cancel()
 			continue
 		}
 		for i := 0; i < 3; i++ {
-			err = kf.writer.WriteMessages(ctx, kafka.Message{
-				Topic: topic,
-				Key:   []byte(logg.TraceID),
-				Value: data,
-			})
-			if err == nil {
-				break
+			select {
+			case <-ctx.Done():
+				log.Printf("[WARN] [API-Service] [KafkaProducer] Context canceled or expired, dropping log: %v", err)
+				continue
+			default:
+				err = kf.writer.WriteMessages(ctx, kafka.Message{
+					Topic: topic,
+					Key:   []byte(logg.TraceID),
+					Value: data,
+				})
+				if err == nil {
+					break
+				}
+				log.Printf("[WARN] [API-Service] [KafkaProducer] Retry %d failed to send log: %v", i+1, err)
+				time.Sleep(1 * time.Second)
 			}
-			log.Printf("[WARN] [API-Service] [KafkaProducer] Retry %d failed to send log: %v", i+1, err)
-			time.Sleep(1 * time.Second)
-		}
-		if err := ctx.Err(); err != nil {
-			log.Printf("[WARN] [API-Service] [KafkaProducer] Context canceled or expired, dropping log: %v", err)
-			cancel()
-			continue
 		}
 		if err != nil {
 			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to send log after all retries: %v", err)
-			cancel()
 		}
-		cancel()
 	}
 }
