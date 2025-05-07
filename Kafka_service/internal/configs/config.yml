@@ -9,4 +9,19 @@ kafka:
   session_timeout: 10000
   heartbeat_interval: 3000    
 logger:
-
+  levels:
+    info: "info"
+    error: "error"
+    warn: "warn"
+  files:
+    info: "logs/info.log"
+    error: "logs/error.log"
+    warn: "logs/warn.log"
+  rotation:
+    max_size: 100       
+    max_backups: 3         
+    max_age: 1             
+    compress: true         
+  format: 
+    json: true             
+    time_format: "ISO8601"
