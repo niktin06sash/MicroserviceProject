@@ -67,7 +67,7 @@ func (kf *KafkaConsumer) startLogs() {
 			}()
 			msg, err := kf.reader.ReadMessage(ctx)
 			if err != nil {
-				if !errors.Is(err, context.Canceled) || !errors.Is(err, context.DeadlineExceeded) {
+				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 					log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to read log: %v", strings.ToUpper(kf.reader.Config().Topic), err)
 					continue
 				}

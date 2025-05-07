@@ -6,7 +6,7 @@ kafka:
     error_log: "error-log-topic"
     warn_log: "warn-log-topic"
   enable_auto_commit: false 
-  session_timeout: 10000
+  session_timeout: 30000
   heartbeat_interval: 3000    
 logger:
   levels:
