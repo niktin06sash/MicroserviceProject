@@ -2,6 +2,7 @@ package logs
 
 import (
 	"log"
+	"strings"
 
 	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/configs"
 	"go.uber.org/zap"
@@ -15,7 +16,7 @@ type Logger struct {
 
 func (logg *Logger) Sync() {
 	lvl := logg.ZapLogger.Level().String()
-	log.Printf("[INFO] [Logger:%s] Successful sync Logger", lvl)
+	log.Printf("[INFO] [Logger:%s] Successful sync Logger", strings.ToTitle(lvl))
 	logg.ZapLogger.Sync()
 }
 func NewLogger(config configs.LoggerConfig, level string) *Logger {
@@ -37,6 +38,7 @@ func NewLogger(config configs.LoggerConfig, level string) *Logger {
 	encoder := zapcore.NewJSONEncoder(encoderconfig)
 	core := zapcore.NewCore(encoder, zapcore.AddSync(writer), zapLevel)
 	zapLogger := zap.New(core, zap.AddStacktrace(zapcore.ErrorLevel))
+	log.Printf("[INFO] [Logger:%s] Successful connect to Logger", strings.ToTitle(zapLogger.Level().String()))
 	return &Logger{
 		ZapLogger: zapLogger,
 	}
