@@ -25,7 +25,19 @@ type KafkaTopics struct {
 	ErrorLog string `mapstructure:"error_log"`
 	WarnLog  string `mapstructure:"warn_log"`
 }
-type LoggerConfig struct{}
+type LoggerConfig struct {
+	Levels   map[string]string `mapstructure:"levels"`
+	Files    map[string]string `mapstructure:"files"`
+	Rotation struct {
+		MaxSize    int  `mapstructure:"max_size"`
+		MaxBackups int  `mapstructure:"max_backups"`
+		MaxAge     int  `mapstructure:"max_age"`
+		Compress   bool `mapstructure:"compress"`
+	} `mapstructure:"rotation"`
+	Format struct {
+		TimeFormat string `mapstructure:"time_format"`
+	} `mapstructure:"format"`
+}
 
 func LoadConfig() Config {
 	viper.SetConfigName("config")
