@@ -10,19 +10,28 @@ import (
 
 	configs "github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/logs"
 )
 
 func main() {
 	config := configs.LoadConfig()
-	topicslice := []string{config.Kafka.Topics.InfoLog, config.Kafka.Topics.ErrorLog, config.Kafka.Topics.WarnLog}
-	consumers := make([]*kafka.KafkaConsumer, 3)
+	topicToLevel := map[string]string{
+		config.Kafka.Topics.InfoLog:  config.Logger.Levels.InfoLevel,
+		config.Kafka.Topics.ErrorLog: config.Logger.Levels.ErrorLevel,
+		config.Kafka.Topics.WarnLog:  config.Logger.Levels.WarnLevel,
+	}
+	consumers := make([]*kafka.KafkaConsumer, 0)
 	var wg sync.WaitGroup
-	for i, topic := range topicslice {
+	var mux sync.Mutex
+	for topic, level := range topicToLevel {
 		wg.Add(1)
 		go func(topic string) {
 			defer wg.Done()
-			consumer := kafka.NewKafkaConsumer(config.Kafka, topic)
-			consumers[i] = consumer
+			logger := logs.NewLogger(config.Logger, level)
+			consumer := kafka.NewKafkaConsumer(config.Kafka, logger, topic)
+			mux.Lock()
+			consumers = append(consumers, consumer)
+			mux.Unlock()
 		}(topic)
 	}
 	quit := make(chan os.Signal, 1)
