@@ -6,11 +6,13 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	configs "github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/logs"
 	"github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
 )
 
 type KafkaConsumer struct {
@@ -18,6 +20,7 @@ type KafkaConsumer struct {
 	wg         *sync.WaitGroup
 	cancelchan chan struct{}
 	logger     *logs.Logger
+	counter    int64
 }
 
 func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic string) *KafkaConsumer {
@@ -42,6 +45,7 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 		consumer.startLogs()
 	}()
 	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", strings.ToUpper(consumer.reader.Config().Topic))
+	consumer.logger.ZapLogger.Info("Start services...", zap.Time("start_time", time.Now()))
 	return consumer
 }
 func (kf *KafkaConsumer) Close() {
@@ -49,7 +53,7 @@ func (kf *KafkaConsumer) Close() {
 	kf.wg.Wait()
 	kf.logger.Sync()
 	kf.reader.Close()
-	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer", strings.ToUpper(kf.reader.Config().Topic))
+	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", strings.ToUpper(kf.reader.Config().Topic), kf.counter)
 }
 func (kf *KafkaConsumer) startLogs() {
 	for {
@@ -68,7 +72,8 @@ func (kf *KafkaConsumer) startLogs() {
 					continue
 				}
 			}
-			kf.logger.ZapLogger.Info(string(msg.Value))
+			atomic.AddInt64(&kf.counter, 1)
+			kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter))
 			if err := kf.reader.CommitMessages(ctx, msg); err != nil {
 				log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to commit log: %v", strings.ToUpper(kf.reader.Config().Topic), err)
 			}
