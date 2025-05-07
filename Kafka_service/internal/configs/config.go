@@ -26,7 +26,7 @@ type KafkaTopics struct {
 	WarnLog  string `mapstructure:"warn_log"`
 }
 type LoggerConfig struct {
-	Levels   map[string]string `mapstructure:"levels"`
+	Levels   LoggerLevel       `mapstructure:"levels"`
 	Files    map[string]string `mapstructure:"files"`
 	Rotation struct {
 		MaxSize    int  `mapstructure:"max_size"`
@@ -37,6 +37,11 @@ type LoggerConfig struct {
 	Format struct {
 		TimeFormat string `mapstructure:"time_format"`
 	} `mapstructure:"format"`
+}
+type LoggerLevel struct {
+	InfoLevel  string `mapstructure:"info"`
+	WarnLevel  string `mapstructure:"warn"`
+	ErrorLevel string `mapstructure:"error"`
 }
 
 func LoadConfig() Config {

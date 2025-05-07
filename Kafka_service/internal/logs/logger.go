@@ -10,17 +10,17 @@ import (
 )
 
 type Logger struct {
-	zapLogger *zap.Logger
+	ZapLogger *zap.Logger
 }
 
 func (logg *Logger) Sync() {
-	lvl := logg.zapLogger.Level().String()
+	lvl := logg.ZapLogger.Level().String()
 	log.Printf("[INFO] [Logger:%s] Successful sync Logger", lvl)
-	logg.zapLogger.Sync()
+	logg.ZapLogger.Sync()
 }
 func NewLogger(config configs.LoggerConfig, level string) *Logger {
 	filename := config.Files[level]
-	zapLevel, err := zapcore.ParseLevel(config.Levels[level])
+	zapLevel, err := zapcore.ParseLevel(level)
 	if err != nil {
 		log.Fatalf("[ERROR] [Logger:%s] Error getting the logging level: %v", zapLevel.String(), err)
 		return nil
@@ -38,6 +38,6 @@ func NewLogger(config configs.LoggerConfig, level string) *Logger {
 	core := zapcore.NewCore(encoder, zapcore.AddSync(writer), zapLevel)
 	zapLogger := zap.New(core, zap.AddStacktrace(zapcore.ErrorLevel))
 	return &Logger{
-		zapLogger: zapLogger,
+		ZapLogger: zapLogger,
 	}
 }
