@@ -73,11 +73,11 @@ func (kf *KafkaConsumer) startLogs() {
 			atomic.AddInt64(&kf.counter, 1)
 			switch strings.ToUpper(kf.reader.Config().Topic) {
 			case "INFO-LOG-TOPIC":
-				kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter), zap.String("topic", msg.Topic))
+				kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter))
 			case "ERROR-LOG-TOPIC":
-				kf.logger.ZapLogger.Error(string(msg.Value), zap.Int64("number", kf.counter), zap.String("topic", msg.Topic))
+				kf.logger.ZapLogger.Error(string(msg.Value), zap.Int64("number", kf.counter))
 			case "WARN-LOG-TOPIC":
-				kf.logger.ZapLogger.Warn(string(msg.Value), zap.Int64("number", kf.counter), zap.String("topic", msg.Topic))
+				kf.logger.ZapLogger.Warn(string(msg.Value), zap.Int64("number", kf.counter))
 			}
 			if err := kf.reader.CommitMessages(ctx, msg); err != nil {
 				log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to commit offset: %v", strings.ToUpper(kf.reader.Config().Topic), err)
