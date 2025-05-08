@@ -6,8 +6,8 @@ kafka:
     error_log: "error-log-topic"
     warn_log: "warn-log-topic"
   enable_auto_commit: false 
-  session_timeout: 30000
-  heartbeat_interval: 3000    
+  session_timeout: 60000
+  heartbeat_interval: 20000    
 logger:
   levels:
     info: "info"

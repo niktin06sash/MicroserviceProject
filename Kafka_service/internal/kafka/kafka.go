@@ -30,8 +30,8 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 		Brokers:           brokers,
 		Topic:             topic,
 		GroupID:           config.GroupId,
-		SessionTimeout:    config.SessionTimeout,
-		HeartbeatInterval: config.HearbeatInterval,
+		SessionTimeout:    30 * time.Second,
+		HeartbeatInterval: 10 * time.Second,
 	})
 	consumer := &KafkaConsumer{
 		reader:     r,
@@ -45,7 +45,6 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 		consumer.startLogs()
 	}()
 	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", strings.ToUpper(consumer.reader.Config().Topic))
-	consumer.logger.ZapLogger.Info("Start services...", zap.Time("start_time", time.Now()))
 	return consumer
 }
 func (kf *KafkaConsumer) Close() {
@@ -69,14 +68,12 @@ func (kf *KafkaConsumer) startLogs() {
 			if err != nil {
 				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 					log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to read log: %v", strings.ToUpper(kf.reader.Config().Topic), err)
-					continue
 				}
+				continue
 			}
 			atomic.AddInt64(&kf.counter, 1)
+			log.Println(string(msg.Value), msg.Topic, msg.Time)
 			kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter))
-			if err := kf.reader.CommitMessages(ctx, msg); err != nil {
-				log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to commit log: %v", strings.ToUpper(kf.reader.Config().Topic), err)
-			}
 		}
 	}
 }
