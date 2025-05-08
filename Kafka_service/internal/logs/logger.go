@@ -17,6 +17,8 @@ type Logger struct {
 }
 
 func (logg *Logger) Sync() {
+	closemsg := fmt.Sprintf("----------CLOSE SERVICE IN %v ----------", time.Now())
+	logg.ZapLogger.Info(closemsg)
 	logg.ZapLogger.Sync()
 	log.Println("[INFO] [Kafka-Service] Successful sync Logger")
 }
