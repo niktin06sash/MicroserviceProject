@@ -57,7 +57,6 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 	w := &kafka.Writer{
 		Addr:            kafka.TCP(brokers...),
 		Topic:           "",
-		Balancer:        &kafka.Hash{},
 		WriteTimeout:    10 * time.Second,
 		WriteBackoffMin: time.Duration(config.RetryBackoffMs) * time.Millisecond,
 		WriteBackoffMax: 5 * time.Second,
