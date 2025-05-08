@@ -19,10 +19,10 @@ func (logg *Logger) Sync() {
 	logg.ZapLogger.Info("----------CLOSE SERVICE----------")
 	logg.ZapLogger.Warn("----------CLOSE SERVICE----------")
 	logg.ZapLogger.Error("----------CLOSE SERVICE----------")
+	logg.ZapLogger.Sync()
 	for _, writer := range logg.Writers {
 		writer.Close()
 	}
-	logg.ZapLogger.Sync()
 	log.Println("[INFO] [Kafka-Service] Successful sync Logger")
 }
 func NewLogger(config configs.LoggerConfig) *Logger {
