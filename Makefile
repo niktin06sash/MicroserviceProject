@@ -19,6 +19,7 @@ kafka:
 	powershell -Command "Start-Sleep -Seconds 5"
 	@echo "Starting Kafka..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd C:\Users\nikit\kafka; .\bin\windows\kafka-server-start.bat .\config\server.properties'"
+	powershell -Command "Start-Sleep -Seconds 5"
 redis:
 	@echo "Starting Redis CLI..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'wsl redis-cli'"
@@ -45,6 +46,6 @@ clean:
 	powershell -Command "Remove-Item -Recurse -Force $(Swagger_DIR)" || true
 	@echo "Cleanup complete."
 
-run: swagger kafka redis start
+run: kafka swagger redis start
 
 shutdown: stop clean
