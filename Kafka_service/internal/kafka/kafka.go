@@ -20,6 +20,8 @@ type KafkaConsumer struct {
 	wg         *sync.WaitGroup
 	cancelchan chan struct{}
 	logger     *logs.Logger
+	ctx        context.Context
+	cancel     context.CancelFunc
 	counter    int64
 }
 
@@ -33,36 +35,38 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 		SessionTimeout:    30 * time.Second,
 		HeartbeatInterval: 10 * time.Second,
 	})
+	ctx, cancel := context.WithCancel(context.Background())
 	consumer := &KafkaConsumer{
 		reader:     r,
 		wg:         &sync.WaitGroup{},
 		cancelchan: make(chan struct{}),
 		logger:     logger,
+		ctx:        ctx,
+		cancel:     cancel,
 	}
 	consumer.wg.Add(1)
-	go func() {
-		defer consumer.wg.Done()
-		consumer.startLogs()
-	}()
+	go consumer.startLogs()
 	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", strings.ToUpper(consumer.reader.Config().Topic))
 	return consumer
 }
 func (kf *KafkaConsumer) Close() {
+	kf.cancel()
 	close(kf.cancelchan)
 	kf.wg.Wait()
 	kf.reader.Close()
 	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", strings.ToUpper(kf.reader.Config().Topic), kf.counter)
 }
 func (kf *KafkaConsumer) startLogs() {
+	defer kf.wg.Done()
 	for {
 		select {
 		case <-kf.cancelchan:
 			return
+		case <-kf.ctx.Done():
+			return
 		default:
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-			defer func() {
-				cancel()
-			}()
+			ctx, cancel := context.WithTimeout(kf.ctx, 2*time.Second)
+			defer cancel()
 			msg, err := kf.reader.FetchMessage(ctx)
 			if err != nil {
 				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
