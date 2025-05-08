@@ -16,13 +16,12 @@ import (
 )
 
 type KafkaConsumer struct {
-	reader     *kafka.Reader
-	wg         *sync.WaitGroup
-	cancelchan chan struct{}
-	logger     *logs.Logger
-	ctx        context.Context
-	cancel     context.CancelFunc
-	counter    int64
+	reader  *kafka.Reader
+	wg      *sync.WaitGroup
+	logger  *logs.Logger
+	ctx     context.Context
+	cancel  context.CancelFunc
+	counter int64
 }
 
 func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic string) *KafkaConsumer {
@@ -37,12 +36,11 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	consumer := &KafkaConsumer{
-		reader:     r,
-		wg:         &sync.WaitGroup{},
-		cancelchan: make(chan struct{}),
-		logger:     logger,
-		ctx:        ctx,
-		cancel:     cancel,
+		reader: r,
+		wg:     &sync.WaitGroup{},
+		logger: logger,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 	consumer.wg.Add(1)
 	go consumer.startLogs()
@@ -51,7 +49,6 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 }
 func (kf *KafkaConsumer) Close() {
 	kf.cancel()
-	close(kf.cancelchan)
 	kf.wg.Wait()
 	kf.reader.Close()
 	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", strings.ToUpper(kf.reader.Config().Topic), kf.counter)
@@ -60,8 +57,6 @@ func (kf *KafkaConsumer) startLogs() {
 	defer kf.wg.Done()
 	for {
 		select {
-		case <-kf.cancelchan:
-			return
 		case <-kf.ctx.Done():
 			return
 		default:

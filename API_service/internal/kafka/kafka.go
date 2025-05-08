@@ -35,6 +35,8 @@ type KafkaProducer struct {
 	writer  *kafka.Writer
 	logchan chan APILog
 	wg      *sync.WaitGroup
+	context context.Context
+	cancel  context.CancelFunc
 }
 type KafkaProducerService interface {
 	NewAPILog(c *http.Request, level, place, traceid, msg string)
@@ -63,11 +65,14 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		BatchSize:       config.BatchSize,
 		RequiredAcks:    acks,
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	logs := make(chan APILog, 1000)
 	producer := &KafkaProducer{
 		writer:  w,
 		logchan: logs,
 		wg:      &sync.WaitGroup{},
+		context: ctx,
+		cancel:  cancel,
 	}
 	startmsg := "Successful connect to Kafka-Producer"
 	startlog := APILog{
@@ -76,7 +81,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		Timestamp: time.Now().Format(time.RFC3339),
 		Message:   startmsg,
 	}
-	for i := 1; i <= 5; i++ {
+	for i := 1; i <= 3; i++ {
 		producer.wg.Add(1)
 		go producer.sendLogs(i)
 	}
@@ -87,6 +92,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 
 func (kf *KafkaProducer) Close() {
 	close(kf.logchan)
+	kf.cancel()
 	kf.wg.Wait()
 	kf.writer.Close()
 	log.Println("[INFO] [API-Service] [KafkaProducer] Successful close Kafka-Producer")
@@ -115,38 +121,45 @@ func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg s
 }
 func (kf *KafkaProducer) sendLogs(num int) {
 	defer kf.wg.Done()
-	for logg := range kf.logchan {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer func() {
-			cancel()
-		}()
-		topic := strings.ToLower(logg.Level) + "-log-topic"
-		data, err := json.Marshal(logg)
-		if err != nil {
-			log.Printf("[ERROR] [API-Service] [KafkaProducer] [Worker: %v] Failed to marshal log: %v", num, err)
-			continue
-		}
-	label:
-		for i := 0; i < 3; i++ {
-			select {
-			case <-ctx.Done():
-				log.Printf("[WARN] [API-Service] [KafkaProducer] [Worker: %v] Context canceled or expired, dropping log: %v", num, err)
-				continue
-			default:
-				err = kf.writer.WriteMessages(ctx, kafka.Message{
-					Topic: topic,
-					Key:   []byte(logg.TraceID),
-					Value: data,
-				})
-				if err == nil {
-					break label
-				}
-				log.Printf("[WARN] [API-Service] [KafkaProducer] [Worker: %v] Retry %d failed to send log: %v", num, i+1, err)
-				time.Sleep(1 * time.Second)
+	for {
+		select {
+		case <-kf.context.Done():
+			return
+		case logg, ok := <-kf.logchan:
+			if !ok {
+				log.Printf("[INFO] [API-Service] [KafkaProducer] [Worker: %v] Log channel closed, stopping worker", num)
+				return
 			}
-		}
-		if err != nil {
-			log.Printf("[ERROR] [API-Service] [KafkaProducer] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
+			ctx, cancel := context.WithTimeout(kf.context, 5*time.Second)
+			defer cancel()
+			topic := strings.ToLower(logg.Level) + "-log-topic"
+			data, err := json.Marshal(logg)
+			if err != nil {
+				log.Printf("[ERROR] [API-Service] [KafkaProducer] [Worker: %v] Failed to marshal log: %v", num, err)
+				continue
+			}
+		label:
+			for i := 0; i < 3; i++ {
+				select {
+				case <-ctx.Done():
+					log.Printf("[WARN] [API-Service] [KafkaProducer] [Worker: %v] Context canceled or expired, dropping log: %v", num, err)
+					continue
+				default:
+					err = kf.writer.WriteMessages(ctx, kafka.Message{
+						Topic: topic,
+						Key:   []byte(logg.TraceID),
+						Value: data,
+					})
+					if err == nil {
+						break label
+					}
+					log.Printf("[WARN] [API-Service] [KafkaProducer] [Worker: %v] Retry %d failed to send log: %v", num, i+1, err)
+					time.Sleep(1 * time.Second)
+				}
+			}
+			if err != nil {
+				log.Printf("[ERROR] [API-Service] [KafkaProducer] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
+			}
 		}
 	}
 }
