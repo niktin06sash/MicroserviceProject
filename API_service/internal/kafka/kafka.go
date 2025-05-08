@@ -126,6 +126,7 @@ func (kf *KafkaProducer) sendLogs() {
 			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to marshal log: %v", err)
 			continue
 		}
+	label:
 		for i := 0; i < 3; i++ {
 			select {
 			case <-ctx.Done():
@@ -138,7 +139,7 @@ func (kf *KafkaProducer) sendLogs() {
 					Value: data,
 				})
 				if err == nil {
-					break
+					break label
 				}
 				log.Printf("[WARN] [API-Service] [KafkaProducer] Retry %d failed to send log: %v", i+1, err)
 				time.Sleep(1 * time.Second)
