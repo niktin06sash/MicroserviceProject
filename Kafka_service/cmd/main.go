@@ -16,7 +16,7 @@ import (
 func main() {
 	config := configs.LoadConfig()
 	logger := logs.NewLogger(config.Logger)
-	topics := []string{config.Logger.Levels.InfoLevel, config.Logger.Levels.ErrorLevel, config.Logger.Levels.WarnLevel}
+	topics := []string{config.Kafka.Topics.InfoLog, config.Kafka.Topics.ErrorLog, config.Kafka.Topics.WarnLog}
 	consumers := make([]*kafka.KafkaConsumer, 0)
 	var wg sync.WaitGroup
 	var mux sync.Mutex
