@@ -1,10 +1,8 @@
 package logs
 
 import (
-	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/configs"
 	"go.uber.org/zap"
@@ -17,8 +15,9 @@ type Logger struct {
 }
 
 func (logg *Logger) Sync() {
-	closemsg := fmt.Sprintf("----------CLOSE SERVICE IN %v ----------", time.Now())
-	logg.ZapLogger.Info(closemsg)
+	logg.ZapLogger.Info("----------CLOSE SERVICE----------")
+	logg.ZapLogger.Warn("----------CLOSE SERVICE----------")
+	logg.ZapLogger.Error("----------CLOSE SERVICE----------")
 	logg.ZapLogger.Sync()
 	log.Println("[INFO] [Kafka-Service] Successful sync Logger")
 }
@@ -40,14 +39,18 @@ func NewLogger(config configs.LoggerConfig) *Logger {
 		encoderConfig := zap.NewProductionEncoderConfig()
 		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 		encoder := zapcore.NewJSONEncoder(encoderConfig)
-		core := zapcore.NewCore(encoder, zapcore.AddSync(writer), zapLevel)
+		levelEnabler := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
+			return level == zapLevel
+		})
+		core := zapcore.NewCore(encoder, zapcore.AddSync(writer), levelEnabler)
 		c = append(c, core)
 	}
 	combinedCore := zapcore.NewTee(c...)
 	logger := zap.New(combinedCore, zap.AddStacktrace(zapcore.ErrorLevel))
 	log.Println("[INFO] [Kafka-Service] Successful connect to Logger")
-	startmsg := fmt.Sprintf("----------START SERVICE IN %v ----------", time.Now())
-	logger.Info(startmsg)
+	logger.Info("----------CLOSE SERVICE----------")
+	logger.Warn("----------CLOSE SERVICE----------")
+	logger.Error("----------CLOSE SERVICE----------")
 	return &Logger{
 		ZapLogger: logger,
 	}
