@@ -14,9 +14,9 @@ logger:
     error: "error"
     warn: "warn"
   files:
-    info: "logs/info.log"
-    error: "logs/error.log"
-    warn: "logs/warn.log"
+    info: "internal/logs/info.log"
+    error: "internal/logs/error.log"
+    warn: "internal/logs/warn.log"
   rotation:
     max_size: 100       
     max_backups: 3         

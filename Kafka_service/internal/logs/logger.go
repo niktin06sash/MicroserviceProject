@@ -1,8 +1,10 @@
 package logs
 
 import (
+	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/configs"
 	"go.uber.org/zap"
@@ -42,6 +44,8 @@ func NewLogger(config configs.LoggerConfig) *Logger {
 	combinedCore := zapcore.NewTee(c...)
 	logger := zap.New(combinedCore, zap.AddStacktrace(zapcore.ErrorLevel))
 	log.Println("[INFO] [Kafka-Service] Successful connect to Logger")
+	startmsg := fmt.Sprintf("----------START SERVICE IN %v ----------", time.Now())
+	logger.Info(startmsg)
 	return &Logger{
 		ZapLogger: logger,
 	}
