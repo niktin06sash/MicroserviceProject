@@ -71,7 +71,6 @@ func (kf *KafkaConsumer) startLogs() {
 				continue
 			}
 			atomic.AddInt64(&kf.counter, 1)
-			log.Println(string(msg.Value))
 			switch strings.ToUpper(kf.reader.Config().Topic) {
 			case "INFO-LOG-TOPIC":
 				kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter), zap.String("topic", msg.Topic))
