@@ -20,7 +20,7 @@ const (
 )
 
 type APILog struct {
-	Level     string `json:"level"`
+	Level     string `json:"-"`
 	Service   string `json:"service"`
 	Place     string `json:"place"`
 	TraceID   string `json:"trace_id"`
@@ -76,11 +76,10 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		Timestamp: time.Now().Format(time.RFC3339),
 		Message:   startmsg,
 	}
-	producer.wg.Add(1)
-	go func() {
-		defer producer.wg.Done()
-		producer.sendLogs()
-	}()
+	for i := 1; i <= 5; i++ {
+		producer.wg.Add(1)
+		go producer.sendLogs(i)
+	}
 	producer.logchan <- startlog
 	log.Println("[INFO] [API-Service] [KafkaProducer] Successful connect to Kafka-Producer")
 	return producer
@@ -114,7 +113,8 @@ func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg s
 		log.Printf("[WARN] [API-Service] [KafkaProducer] Log channel is full, dropping log: %+v", newlog)
 	}
 }
-func (kf *KafkaProducer) sendLogs() {
+func (kf *KafkaProducer) sendLogs(num int) {
+	defer kf.wg.Done()
 	for logg := range kf.logchan {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer func() {
@@ -123,14 +123,14 @@ func (kf *KafkaProducer) sendLogs() {
 		topic := strings.ToLower(logg.Level) + "-log-topic"
 		data, err := json.Marshal(logg)
 		if err != nil {
-			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to marshal log: %v", err)
+			log.Printf("[ERROR] [API-Service] [KafkaProducer] [Worker: %v] Failed to marshal log: %v", num, err)
 			continue
 		}
 	label:
 		for i := 0; i < 3; i++ {
 			select {
 			case <-ctx.Done():
-				log.Printf("[WARN] [API-Service] [KafkaProducer] Context canceled or expired, dropping log: %v", err)
+				log.Printf("[WARN] [API-Service] [KafkaProducer] [Worker: %v] Context canceled or expired, dropping log: %v", num, err)
 				continue
 			default:
 				err = kf.writer.WriteMessages(ctx, kafka.Message{
@@ -141,12 +141,12 @@ func (kf *KafkaProducer) sendLogs() {
 				if err == nil {
 					break label
 				}
-				log.Printf("[WARN] [API-Service] [KafkaProducer] Retry %d failed to send log: %v", i+1, err)
+				log.Printf("[WARN] [API-Service] [KafkaProducer] [Worker: %v] Retry %d failed to send log: %v", num, i+1, err)
 				time.Sleep(1 * time.Second)
 			}
 		}
 		if err != nil {
-			log.Printf("[ERROR] [API-Service] [KafkaProducer] Failed to send log after all retries: %v, (%v)", err, logg)
+			log.Printf("[ERROR] [API-Service] [KafkaProducer] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
 		}
 	}
 }
