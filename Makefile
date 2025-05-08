@@ -16,7 +16,7 @@ kafka:
 	@echo "Starting Zookeeper..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd C:\Users\nikit\kafka; .\bin\windows\zookeeper-server-start.bat .\config\zookeeper.properties'"
 	@echo "Waiting for Zookeeper to initialize..."
-	timeout /T 5 >nul
+	powershell -Command "Start-Sleep -Seconds 5"
 	@echo "Starting Kafka..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd C:\Users\nikit\kafka; .\bin\windows\kafka-server-start.bat .\config\server.properties'"
 redis:
