@@ -12,17 +12,22 @@ import (
 
 type Logger struct {
 	ZapLogger *zap.Logger
+	Writers   []*lumberjack.Logger
 }
 
 func (logg *Logger) Sync() {
 	logg.ZapLogger.Info("----------CLOSE SERVICE----------")
 	logg.ZapLogger.Warn("----------CLOSE SERVICE----------")
 	logg.ZapLogger.Error("----------CLOSE SERVICE----------")
+	for _, writer := range logg.Writers {
+		writer.Close()
+	}
 	logg.ZapLogger.Sync()
 	log.Println("[INFO] [Kafka-Service] Successful sync Logger")
 }
 func NewLogger(config configs.LoggerConfig) *Logger {
 	c := []zapcore.Core{}
+	writers := []*lumberjack.Logger{}
 	for lvl, fn := range config.Files {
 		zapLevel, err := zapcore.ParseLevel(strings.ToUpper(lvl))
 		if err != nil {
@@ -36,6 +41,7 @@ func NewLogger(config configs.LoggerConfig) *Logger {
 			MaxBackups: config.Rotation.MaxBackups,
 			Compress:   config.Rotation.Compress,
 		}
+		writers = append(writers, writer)
 		encoderConfig := zap.NewProductionEncoderConfig()
 		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 		encoder := zapcore.NewJSONEncoder(encoderConfig)
@@ -48,10 +54,11 @@ func NewLogger(config configs.LoggerConfig) *Logger {
 	combinedCore := zapcore.NewTee(c...)
 	logger := zap.New(combinedCore, zap.AddStacktrace(zapcore.ErrorLevel))
 	log.Println("[INFO] [Kafka-Service] Successful connect to Logger")
-	logger.Info("----------CLOSE SERVICE----------")
-	logger.Warn("----------CLOSE SERVICE----------")
-	logger.Error("----------CLOSE SERVICE----------")
+	logger.Info("----------START SERVICE----------")
+	logger.Warn("----------START SERVICE----------")
+	logger.Error("----------START SERVICE----------")
 	return &Logger{
 		ZapLogger: logger,
+		Writers:   writers,
 	}
 }
