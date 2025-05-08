@@ -26,11 +26,11 @@ redis:
 start:
 	@echo "Starting Kafka Service..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(Kafka_Service_DIR); go run cmd/main.go'"
-	@echo "Starting API Service..."
+	@echo "Starting API-Service..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(API_Service_DIR); go run cmd/main.go'"
-	@echo "Starting Session Service..."
+	@echo "Starting Session-Service..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(Session_Service_DIR); go run cmd/main.go'"
-	@echo "Starting User Service..."
+	@echo "Starting User-Service..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(User_Service_DIR); go run cmd/main.go'"
 	@echo "All services started."
 
