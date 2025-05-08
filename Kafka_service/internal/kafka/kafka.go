@@ -50,7 +50,6 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 func (kf *KafkaConsumer) Close() {
 	close(kf.cancelchan)
 	kf.wg.Wait()
-	kf.logger.Sync()
 	kf.reader.Close()
 	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", strings.ToUpper(kf.reader.Config().Topic), kf.counter)
 }
@@ -72,8 +71,15 @@ func (kf *KafkaConsumer) startLogs() {
 				continue
 			}
 			atomic.AddInt64(&kf.counter, 1)
-			log.Println(string(msg.Value), msg.Topic, msg.Time)
-			kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter))
+			log.Println(string(msg.Value))
+			switch strings.ToUpper(kf.reader.Config().Topic) {
+			case "INFO-LOG-TOPIC":
+				kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter), zap.String("topic", msg.Topic))
+			case "ERROR-LOG-TOPIC":
+				kf.logger.ZapLogger.Error(string(msg.Value), zap.Int64("number", kf.counter), zap.String("topic", msg.Topic))
+			case "WARN-LOG-TOPIC":
+				kf.logger.ZapLogger.Warn(string(msg.Value), zap.Int64("number", kf.counter), zap.String("topic", msg.Topic))
+			}
 		}
 	}
 }

@@ -15,31 +15,34 @@ type Logger struct {
 }
 
 func (logg *Logger) Sync() {
-	lvl := logg.ZapLogger.Level().String()
-	log.Printf("[INFO] [Logger:%s] Successful sync Logger", strings.ToTitle(lvl))
 	logg.ZapLogger.Sync()
+	log.Println("[INFO] [Kafka-Service] Successful sync Logger")
 }
-func NewLogger(config configs.LoggerConfig, level string) *Logger {
-	filename := config.Files[level]
-	zapLevel, err := zapcore.ParseLevel(level)
-	if err != nil {
-		log.Fatalf("[ERROR] [Logger:%s] Error getting the logging level: %v", zapLevel.String(), err)
-		return nil
+func NewLogger(config configs.LoggerConfig) *Logger {
+	c := []zapcore.Core{}
+	for lvl, fn := range config.Files {
+		zapLevel, err := zapcore.ParseLevel(strings.ToUpper(lvl))
+		if err != nil {
+			log.Fatalf("[ERROR] [Kafka-Service] Error getting the logging level: %v", err)
+			return nil
+		}
+		writer := &lumberjack.Logger{
+			Filename:   fn,
+			MaxSize:    config.Rotation.MaxSize,
+			MaxAge:     config.Rotation.MaxAge,
+			MaxBackups: config.Rotation.MaxBackups,
+			Compress:   config.Rotation.Compress,
+		}
+		encoderConfig := zap.NewProductionEncoderConfig()
+		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+		encoder := zapcore.NewJSONEncoder(encoderConfig)
+		core := zapcore.NewCore(encoder, zapcore.AddSync(writer), zapLevel)
+		c = append(c, core)
 	}
-	writer := &lumberjack.Logger{
-		Filename:   filename,
-		MaxSize:    config.Rotation.MaxSize,
-		MaxAge:     config.Rotation.MaxAge,
-		MaxBackups: config.Rotation.MaxBackups,
-		Compress:   config.Rotation.Compress,
-	}
-	encoderconfig := zap.NewProductionEncoderConfig()
-	encoderconfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	encoder := zapcore.NewJSONEncoder(encoderconfig)
-	core := zapcore.NewCore(encoder, zapcore.AddSync(writer), zapLevel)
-	zapLogger := zap.New(core, zap.AddStacktrace(zapcore.ErrorLevel))
-	log.Printf("[INFO] [Logger:%s] Successful connect to Logger", strings.ToTitle(zapLogger.Level().String()))
+	combinedCore := zapcore.NewTee(c...)
+	logger := zap.New(combinedCore, zap.AddStacktrace(zapcore.ErrorLevel))
+	log.Println("[INFO] [Kafka-Service] Successful connect to Logger")
 	return &Logger{
-		ZapLogger: zapLogger,
+		ZapLogger: logger,
 	}
 }

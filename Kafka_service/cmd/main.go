@@ -15,24 +15,20 @@ import (
 
 func main() {
 	config := configs.LoadConfig()
-	topicToLevel := map[string]string{
-		config.Kafka.Topics.InfoLog:  config.Logger.Levels.InfoLevel,
-		config.Kafka.Topics.ErrorLog: config.Logger.Levels.ErrorLevel,
-		config.Kafka.Topics.WarnLog:  config.Logger.Levels.WarnLevel,
-	}
+	logger := logs.NewLogger(config.Logger)
+	topics := []string{config.Logger.Levels.InfoLevel, config.Logger.Levels.ErrorLevel, config.Logger.Levels.WarnLevel}
 	consumers := make([]*kafka.KafkaConsumer, 0)
 	var wg sync.WaitGroup
 	var mux sync.Mutex
-	for topic, level := range topicToLevel {
+	for _, topic := range topics {
 		wg.Add(1)
-		go func(topic string) {
+		go func() {
 			defer wg.Done()
-			logger := logs.NewLogger(config.Logger, level)
 			consumer := kafka.NewKafkaConsumer(config.Kafka, logger, topic)
 			mux.Lock()
 			consumers = append(consumers, consumer)
 			mux.Unlock()
-		}(topic)
+		}()
 	}
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
@@ -43,6 +39,7 @@ func main() {
 		consumer.Close()
 	}
 	wg.Wait()
+	logger.Sync()
 	log.Println("[INFO] [Kafka-Service] All Kafka consumers have been successfully closed")
 	defer func() {
 		buf := make([]byte, 10<<20)
