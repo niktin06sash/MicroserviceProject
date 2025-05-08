@@ -63,7 +63,7 @@ func (kf *KafkaConsumer) startLogs() {
 			defer func() {
 				cancel()
 			}()
-			msg, err := kf.reader.ReadMessage(ctx)
+			msg, err := kf.reader.FetchMessage(ctx)
 			if err != nil {
 				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 					log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to read log: %v", strings.ToUpper(kf.reader.Config().Topic), err)
@@ -78,6 +78,9 @@ func (kf *KafkaConsumer) startLogs() {
 				kf.logger.ZapLogger.Error(string(msg.Value), zap.Int64("number", kf.counter), zap.String("topic", msg.Topic))
 			case "WARN-LOG-TOPIC":
 				kf.logger.ZapLogger.Warn(string(msg.Value), zap.Int64("number", kf.counter), zap.String("topic", msg.Topic))
+			}
+			if err := kf.reader.CommitMessages(ctx, msg); err != nil {
+				log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to commit offset: %v", strings.ToUpper(kf.reader.Config().Topic), err)
 			}
 		}
 	}
