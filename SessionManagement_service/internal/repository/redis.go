@@ -20,16 +20,17 @@ type RedisObject struct {
 	RedisClient *redis.Client
 }
 
-func NewRedisConnection(cfg configs.RedisConfig) *RedisObject {
+func NewRedisConnection(cfg configs.RedisConfig) (*RedisObject, error) {
 	redisobject := &RedisObject{}
 	redisobject.Open(cfg.Host, cfg.Port, cfg.Password, cfg.DB)
 	err := redisobject.Ping()
 	if err != nil {
 		redisobject.Close()
-		log.Fatalf("[INFO] [Session-Service] Failed to establish Redis-Client connection: %v", err)
+		log.Printf("[INFO] [Session-Service] Failed to establish Redis-Client connection: %v", err)
+		return nil, err
 	}
 	log.Println("[INFO] [Session-Service] Successful connect to Redis-Client")
-	return redisobject
+	return redisobject, nil
 }
 func (r *RedisObject) Open(host string, port int, password string, db int) {
 	r.RedisClient = redis.NewClient(&redis.Options{

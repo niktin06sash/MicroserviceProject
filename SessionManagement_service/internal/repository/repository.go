@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/logger"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 )
 
@@ -25,8 +25,8 @@ type RepositoryResponse struct {
 	Errors         error
 }
 
-func NewRepository(client *RedisObject, log *logger.SessionLogger) *Repository {
+func NewRepository(client *RedisObject, kafkaprod kafka.KafkaProducerService) *Repository {
 	return &Repository{
-		RedisSessionRepos: NewAuthRedis(client, log),
+		RedisSessionRepos: NewAuthRedis(client, kafkaprod),
 	}
 }
