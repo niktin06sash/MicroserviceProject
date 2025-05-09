@@ -19,13 +19,12 @@ import (
 
 func main() {
 	config := configs.LoadConfig()
-	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
 	redis, err := repository.NewRedisConnection(config.Redis)
 	if err != nil {
-		log.Fatalf("[ERROR] [Session-Service] Failed to connect to database: %v", err)
 		return
 	}
-	repository := repository.NewRepository(redis)
+	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
+	repository := repository.NewRepository(redis, kafkaProducer)
 	service := service.NewSessionAPI(repository)
 	srv := server.NewGrpcServer(service)
 	serverError := make(chan error, 1)
