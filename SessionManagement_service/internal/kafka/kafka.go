@@ -84,6 +84,21 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 	log.Println("[INFO] [Session-Service] [KafkaProducer] Successful connect to Kafka-Producer")
 	return producer
 }
+func (kf *KafkaProducer) NewSessionLog(level, place, traceid, msg string) {
+	newlog := SessionLog{
+		Level:     level,
+		Service:   "Session-Service",
+		Place:     place,
+		TraceID:   traceid,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Message:   msg,
+	}
+	select {
+	case kf.logchan <- newlog:
+	default:
+		log.Printf("[WARN] [Session-Service] [KafkaProducer] Log channel is full, dropping log: %+v", newlog)
+	}
+}
 func (kf *KafkaProducer) Close() {
 	close(kf.logchan)
 	kf.cancel()
