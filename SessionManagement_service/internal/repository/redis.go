@@ -3,9 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/configs"
-	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/logger"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -18,19 +18,18 @@ type RedisInterface interface {
 
 type RedisObject struct {
 	RedisClient *redis.Client
-	Logger      *logger.SessionLogger
 }
 
-func NewRedisConnection(cfg configs.RedisConfig, logger *logger.SessionLogger) (*RedisObject, error) {
-	redisobject := &RedisObject{Logger: logger}
+func NewRedisConnection(cfg configs.RedisConfig) *RedisObject {
+	redisobject := &RedisObject{}
 	redisobject.Open(cfg.Host, cfg.Port, cfg.Password, cfg.DB)
 	err := redisobject.Ping()
 	if err != nil {
 		redisobject.Close()
-		return nil, fmt.Errorf("failed to establish database connection: %w", err)
+		log.Fatalf("[INFO] [Session-Service] Failed to establish Redis-Client connection: %v", err)
 	}
-	redisobject.Logger.Info("SessionManagement: Successful connect to Redis-Client!")
-	return redisobject, nil
+	log.Println("[INFO] [Session-Service] Successful connect to Redis-Client")
+	return redisobject
 }
 func (r *RedisObject) Open(host string, port int, password string, db int) {
 	r.RedisClient = redis.NewClient(&redis.Options{
@@ -47,5 +46,5 @@ func (r *RedisObject) Ping() error {
 
 func (r *RedisObject) Close() {
 	r.RedisClient.Close()
-	r.Logger.Info("SessionManagement: Successful close Redis-Client!")
+	log.Println("[INFO] [Session-Service] Successful close Redis-Client")
 }
