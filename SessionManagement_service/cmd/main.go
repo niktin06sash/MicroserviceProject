@@ -25,7 +25,7 @@ func main() {
 	}
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
 	repository := repository.NewRepository(redis, kafkaProducer)
-	service := service.NewSessionAPI(repository)
+	service := service.NewSessionAPI(repository, kafkaProducer)
 	srv := server.NewGrpcServer(service)
 	serverError := make(chan error, 1)
 	go func() {
@@ -41,7 +41,8 @@ func main() {
 	case sig := <-quit:
 		log.Printf("[INFO] [Session-Service] Service shutting down with signal: %v", sig)
 	case err := <-serverError:
-		log.Fatalf("[ERROR] [Session-Service] Service startup failed: %v", err)
+		log.Printf("[ERROR] [Session-Service] Service startup failed: %v", err)
+		return
 	}
 	shutdownTimeout := 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
