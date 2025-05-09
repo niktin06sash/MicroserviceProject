@@ -50,6 +50,7 @@ func main() {
 	log.Println("[INFO] [Session-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("[ERROR] [Session-Service] Server shutdown error: %v", err)
+		return
 	}
 	log.Println("[INFO] [Session-Service] Service has shutted down successfully")
 	defer func() {

@@ -48,7 +48,8 @@ func main() {
 	case sig := <-quit:
 		log.Printf("[INFO] [API-Service] Service shutting down with signal: %v", sig)
 	case err := <-serverError:
-		log.Fatalf("[ERROR] [API-Service] Service startup failed: %v", err)
+		log.Printf("[ERROR] [API-Service] Service startup failed: %v", err)
+		return
 	}
 	shutdownTimeout := 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
@@ -56,6 +57,7 @@ func main() {
 	log.Println("[INFO] [API-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("[INFO] [API-Service] Server shutdown error: %v", err)
+		return
 	}
 	log.Println("[INFO] [API-Service] Service has shutted down successfully")
 	defer func() {
