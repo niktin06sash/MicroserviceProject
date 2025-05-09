@@ -132,7 +132,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			}
 			ctx, cancel := context.WithTimeout(kf.context, 5*time.Second)
 			defer cancel()
-			topic := strings.ToLower(logg.Level) + "-log-topic"
+			topic := "api-" + strings.ToLower(logg.Level) + "-log-topic"
 			data, err := json.Marshal(logg)
 			if err != nil {
 				log.Printf("[ERROR] [API-Service] [KafkaProducer] [Worker: %v] Failed to marshal log: %v", num, err)
