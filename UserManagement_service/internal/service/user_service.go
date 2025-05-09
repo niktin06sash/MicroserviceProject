@@ -80,17 +80,16 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		return serviceresponse
 	}
 	userID = bdresponse.UserId
-	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
+	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
 		return as.GrpcClient.CreateSession(ctx, userID.String())
 	}, traceid, registrateMap, "RegistrateAndLogin")
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	sessionresponse := grpcresponse.(*proto.CreateSessionResponse)
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] RegistrateAndLogin: Error committing transaction: %v", traceid, err)
-		_, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
-			return as.GrpcClient.DeleteSession(ctx, sessionresponse.SessionID)
+		_, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
+			return as.GrpcClient.DeleteSession(ctx, grpcresponse.SessionID)
 		}, traceid, registrateMap, "RegistrateAndLogin")
 		if serviceresponse != nil {
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] RegistrateAndLogin: Failed to delete session after transaction failure: %v", traceid, serviceresponse.Errors)
@@ -99,8 +98,8 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive = false
-	timeExpire := time.Unix(sessionresponse.ExpiryTime, 0)
-	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: sessionresponse.SessionID, ExpireSession: timeExpire}
+	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
+	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
 func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	authenticateMap := make(map[string]error)
@@ -117,16 +116,15 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 		return serviceresponse
 	}
 	userID := bdresponse.UserId
-	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
+	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
 		return as.GrpcClient.CreateSession(ctx, userID.String())
 	}, traceid, authenticateMap, "AuthenticateAndLogin")
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	sessionresponse := grpcresponse.(*proto.CreateSessionResponse)
-	timeExpire := time.Unix(sessionresponse.ExpiryTime, 0)
+	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
 	log.Printf("[INFO] [UserManagement] [TraceID: %s] AuthenticateAndLogin: The session was created successfully and the user is authenticated!", traceid)
-	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: sessionresponse.SessionID, ExpireSession: timeExpire}
+	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
 func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse {
 	deletemap := make(map[string]error)
@@ -161,13 +159,12 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
+	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 		return as.GrpcClient.DeleteSession(ctx, sessionID)
 	}, traceid, deletemap, "DeleteAccount")
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	sessionresponse := grpcresponse.(*proto.DeleteSessionResponse)
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Error committing transaction: %v", traceid, err)
 		deletemap["InternalServerError"] = erro.ErrorCommitTransaction
@@ -175,19 +172,18 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	}
 	isTransactionActive = false
 	return &ServiceResponse{
-		Success: sessionresponse.Success,
+		Success: grpcresponse.Success,
 	}
 }
 func (as *AuthService) Logout(ctx context.Context, sessionID string) *ServiceResponse {
-	authenticateMap := make(map[string]error)
+	logMap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
-	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (interface{}, error) {
+	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 		return as.GrpcClient.DeleteSession(ctx, sessionID)
-	}, traceid, authenticateMap, "Logout")
+	}, traceid, logMap, "Logout")
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	sessionresponse := grpcresponse.(*proto.DeleteSessionResponse)
 	log.Printf("[INFO] [UserManagement] [TraceID: %s] Logout: The user has successfully logged out of the account!", traceid)
-	return &ServiceResponse{Success: sessionresponse.Success}
+	return &ServiceResponse{Success: grpcresponse.Success}
 }
