@@ -12,53 +12,63 @@ import (
 
 type Logger struct {
 	ZapLogger *zap.Logger
-	Writers   []*lumberjack.Logger
+	Writers   *lumberjack.Logger
+	Level     string
+	Topic     string
 }
 
 func (logg *Logger) Sync() {
-	logg.ZapLogger.Info("----------CLOSE SERVICE----------")
-	logg.ZapLogger.Warn("----------CLOSE SERVICE----------")
-	logg.ZapLogger.Error("----------CLOSE SERVICE----------")
+	switch logg.Level {
+	case "info":
+		logg.ZapLogger.Info("----------CLOSE SERVICE----------")
+	case "error":
+		logg.ZapLogger.Error("----------CLOSE SERVICE----------")
+	case "warn":
+		logg.ZapLogger.Warn("----------CLOSE SERVICE----------")
+	}
 	logg.ZapLogger.Sync()
-	for _, writer := range logg.Writers {
-		writer.Close()
-	}
-	log.Println("[INFO] [Kafka-Service] Successful sync Logger")
+	logg.Writers.Close()
+	log.Printf("[INFO] [Logger-Service] [Logger: %s] Successful sync and close Logger", logg.Topic)
 }
-func NewLogger(config configs.LoggerConfig) *Logger {
-	c := []zapcore.Core{}
-	writers := []*lumberjack.Logger{}
-	for lvl, fn := range config.Files {
-		zapLevel, err := zapcore.ParseLevel(strings.ToUpper(lvl))
-		if err != nil {
-			log.Fatalf("[ERROR] [Kafka-Service] Error getting the logging level: %v", err)
-			return nil
-		}
-		writer := &lumberjack.Logger{
-			Filename:   fn,
-			MaxSize:    config.Rotation.MaxSize,
-			MaxAge:     config.Rotation.MaxAge,
-			MaxBackups: config.Rotation.MaxBackups,
-			Compress:   config.Rotation.Compress,
-		}
-		writers = append(writers, writer)
-		encoderConfig := zap.NewProductionEncoderConfig()
-		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-		encoder := zapcore.NewJSONEncoder(encoderConfig)
-		levelEnabler := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
-			return level == zapLevel
-		})
-		core := zapcore.NewCore(encoder, zapcore.AddSync(writer), levelEnabler)
-		c = append(c, core)
+func NewLogger(config configs.LoggerConfig, topic string) *Logger {
+	parts := strings.Split(topic, "-")
+	service := parts[0]
+	level := parts[1]
+	fn := config.Files[service+"_"+level]
+	zapLevel, err := zapcore.ParseLevel(strings.ToUpper(level))
+	if err != nil {
+		log.Fatalf("[ERROR] [Logger-Service] Error getting the logging level: %v", err)
+		return nil
 	}
-	combinedCore := zapcore.NewTee(c...)
-	logger := zap.New(combinedCore, zap.AddStacktrace(zapcore.ErrorLevel))
-	log.Println("[INFO] [Kafka-Service] Successful connect to Logger")
-	logger.Info("----------START SERVICE----------")
-	logger.Warn("----------START SERVICE----------")
-	logger.Error("----------START SERVICE----------")
+	writer := &lumberjack.Logger{
+		Filename:   fn,
+		MaxSize:    config.Rotation.MaxSize,
+		MaxAge:     config.Rotation.MaxAge,
+		MaxBackups: config.Rotation.MaxBackups,
+		Compress:   config.Rotation.Compress,
+	}
+
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoder := zapcore.NewJSONEncoder(encoderConfig)
+	levelEnabler := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
+		return level == zapLevel
+	})
+	core := zapcore.NewCore(encoder, zapcore.AddSync(writer), levelEnabler)
+	logger := zap.New(core)
+	log.Printf("[INFO] [Logger-Service] [Logger: %s] Successful connect to Logger", topic)
+	switch level {
+	case "info":
+		logger.Info("----------START SERVICE----------")
+	case "error":
+		logger.Error("----------START SERVICE----------")
+	case "warn":
+		logger.Warn("----------START SERVICE----------")
+	}
 	return &Logger{
 		ZapLogger: logger,
-		Writers:   writers,
+		Writers:   writer,
+		Level:     level,
+		Topic:     topic,
 	}
 }

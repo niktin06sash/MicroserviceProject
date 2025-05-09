@@ -21,12 +21,34 @@ type KafkaConfig struct {
 	HearbeatInterval time.Duration `mapstructure:"heartbeat_interval"`
 }
 type KafkaTopics struct {
-	InfoLog  string `mapstructure:"info_log"`
-	ErrorLog string `mapstructure:"error_log"`
-	WarnLog  string `mapstructure:"warn_log"`
+	IApi string `mapstructure:"api_info_log"`
+	EApi string `mapstructure:"api_error_log"`
+	WApi string `mapstructure:"api_warn_log"`
+
+	IUser string `mapstructure:"user_info_log"`
+	EUser string `mapstructure:"user_error_log"`
+	WUser string `mapstructure:"user_warn_log"`
+
+	ISess string `mapstructure:"session_info_log"`
+	ESess string `mapstructure:"session_error_log"`
+	WSess string `mapstructure:"session_warn_log"`
 }
+
+func (c Config) GetAllTopics() []string {
+	return []string{
+		c.Kafka.Topics.EApi,
+		c.Kafka.Topics.WApi,
+		c.Kafka.Topics.IApi,
+		c.Kafka.Topics.WUser,
+		c.Kafka.Topics.IUser,
+		c.Kafka.Topics.EUser,
+		c.Kafka.Topics.WSess,
+		c.Kafka.Topics.ISess,
+		c.Kafka.Topics.ESess,
+	}
+}
+
 type LoggerConfig struct {
-	Levels   LoggerLevel       `mapstructure:"levels"`
 	Files    map[string]string `mapstructure:"files"`
 	Rotation struct {
 		MaxSize    int  `mapstructure:"max_size"`
@@ -37,11 +59,6 @@ type LoggerConfig struct {
 	Format struct {
 		TimeFormat string `mapstructure:"time_format"`
 	} `mapstructure:"format"`
-}
-type LoggerLevel struct {
-	InfoLevel  string `mapstructure:"info"`
-	WarnLevel  string `mapstructure:"warn"`
-	ErrorLevel string `mapstructure:"error"`
 }
 
 func LoadConfig() Config {

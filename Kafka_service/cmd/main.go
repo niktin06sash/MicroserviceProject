@@ -15,8 +15,7 @@ import (
 
 func main() {
 	config := configs.LoadConfig()
-	logger := logs.NewLogger(config.Logger)
-	topics := []string{config.Kafka.Topics.InfoLog, config.Kafka.Topics.ErrorLog, config.Kafka.Topics.WarnLog}
+	topics := config.GetAllTopics()
 	consumers := make([]*kafka.KafkaConsumer, 0)
 	var wg sync.WaitGroup
 	var mux sync.Mutex
@@ -24,6 +23,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			logger := logs.NewLogger(config.Logger, topic)
 			consumer := kafka.NewKafkaConsumer(config.Kafka, logger, topic)
 			mux.Lock()
 			consumers = append(consumers, consumer)
@@ -39,7 +39,6 @@ func main() {
 		consumer.Close()
 	}
 	wg.Wait()
-	logger.Sync()
 	log.Println("[INFO] [Kafka-Service] All Kafka consumers have been successfully closed")
 	defer func() {
 		buf := make([]byte, 10<<20)
