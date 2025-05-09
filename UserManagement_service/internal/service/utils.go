@@ -81,15 +81,15 @@ func checkContext(ctx context.Context, mapa map[string]error) (*ServiceResponse,
 		return nil, false
 	}
 }
-func retryOperationGrpc(ctx context.Context, operation func(context.Context) (interface{}, error), traceID string, errorMap map[string]error, place string) (interface{}, *ServiceResponse) {
-	var response interface{}
+func retryOperationGrpc[T any](ctx context.Context, operation func(context.Context) (T, error), traceID string, errorMap map[string]error, place string) (T, *ServiceResponse) {
+	var response T
 	var err error
 	for i := 1; i <= 3; i++ {
 		md := metadata.Pairs("traceID", traceID)
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		if ctxresponse, shouldReturn := checkContext(ctx, errorMap); shouldReturn {
 			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Context cancelled before operation: %v", traceID, place, ctx.Err())
-			return nil, ctxresponse
+			return response, ctxresponse
 		}
 		response, err = operation(ctx)
 		if err != nil {
@@ -102,7 +102,7 @@ func retryOperationGrpc(ctx context.Context, operation func(context.Context) (in
 				continue
 			default:
 				errorMap["ClientError"] = err
-				return nil, &ServiceResponse{
+				return response, &ServiceResponse{
 					Success: false,
 					Errors:  errorMap,
 					Type:    erro.ClientErrorType,
@@ -114,7 +114,7 @@ func retryOperationGrpc(ctx context.Context, operation func(context.Context) (in
 	}
 	log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Operation failed after all attempts", traceID, place)
 	errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
-	return nil, &ServiceResponse{
+	return response, &ServiceResponse{
 		Success: false,
 		Errors:  errorMap,
 		Type:    erro.ServerErrorType,
