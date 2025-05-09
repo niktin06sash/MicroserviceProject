@@ -44,14 +44,15 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 	}
 	consumer.wg.Add(1)
 	go consumer.startLogs()
-	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", strings.ToUpper(consumer.reader.Config().Topic))
+	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", consumer.reader.Config().Topic)
 	return consumer
 }
 func (kf *KafkaConsumer) Close() {
 	kf.cancel()
 	kf.wg.Wait()
+	kf.logger.Sync()
 	kf.reader.Close()
-	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", strings.ToUpper(kf.reader.Config().Topic), kf.counter)
+	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", kf.reader.Config().Topic, kf.counter)
 }
 func (kf *KafkaConsumer) startLogs() {
 	defer kf.wg.Done()
@@ -65,21 +66,23 @@ func (kf *KafkaConsumer) startLogs() {
 			msg, err := kf.reader.FetchMessage(ctx)
 			if err != nil {
 				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-					log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to read log: %v", strings.ToUpper(kf.reader.Config().Topic), err)
+					log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to read log: %v", kf.reader.Config().Topic, err)
 				}
 				continue
 			}
 			atomic.AddInt64(&kf.counter, 1)
-			switch strings.ToUpper(kf.reader.Config().Topic) {
-			case "INFO-LOG-TOPIC":
+			parts := strings.Split(kf.reader.Config().Topic, "-")
+			level := strings.ToTitle(parts[1])
+			switch level {
+			case "info":
 				kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter))
-			case "ERROR-LOG-TOPIC":
+			case "error":
 				kf.logger.ZapLogger.Error(string(msg.Value), zap.Int64("number", kf.counter))
-			case "WARN-LOG-TOPIC":
+			case "warn":
 				kf.logger.ZapLogger.Warn(string(msg.Value), zap.Int64("number", kf.counter))
 			}
 			if err := kf.reader.CommitMessages(ctx, msg); err != nil {
-				log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to commit offset: %v", strings.ToUpper(kf.reader.Config().Topic), err)
+				log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to commit offset: %v", kf.reader.Config().Topic, err)
 			}
 		}
 	}

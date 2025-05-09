@@ -2,9 +2,15 @@ kafka:
   bootstrap_servers: "localhost:9092"
   group_id: "servers_log"
   topics:
-    info_log: "info-log-topic"
-    error_log: "error-log-topic"
-    warn_log: "warn-log-topic"
+    api_info_log: "api-info-log-topic"
+    api_error_log: "api-error-log-topic"
+    api_warn_log: "api-warn-log-topic"
+    session_info_log: "session-info-log-topic"
+    session_error_log: "session-error-log-topic"
+    session_warn_log: "session-warn-log-topic"
+    user_info_log: "user-info-log-topic"
+    user_error_log: "user-error-log-topic"
+    user_warn_log: "user-warn-log-topic"
   enable_auto_commit: false 
   session_timeout: 60000
   heartbeat_interval: 20000    
@@ -14,9 +20,15 @@ logger:
     error: "error"
     warn: "warn"
   files:
-    info: "internal/logs/info.log"
-    error: "internal/logs/error.log"
-    warn: "internal/logs/warn.log"
+    api_info: "internal/logs/api-service/info.log"
+    api_error: "internal/logs/api-service/error.log"
+    api_warn: "internal/logs/api-service/warn.log"
+    user_info: "internal/logs/user-service/info.log"
+    user_error: "internal/logs/user-service/error.log"
+    user_warn: "internal/logs/user-service/warn.log"
+    session_info: "internal/logs/session-service/info.log"
+    session_warn: "internal/logs/session-service/warn.log"
+    session_error: "internal/logs/session-service/error.log"
   rotation:
     max_size: 100       
     max_backups: 3         
