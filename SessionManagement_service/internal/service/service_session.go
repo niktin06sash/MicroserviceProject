@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/logger"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
-	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -18,43 +16,37 @@ import (
 )
 
 type SessionService struct {
-	repo   repository.RedisSessionRepos
-	logger *logger.SessionLogger
+	repo          repository.RedisSessionRepos
+	kafkaProducer kafka.KafkaProducerService
 }
 
-func NewSessionService(repo repository.RedisSessionRepos, log *logger.SessionLogger) *SessionService {
-	return &SessionService{repo: repo, logger: log}
+func NewSessionService(repo repository.RedisSessionRepos, kafka kafka.KafkaProducerService) *SessionService {
+	return &SessionService{repo: repo, kafkaProducer: kafka}
 }
-func validateContext(ctx context.Context, logger *logger.SessionLogger, place string) (string, error) {
+func (s *SessionService) validateContext(ctx context.Context, place string) (string, error) {
 	traceID := ctx.Value("traceID").(string)
 	select {
 	case <-ctx.Done():
-		logger.Error(fmt.Sprintf("[%s] Context time-out", place),
-			zap.String("traceID", traceID),
-			zap.Error(ctx.Err()),
-		)
+		fmterr := fmt.Sprintf("Context error: %v", ctx.Err())
+		s.kafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
 		return "", status.Errorf(codes.Internal, "Request timed out")
 	default:
 		return traceID, nil
 	}
 }
 func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
-	traceID, err := validateContext(ctx, s.logger, "CreateSession")
+	var place = "CreateSession"
+	traceID, err := s.validateContext(ctx, place)
 	if err != nil {
 		return nil, err
 	}
 	if req.UserID == "" {
-		s.logger.Error("CreateSession: Required userID",
-			zap.String("traceID", traceID),
-			zap.Error(erro.ErrorRequiredUserId),
-		)
+		s.kafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Required userID")
 		return nil, status.Errorf(codes.InvalidArgument, "UserID is required")
 	}
 	if _, err := uuid.Parse(req.UserID); err != nil {
-		s.logger.Error("CreateSession: Error UUID-Parse userID",
-			zap.String("traceID", traceID),
-			zap.Error(err),
-		)
+		fmterr := fmt.Sprintf("UUID-Parse userID error: %v", err)
+		s.kafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid userID format: %v", err)
 	}
 	sessionID := uuid.New()
@@ -75,22 +67,17 @@ func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessio
 	}, nil
 }
 func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
-	traceID, err := validateContext(ctx, s.logger, "ValidateSession")
+	var place = "ValidateSession"
+	traceID, err := s.validateContext(ctx, place)
 	if err != nil {
 		return nil, err
 	}
 	if req.SessionID == "" {
-		s.logger.Error("ValidateSession: Required sessionID",
-			zap.String("traceID", traceID),
-			zap.Error(erro.ErrorRequiredSessionId),
-		)
+		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Required sessionID")
 		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
 	}
 	if _, err := uuid.Parse(req.SessionID); err != nil {
-		s.logger.Error("ValidateSession: Error UUID-Parse sessionID",
-			zap.String("traceID", traceID),
-			zap.Error(err),
-		)
+		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "UUID-Parse sessionID error")
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid sessionID format: %v", err)
 	}
 	response := s.repo.GetSession(ctx, req.SessionID)
@@ -103,22 +90,17 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 	}, nil
 }
 func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
-	traceID, err := validateContext(ctx, s.logger, "DeleteSession")
+	var place = "DeleteSession"
+	traceID, err := s.validateContext(ctx, place)
 	if err != nil {
 		return nil, err
 	}
 	if req.SessionID == "" {
-		s.logger.Error("DeleteSession: Required sessionID",
-			zap.String("traceID", traceID),
-			zap.Error(erro.ErrorRequiredSessionId),
-		)
+		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Required sessionID")
 		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
 	}
 	if _, err := uuid.Parse(req.SessionID); err != nil {
-		s.logger.Error("DeleteSession: Error UUID-Parse sessionID",
-			zap.String("traceID", traceID),
-			zap.Error(err),
-		)
+		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "UUID-Parse sessionID error")
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid sessionID format: %v", err)
 	}
 	response := s.repo.DeleteSession(ctx, req.SessionID)
