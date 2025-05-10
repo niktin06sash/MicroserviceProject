@@ -3,9 +3,12 @@ package response
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 )
 
 type HTTPResponse struct {
@@ -15,10 +18,11 @@ type HTTPResponse struct {
 	Status  int               `json:"status"`
 }
 
-func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data map[string]any, errors map[string]string, status int, traceid string, place string) {
+func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data map[string]any, errors map[string]string, status int, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
 	w.Header().Set("Content-Type", "application/json")
 	if ctx.Err() != nil {
-		log.Printf("[WARN] [UserManagement] [TraceID: %s] %s: Context canceled or deadline exceeded", traceid, place)
+		fmterr := fmt.Sprintf("Context error: %v", ctx.Err())
+		kafkaprod.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		w.WriteHeader(http.StatusInternalServerError)
 		badreq := HTTPResponse{
 			Success: false,
@@ -38,7 +42,8 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data
 	}
 	w.WriteHeader(resp.Status)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Failed to encode response: %v", traceid, place, err)
+		fmterr := fmt.Sprintf("Failed to encode response: %v", err)
+		kafkaprod.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		w.WriteHeader(http.StatusInternalServerError)
 		badreq := HTTPResponse{
 			Success: false,
@@ -47,7 +52,7 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data
 		}
 		json.NewEncoder(w).Encode(badreq)
 	}
-	log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: Succesfull send response to client", traceid, place)
+	kafkaprod.NewUserLog(kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
 }
 func AddSessionCookie(w http.ResponseWriter, sessionID string, expireTime time.Time) {
 	maxAge := int(time.Until(expireTime).Seconds())
