@@ -20,7 +20,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 	var protoresponse *proto.ValidateSessionResponse
 	for i := 1; i <= 3; i++ {
 		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
-		md := metadata.Pairs("traceID", traceID)
+		md := metadata.Pairs("traceID", traceID, "flagvalidate", "true")
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		if err = response.CheckContext(ctx, traceID, place); err != nil {
 			fmterr := fmt.Sprintf("Context error: %v", err)
@@ -54,7 +54,7 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 	var protoresponse *proto.ValidateSessionResponse
 	for i := 1; i <= 3; i++ {
 		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
-		md := metadata.Pairs("traceID", traceID)
+		md := metadata.Pairs("traceID", traceID, "flagvalidate", "false")
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		if err = response.CheckContext(ctx, traceID, place); err != nil {
 			fmterr := fmt.Sprintf("Context error: %v", err)
@@ -62,6 +62,9 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			return nil, &erro.CustomError{ErrorName: "Context Error", ErrorType: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
+		if err == nil && protoresponse.Success {
+			return protoresponse, nil
+		}
 		if err != nil {
 			st, _ := status.FromError(err)
 			fmterr := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
@@ -73,11 +76,8 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
-				return protoresponse, nil
+				return nil, &erro.CustomError{ErrorName: "Already authorized", ErrorType: erro.ClientErrorType}
 			}
-		}
-		if protoresponse.Success {
-			return nil, &erro.CustomError{ErrorName: "Already authorized", ErrorType: erro.ClientErrorType}
 		}
 	}
 	middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
