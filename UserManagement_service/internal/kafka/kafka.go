@@ -34,7 +34,7 @@ type KafkaProducer struct {
 	cancel  context.CancelFunc
 }
 type KafkaProducerService interface {
-	NewSessionLog(level, place, traceid, msg string)
+	NewUserLog(level, place, traceid, msg string)
 }
 
 func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
@@ -84,7 +84,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 	log.Println("[INFO] [User-Service] [KafkaProducer] Successful connect to Kafka-Producer")
 	return producer
 }
-func (kf *KafkaProducer) NewSessionLog(level, place, traceid, msg string) {
+func (kf *KafkaProducer) NewUserLog(level, place, traceid, msg string) {
 	newlog := UserLog{
 		Level:     level,
 		Service:   "User-Service",
