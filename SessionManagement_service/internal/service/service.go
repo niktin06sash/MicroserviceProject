@@ -7,7 +7,9 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 type SessionAPI struct {
@@ -39,7 +41,12 @@ func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionReq
 func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
 	var place = "ValidateSession"
 	traceID := s.getTraceIdFromMetadata(ctx, place)
+	flag := s.getFlagValidate(ctx, place, traceID)
+	if flag == "" {
+		return nil, status.Errorf(codes.Internal, "Missing flagvalidate")
+	}
 	ctx = context.WithValue(ctx, "traceID", traceID)
+	ctx = context.WithValue(ctx, "flagvalidate", flag)
 	resp, err := s.sessionService.ValidateSession(ctx, req)
 	s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	return resp, err
@@ -57,8 +64,8 @@ func (s *SessionAPI) getTraceIdFromMetadata(ctx context.Context, place string) s
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, "", "Metadata not found in context")
-		newreq := uuid.New()
-		return newreq.String()
+		newtrace := uuid.New()
+		return newtrace.String()
 	}
 	traceIDs := md.Get("traceID")
 	if len(traceIDs) == 0 || traceIDs[0] == "" {
@@ -67,4 +74,17 @@ func (s *SessionAPI) getTraceIdFromMetadata(ctx context.Context, place string) s
 		return newtrace.String()
 	}
 	return traceIDs[0]
+}
+func (s *SessionAPI) getFlagValidate(ctx context.Context, place string, traceID string) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Metadata not found in context")
+		return ""
+	}
+	flagvalidates := md.Get("flagvalidate")
+	if len(flagvalidates) == 0 || flagvalidates[0] == "" {
+		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "FlagValidate not found in context")
+		return ""
+	}
+	return flagvalidates[0]
 }

@@ -66,19 +66,36 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
 	}
+	flag := ctx.Value("flagvalidate").(string)
+	flagValidate := flag == "true"
+	return redisrepo.getSessionData(ctx, sessionID, traceID, place, flagValidate)
+}
+func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string, traceID string, place string, flagvalidate bool) *RepositoryResponse {
 	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, sessionID).Result()
 	if err != nil {
 		if err == redis.Nil {
-			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Session not found")
-			return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session not found")}
+			if flagvalidate {
+				redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Session not found")
+				return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session not found")}
+			}
+			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful verification of missing session")
+			return &RepositoryResponse{Success: true}
 		}
 		fmterr := fmt.Sprintf("HGetAll session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "HGetAll session Error")}
 	}
 	if len(result) == 0 {
-		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Session is empty or invalid")
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session is empty or invalid")}
+		if flagvalidate {
+			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Session is empty or invalid")
+			return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session is empty or invalid")}
+		}
+		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful verification of missing session")
+		return &RepositoryResponse{Success: true}
+	}
+	if !flagvalidate {
+		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Unauthorized-request for authorized users")
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Already Authorized")}
 	}
 	userIDString, ok := result["UserID"]
 	if !ok {

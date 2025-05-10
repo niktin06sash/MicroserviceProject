@@ -58,7 +58,7 @@ func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessio
 	}
 	response := s.repo.SetSession(ctx, newsession)
 	if !response.Success {
-		return nil, response.Errors
+		return &pb.CreateSessionResponse{Success: false}, response.Errors
 	}
 	return &pb.CreateSessionResponse{
 		Success:    true,
@@ -72,17 +72,33 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 	if err != nil {
 		return nil, err
 	}
-	if req.SessionID == "" {
-		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Required sessionID")
-		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
-	}
-	if _, err := uuid.Parse(req.SessionID); err != nil {
-		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "UUID-Parse sessionID error")
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid sessionID format: %v", err)
+	flag := ctx.Value("flagvalidate").(string)
+	switch flag {
+	case "true":
+		if req.SessionID == "" {
+			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Required sessionID")
+			return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
+		}
+		if _, err := uuid.Parse(req.SessionID); err != nil {
+			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "UUID-Parse sessionID error")
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid sessionID format: %v", err)
+		}
+	case "false":
+		if req.SessionID == "" {
+			return &pb.ValidateSessionResponse{
+				Success: true,
+			}, nil
+		}
+		if _, err := uuid.Parse(req.SessionID); err != nil {
+			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "UUID-Parse sessionID error")
+			return &pb.ValidateSessionResponse{
+				Success: true,
+			}, nil
+		}
 	}
 	response := s.repo.GetSession(ctx, req.SessionID)
 	if !response.Success {
-		return nil, response.Errors
+		return &pb.ValidateSessionResponse{Success: false}, response.Errors
 	}
 	return &pb.ValidateSessionResponse{
 		Success: true,
@@ -105,7 +121,7 @@ func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessio
 	}
 	response := s.repo.DeleteSession(ctx, req.SessionID)
 	if !response.Success {
-		return nil, response.Errors
+		return &pb.DeleteSessionResponse{Success: false}, response.Errors
 	}
 	return &pb.DeleteSessionResponse{
 		Success: true,
