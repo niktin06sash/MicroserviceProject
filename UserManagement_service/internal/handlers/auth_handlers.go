@@ -26,12 +26,12 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	regresponse := h.Services.RegistrateAndLogin(r.Context(), &newperk)
-	if !serviceResponse(regresponse, r, w, traceID, place) {
+	if !serviceResponse(regresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
 	respdata := map[string]any{"UserID": regresponse.UserId}
 	response.AddSessionCookie(w, regresponse.SessionId, regresponse.ExpireSession)
-	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place)
+	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 	msg := fmt.Sprintf("Person with id %v has successfully registered", regresponse.UserId)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 }
@@ -49,12 +49,12 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auresponse := h.Services.AuthenticateAndLogin(r.Context(), &newperk)
-	if !serviceResponse(auresponse, r, w, traceID, place) {
+	if !serviceResponse(auresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
 	respdata := map[string]any{"UserID": auresponse.UserId}
 	response.AddSessionCookie(w, auresponse.SessionId, auresponse.ExpireSession)
-	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place)
+	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 	msg := fmt.Sprintf("Person with id %v has successfully registered", auresponse.UserId)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 }
@@ -73,7 +73,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid User ID format: %v", traceID, err)
 		maparesponse["InternalServerError"] = erro.ErrorMissingUserID.Error()
-		response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, "DeleteAccount")
+		response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, place, h.KafkaProducer)
 		return
 	}
 	if !checkMethod(r, w, http.MethodDelete, traceID, maparesponse, place, h.KafkaProducer) {
@@ -87,16 +87,16 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	if !ok || password == "" {
 		h.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Password is missing or empty")
 		maparesponse["ClientError"] = erro.ErrorUnmarshal.Error()
-		response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusBadRequest, traceID, place)
+		response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusBadRequest, traceID, place, h.KafkaProducer)
 		return
 	}
 	defer r.Body.Close()
 	delresponse := h.Services.DeleteAccount(r.Context(), sessionID, userID, string(password))
-	if !serviceResponse(delresponse, r, w, traceID, place) {
+	if !serviceResponse(delresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
 	response.DeleteSessionCookie(w)
-	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place)
+	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 	msg := fmt.Sprintf("Person with id %v has successfully registered", delresponse.UserId)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 }
@@ -113,11 +113,11 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logresponse := h.Services.Logout(r.Context(), sessionID)
-	if !serviceResponse(logresponse, r, w, traceID, place) {
+	if !serviceResponse(logresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
 	response.DeleteSessionCookie(w)
-	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, "Logout")
+	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 	msg := fmt.Sprintf("Person with id %v has successfully logout", userIDStr)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 }
