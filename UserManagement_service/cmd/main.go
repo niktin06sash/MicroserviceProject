@@ -45,20 +45,20 @@ func main() {
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	select {
 	case sig := <-quit:
-		log.Printf("[INFO] [UserManagement] Service shutting down with signal: %v", sig)
+		log.Printf("[INFO] [User-Service] Service shutting down with signal: %v", sig)
 	case err := <-serverError:
-		log.Printf("[ERROR] [UserManagement] Service startup failed: %v", err)
+		log.Printf("[ERROR] [User-Service] Service startup failed: %v", err)
 		return
 	}
 	shutdownTimeout := 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
-	log.Println("[INFO] [UserManagement] Service is shutting down...")
+	log.Println("[INFO] [User-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("[ERROR] [UserManagement] Server shutdown error: %v", err)
+		log.Printf("[ERROR] [User-Service] Server shutdown error: %v", err)
 		return
 	}
-	log.Println("[INFO] [UserManagement] Service has shutted down successfully")
+	log.Println("[INFO] [User-Service] Service has shutted down successfully")
 	defer func() {
 		kafkaProducer.Close()
 		db.Close()
