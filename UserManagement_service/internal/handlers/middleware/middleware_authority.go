@@ -6,22 +6,24 @@ import (
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 )
 
-func Middleware_Authorized(next http.Handler) http.Handler {
+func (m *Middleware) Authorized(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var place = "Authority"
 		traceID := r.Context().Value("traceID").(string)
 		maparesponse := make(map[string]string)
 		userID := r.Header.Get("X-User-ID")
 		if userID == "" {
-			logRequest(r, "Authority", traceID, true, "Required User-ID")
+			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Required User-ID")
 			maparesponse["InternalServerError"] = erro.ErrorRequiredUserID.Error()
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, "Authority")
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID == "" {
-			logRequest(r, "Authority", traceID, true, "Required Session-ID")
+			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Required Session-ID")
 			maparesponse["InternalServerError"] = erro.ErrorRequiredSessionID.Error()
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, "Authority")
 			return
@@ -29,29 +31,30 @@ func Middleware_Authorized(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), "userID", userID)
 		ctx = context.WithValue(ctx, "sessionID", sessionID)
 		r = r.WithContext(ctx)
-		logRequest(r, "Authority", traceID, false, "Successful authorization verification")
+		m.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, "Successful authorization verification")
 		next.ServeHTTP(w, r)
 	})
 }
-func Middleware_AuthorizedNot(next http.Handler) http.Handler {
+func (m *Middleware) AuthorizedNot(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var place = "Not-Authority"
 		traceID := r.Context().Value("traceID").(string)
 		maparesponse := make(map[string]string)
 		userID := r.Header.Get("X-User-ID")
 		if userID != "" {
-			logRequest(r, "Not-Authority", traceID, true, "Not-Required User-ID")
+			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Not-Required User-ID")
 			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, "Authority")
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID != "" {
-			logRequest(r, "Not-Authority", traceID, true, "Not-Required Session-ID")
+			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Not-Required Session-ID")
 			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, "Authority")
 			return
 		}
-		logRequest(r, "Non-Authority", traceID, false, "Successful unauthorization verification")
+		m.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, "Successful unauthorization verification")
 		next.ServeHTTP(w, r)
 	})
 }
