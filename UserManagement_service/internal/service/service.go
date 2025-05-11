@@ -17,7 +17,7 @@ import (
 type UserAuthentication interface {
 	RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
 	AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
-	DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse
+	DeleteAccount(ctx context.Context, sessionID string, userid string, password string) *ServiceResponse
 	Logout(ctx context.Context, sessionID string) *ServiceResponse
 }
 type Service struct {
@@ -32,7 +32,7 @@ type ServiceResponse struct {
 	Type          erro.ErrorType
 }
 
-func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducer, clientgrpc *client.GrpcClient) *Service {
+func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducerService, clientgrpc *client.GrpcClient) *Service {
 
 	return &Service{
 

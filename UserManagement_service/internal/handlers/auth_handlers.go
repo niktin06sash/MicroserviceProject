@@ -2,15 +2,12 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
-
-	"github.com/google/uuid"
 )
 
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
@@ -64,16 +61,8 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
-	flag, sessionID, userIDStr := getUserIdAndSession(r, w, traceID, maparesponse, place, h.KafkaProducer)
+	flag, sessionID, userIDstr := getUserIdAndSession(r, w, traceID, maparesponse, place, h.KafkaProducer)
 	if !flag {
-		return
-	}
-	//сделать перевод в uuid в бизнес-логике - добавить в другой слой
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Invalid User ID format: %v", traceID, err)
-		maparesponse["InternalServerError"] = erro.ErrorMissingUserID.Error()
-		response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, place, h.KafkaProducer)
 		return
 	}
 	if !checkMethod(r, w, http.MethodDelete, traceID, maparesponse, place, h.KafkaProducer) {
@@ -91,7 +80,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	delresponse := h.Services.DeleteAccount(r.Context(), sessionID, userID, string(password))
+	delresponse := h.Services.DeleteAccount(r.Context(), sessionID, userIDstr, string(password))
 	if !serviceResponse(delresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
