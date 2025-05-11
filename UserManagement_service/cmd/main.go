@@ -27,7 +27,7 @@ func main() {
 		return
 	}
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
-	repositories := repository.NewRepository(db)
+	repositories := repository.NewRepository(db, kafkaProducer)
 	grpcclient := client.NewGrpcClient(config.SessionService)
 	service := service.NewService(repositories, kafkaProducer, grpcclient)
 	middleware := middleware.NewMiddleware(kafkaProducer)

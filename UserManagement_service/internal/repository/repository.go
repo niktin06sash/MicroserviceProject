@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 
 	"github.com/google/uuid"
@@ -32,9 +33,9 @@ type DBRepositoryResponse struct {
 	Type    erro.ErrorType
 }
 
-func NewRepository(db *DBObject) *Repository {
+func NewRepository(db *DBObject, kafka kafka.KafkaProducerService) *Repository {
 	return &Repository{
-		DBAuthenticateRepos:  NewAuthPostgresRepo(db),
+		DBAuthenticateRepos:  NewAuthPostgresRepo(db, kafka),
 		DBTransactionManager: NewTxManagerRepo(db),
 	}
 }
