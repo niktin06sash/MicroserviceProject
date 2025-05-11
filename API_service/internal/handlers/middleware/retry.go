@@ -33,7 +33,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 		}
 		if err != nil {
 			st, _ := status.FromError(err)
-			fmterr := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
+			fmterr := fmt.Sprintf("Operation attempt %d failed", i)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
@@ -67,7 +67,7 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 		}
 		if err != nil {
 			st, _ := status.FromError(err)
-			fmterr := fmt.Sprintf("Operation attempt %d failed: %v", i, st.Message())
+			fmterr := fmt.Sprintf("Operation attempt %d failed", i)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
