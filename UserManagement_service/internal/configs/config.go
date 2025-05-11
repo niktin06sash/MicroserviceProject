@@ -50,16 +50,16 @@ func LoadConfig() Config {
 	err := viper.ReadInConfig()
 	if err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Printf("[ERROR] [UserManagement] Config file not found; using defaults or environment variables")
+			log.Printf("[ERROR] [User-Service] Config file not found; using defaults or environment variables")
 		} else {
-			log.Fatalf("[ERROR] [UserManagement] Error reading config file: %s", err)
+			log.Fatalf("[ERROR] [User-Service] Error reading config file: %s", err)
 		}
 	}
 	var config Config
 	err = viper.Unmarshal(&config)
 	if err != nil {
-		log.Fatalf("[ERROR] [UserManagement] Unable to decode into struct, %v", err)
+		log.Fatalf("[ERROR] [User-Service] Unable to decode into struct, %v", err)
 	}
-	log.Println("[INFO] [UserManagement] Successful Load Config")
+	log.Println("[INFO] [User-Service] Successful Load Config")
 	return config
 }
