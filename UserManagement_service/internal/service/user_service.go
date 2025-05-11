@@ -21,12 +21,12 @@ import (
 type AuthService struct {
 	Dbrepo        repository.DBAuthenticateRepos
 	Dbtxmanager   repository.DBTransactionManager
-	KafkaProducer kafka.KafkaProducer
+	KafkaProducer kafka.KafkaProducerService
 	Validator     *validator.Validate
 	GrpcClient    client.GrpcClientService
 }
 
-func NewAuthService(dbrepo repository.DBAuthenticateRepos, dbtxmanager repository.DBTransactionManager, kafkaProd kafka.KafkaProducer, grpc *client.GrpcClient) *AuthService {
+func NewAuthService(dbrepo repository.DBAuthenticateRepos, dbtxmanager repository.DBTransactionManager, kafkaProd kafka.KafkaProducerService, grpc *client.GrpcClient) *AuthService {
 	validator := validator.New()
 	return &AuthService{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
 }
