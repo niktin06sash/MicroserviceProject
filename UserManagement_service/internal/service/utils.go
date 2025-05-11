@@ -137,6 +137,8 @@ func retryOperationDB(ctx context.Context, operation func(context.Context) *repo
 			fmterr := fmt.Sprintf("Operation attempt %d failed", i)
 			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 			if response.Type == erro.ServerErrorType {
+				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", response.Errors)
+				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			}
