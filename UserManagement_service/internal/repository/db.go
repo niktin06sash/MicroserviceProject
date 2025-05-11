@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/configs"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 
 	_ "github.com/lib/pq"
 )
@@ -41,7 +40,7 @@ func NewDatabaseConnection(cfg configs.DatabaseConfig) (*DBObject, error) {
 		return nil, fmt.Errorf("failed to establish database connection: %w", err)
 	}
 
-	log.Println("[INFO] [UserManagement] Successful connect to Postgre-Client!")
+	log.Println("[INFO] [User-Service] Successful connect to Postgre-Client")
 	return dbObject, nil
 }
 
@@ -53,25 +52,22 @@ func (d *DBObject) Open(driverName, connectionString string) error {
 	var err error
 	d.DB, err = sql.Open(driverName, connectionString)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] Postgre-Client-Open error: %v", err)
-		return erro.ErrorDbOpen
+		log.Printf("[ERROR] [User-Service] Postgre-Client-Open error: %v", err)
+		return err
 	}
 	return nil
 }
 
 func (d *DBObject) Close() {
-	err := d.DB.Close()
-	if err != nil {
-		log.Printf("[ERROR] [UserManagement] Postgre-Client-Close error: %v", err)
-	}
-	log.Println("[INFO] [UserManagement] Successful close Postgre-Client")
+	d.DB.Close()
+	log.Println("[INFO] [User-Service] Successful close Postgre-Client")
 }
 
 func (d *DBObject) Ping() error {
 	err := d.DB.Ping()
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] Postgre-Client-Ping error: %v", err)
-		return erro.ErrorDbPing
+		log.Printf("[ERROR] [User-Service] Postgre-Client-Ping error: %v", err)
+		return err
 	}
 	return nil
 }
