@@ -52,7 +52,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	respdata := map[string]any{"UserID": auresponse.UserId}
 	response.AddSessionCookie(w, auresponse.SessionId, auresponse.ExpireSession)
 	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place, h.KafkaProducer)
-	msg := fmt.Sprintf("Person with id %v has successfully registered", auresponse.UserId)
+	msg := fmt.Sprintf("Person with id %v has successfully authenticated", auresponse.UserId)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 }
 
@@ -86,7 +86,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	response.DeleteSessionCookie(w)
 	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
-	msg := fmt.Sprintf("Person with id %v has successfully registered", delresponse.UserId)
+	msg := fmt.Sprintf("Person with id %v has successfully deleted account", delresponse.UserId)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 }
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
