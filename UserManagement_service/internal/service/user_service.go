@@ -126,11 +126,16 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	log.Printf("[INFO] [UserManagement] [TraceID: %s] AuthenticateAndLogin: The session was created successfully and the user is authenticated!", traceid)
 	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
-func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse {
+func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, useridstr string, password string) *ServiceResponse {
 	deletemap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
+	userid, err := uuid.Parse(useridstr)
+	if err != nil {
+		deletemap["InternalServerError"] = erro.ErrorMissingUserID
+		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
+	}
 	var tx *sql.Tx
-	tx, err := as.Dbtxmanager.BeginTx(ctx)
+	tx, err = as.Dbtxmanager.BeginTx(ctx)
 	if err != nil {
 		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: TransactionError %v", traceid, err)
 		deletemap["InternalServerError"] = erro.ErrorStartTransaction
