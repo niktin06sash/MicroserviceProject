@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	"google.golang.org/grpc/codes"
@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func validatePerson(val *validator.Validate, user *model.Person, flag bool, traceid string, place string) map[string]error {
+func validatePerson(val *validator.Validate, user *model.Person, flag bool, traceid string, place string, kafkaProd kafka.KafkaProducerService) map[string]error {
 	personToValidate := *user
 	if !flag {
 		personToValidate.Name = "qwertyuiopasdfghjklzxcvbn"
@@ -30,16 +30,17 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool, trac
 			for _, err := range validationErrors {
 				switch err.Tag() {
 				case "email":
-					log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: Email format error", traceid, place)
+					fmterr := fmt.Sprintf("Email format error: %v", err)
+					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
 					erors[err.Field()] = erro.ErrorNotEmail
 				case "min":
-					errv := fmt.Errorf("%s is too short", err.Field())
-					log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: %s format error", traceid, place, errv)
-					erors[err.Field()] = errv
+					fmterr := fmt.Errorf("%s is too short", err.Field())
+					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr.Error())
+					erors[err.Field()] = fmterr
 				default:
-					errv := fmt.Errorf("%s is Null", err.Field())
-					log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: %s format error", traceid, place, errv)
-					erors[err.Field()] = errv
+					fmterr := fmt.Errorf("%s is Null", err.Field())
+					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr.Error())
+					erors[err.Field()] = fmterr
 				}
 			}
 			return erors
@@ -47,7 +48,7 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool, trac
 	}
 	return nil
 }
-func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, traceid string, place string) {
+func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
 	if tx == nil {
 		return
 	}
@@ -57,47 +58,52 @@ func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, trac
 		attempt++
 		err := txMgr.RollbackTx(tx)
 		if err == nil {
-			log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: Successful rollback on attempt %d", traceid, place, attempt)
+			msg := fmt.Sprintf("Successful rollback on attempt %d", attempt)
+			kafkaprod.NewUserLog(kafka.LogLevelInfo, place, traceid, msg)
 			return
 		}
 		if errors.Is(err, sql.ErrTxDone) {
-			log.Printf("[INFO] [UserManagement] [TraceID: %s] %s: Transaction is already completed, skipping rollback", traceid, place)
+			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceid, "Transaction is already completed, skipping rollback")
 			return
 		}
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Error rolling back transaction on attempt %d: %v", traceid, place, attempt, err)
+		fmterr := fmt.Sprintf("Error rolling back transaction on attempt %d: %v", attempt, err)
+		kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
 		if attempt == maxAttempts {
-			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Failed to rollback transaction after %d attempts", traceid, place, maxAttempts)
+			kafkaprod.NewUserLog(kafka.LogLevelError, place, traceid, "Failed to rollback transaction after all attempts")
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 }
-func checkContext(ctx context.Context, mapa map[string]error) (*ServiceResponse, bool) {
+func checkContext(ctx context.Context, mapa map[string]error, place string, traceID string, kafkaprod kafka.KafkaProducerService) (*ServiceResponse, bool) {
 	select {
 	case <-ctx.Done():
+		fmterr := fmt.Sprintf("Context cancelled before operation: %v", ctx.Err())
+		kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
 		mapa["InternalServerError"] = erro.ErrorContextTimeout
 		return &ServiceResponse{Success: false, Errors: mapa, Type: erro.ServerErrorType}, true
 	default:
 		return nil, false
 	}
 }
-func retryOperationGrpc[T any](ctx context.Context, operation func(context.Context) (T, error), traceID string, errorMap map[string]error, place string) (T, *ServiceResponse) {
+func retryOperationGrpc[T any](ctx context.Context, operation func(context.Context) (T, error), traceID string, errorMap map[string]error, place string, kafkaprod kafka.KafkaProducerService) (T, *ServiceResponse) {
 	var response T
 	var err error
 	for i := 1; i <= 3; i++ {
 		md := metadata.Pairs("traceID", traceID)
 		ctx = metadata.NewOutgoingContext(ctx, md)
-		if ctxresponse, shouldReturn := checkContext(ctx, errorMap); shouldReturn {
-			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Context cancelled before operation: %v", traceID, place, ctx.Err())
+		if ctxresponse, shouldReturn := checkContext(ctx, errorMap, place, traceID, kafkaprod); shouldReturn {
 			return response, ctxresponse
 		}
 		response, err = operation(ctx)
 		if err != nil {
 			st, _ := status.FromError(err)
-			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Operation attempt %d failed: %v", traceID, place, i, st.Message())
+			fmterr := fmt.Sprintf("Operation attempt %d failed", i)
+			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				log.Printf("[WARN] [UserManagement] [TraceID: %s] %s: Server unavailable, retrying (%d)...", traceID, place, i)
+				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
+				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
@@ -112,7 +118,7 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 			return response, nil
 		}
 	}
-	log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Operation failed after all attempts", traceID, place)
+	kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, "All retry attempts failed")
 	errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
 	return response, &ServiceResponse{
 		Success: false,
@@ -120,16 +126,16 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 		Type:    erro.ServerErrorType,
 	}
 }
-func retryOperationDB(ctx context.Context, operation func(context.Context) *repository.DBRepositoryResponse, traceID string, errorMap map[string]error, place string) (*repository.DBRepositoryResponse, *ServiceResponse) {
+func retryOperationDB(ctx context.Context, operation func(context.Context) *repository.DBRepositoryResponse, traceID string, errorMap map[string]error, place string, kafkaprod kafka.KafkaProducerService) (*repository.DBRepositoryResponse, *ServiceResponse) {
 	var response *repository.DBRepositoryResponse
 	for i := 1; i <= 3; i++ {
-		if ctxresponse, shouldReturn := checkContext(ctx, errorMap); shouldReturn {
-			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Context cancelled before operation: %v", traceID, place, ctx.Err())
+		if ctxresponse, shouldReturn := checkContext(ctx, errorMap, place, traceID, kafkaprod); shouldReturn {
 			return nil, ctxresponse
 		}
 		response = operation(ctx)
 		if !response.Success && response.Errors != nil {
-			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Operation attempt %d failed: %v", traceID, place, i, response.Errors)
+			fmterr := fmt.Sprintf("Operation attempt %d failed", i)
+			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 			if response.Type == erro.ServerErrorType {
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
@@ -140,7 +146,7 @@ func retryOperationDB(ctx context.Context, operation func(context.Context) *repo
 			return response, nil
 		}
 	}
-	log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Operation failed after all attempts", traceID, place)
+	kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, "All retry attempts failed")
 	errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
 	return nil, &ServiceResponse{
 		Success: false,

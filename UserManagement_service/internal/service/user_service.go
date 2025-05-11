@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
@@ -31,68 +31,70 @@ func NewAuthService(dbrepo repository.DBAuthenticateRepos, dbtxmanager repositor
 	return &AuthService{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
 }
 func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
+	var place = "RegistrateAndLogin"
 	registrateMap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
-	errorvalidate := validatePerson(as.Validator, user, true, traceid, "RegistrateAndLogin")
+	errorvalidate := validatePerson(as.Validator, user, true, traceid, place, as.KafkaProducer)
 	if errorvalidate != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] RegistrateAndLogin: Validate error %v", traceid, errorvalidate)
 		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
 	}
 	var tx *sql.Tx
 	tx, err := as.Dbtxmanager.BeginTx(ctx)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] RegistrateAndLogin: TransactionError %v", traceid, err)
+		fmterr := fmt.Sprintf("Transaction Error: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		registrateMap["InternalServerError"] = erro.ErrorStartTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive := true
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("[ERROR] [UserManagement] [TraceID: %s] RegistrateAndLogin: Panic occurred: %v", traceid, r)
+			fmterr := fmt.Sprintf("Panic occurred: %v", r)
+			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 			if isTransactionActive {
-				rollbackTransaction(as.Dbtxmanager, tx, traceid, "RegistrateAndLogin")
+				rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 				isTransactionActive = false
 			}
 		}
 		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, traceid, "RegistrateAndLogin")
+			rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 			isTransactionActive = false
 		} else {
-			log.Printf("[INFO] [UserManagement] [TraceID: %s] RegistrateAndLogin: Transaction was successfully committed", traceid)
-			log.Printf("[INFO] [UserManagement] [TraceID: %s] RegistrateAndLogin: The session was created successfully and the user is registered!", traceid)
+			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Transaction was successfully committed and session received")
 		}
 	}()
 
 	hashpass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] RegistrateAndLogin: HashPassError %v", traceid, err)
+		fmterr := fmt.Sprintf("HashPass Error: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		registrateMap["InternalServerError"] = erro.ErrorHashPass
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	user.Password = string(hashpass)
-
 	userID := uuid.New()
 	user.Id = userID
 	bdresponse, serviceresponse := retryOperationDB(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
 		return as.Dbrepo.CreateUser(ctx, tx, user)
-	}, traceid, registrateMap, "RegistrateAndLogin")
+	}, traceid, registrateMap, place, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	userID = bdresponse.UserId
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
 		return as.GrpcClient.CreateSession(ctx, userID.String())
-	}, traceid, registrateMap, "RegistrateAndLogin")
+	}, traceid, registrateMap, place, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] RegistrateAndLogin: Error committing transaction: %v", traceid, err)
+		fmterr := fmt.Sprintf("Error committing transaction: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		_, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 			return as.GrpcClient.DeleteSession(ctx, grpcresponse.SessionID)
-		}, traceid, registrateMap, "RegistrateAndLogin")
+		}, traceid, registrateMap, place, as.KafkaProducer)
 		if serviceresponse != nil {
-			log.Printf("[ERROR] [UserManagement] [TraceID: %s] RegistrateAndLogin: Failed to delete session after transaction failure: %v", traceid, serviceresponse.Errors)
+			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Failed to delete session after transaction failure")
 		}
 		registrateMap["InternalServerError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
@@ -102,76 +104,81 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
 func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
+	var place = "AuthenticateAndLogin"
 	authenticateMap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
-	errorvalidate := validatePerson(as.Validator, user, false, traceid, "AuthenticateAndLogin")
+	errorvalidate := validatePerson(as.Validator, user, false, traceid, place, as.KafkaProducer)
 	if errorvalidate != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] AuthenticateAndLogin: Validate error %v", traceid, errorvalidate)
 		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
 	}
 	bdresponse, serviceresponse := retryOperationDB(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
 		return as.Dbrepo.GetUser(ctx, user.Email, user.Password)
-	}, traceid, authenticateMap, "AuthenticateAndLogin")
+	}, traceid, authenticateMap, place, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	userID := bdresponse.UserId
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
 		return as.GrpcClient.CreateSession(ctx, userID.String())
-	}, traceid, authenticateMap, "AuthenticateAndLogin")
+	}, traceid, authenticateMap, place, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
-	log.Printf("[INFO] [UserManagement] [TraceID: %s] AuthenticateAndLogin: The session was created successfully and the user is authenticated!", traceid)
+	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "The session was created successfully and received")
 	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
 func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, useridstr string, password string) *ServiceResponse {
+	var place = "DeleteAccount"
 	deletemap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
 	userid, err := uuid.Parse(useridstr)
 	if err != nil {
+		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		deletemap["InternalServerError"] = erro.ErrorMissingUserID
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	var tx *sql.Tx
 	tx, err = as.Dbtxmanager.BeginTx(ctx)
 	if err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: TransactionError %v", traceid, err)
+		fmterr := fmt.Sprintf("Transaction Error: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		deletemap["InternalServerError"] = erro.ErrorStartTransaction
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive := true
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Panic occurred: %v", traceid, r)
+			fmterr := fmt.Sprintf("Panic occurred: %v", r)
+			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 			if isTransactionActive {
-				rollbackTransaction(as.Dbtxmanager, tx, traceid, "DeleteAccount")
+				rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 				isTransactionActive = false
 			}
 		}
 		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, traceid, "DeleteAccount")
+			rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 			isTransactionActive = false
 		} else {
-			log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: Transaction was successfully committed", traceid)
-			log.Printf("[INFO] [UserManagement] [TraceID: %s] DeleteAccount: The user has successfully deleted his account with all data!", traceid)
+			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, "The user has successfully deleted his account with all data")
 		}
 	}()
 	_, serviceresponse := retryOperationDB(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
 		return as.Dbrepo.DeleteUser(ctx, tx, userid, password)
-	}, traceid, deletemap, "DeleteAccount")
+	}, traceid, deletemap, place, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 		return as.GrpcClient.DeleteSession(ctx, sessionID)
-	}, traceid, deletemap, "DeleteAccount")
+	}, traceid, deletemap, place, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
-		log.Printf("[ERROR] [UserManagement] [TraceID: %s] DeleteAccount: Error committing transaction: %v", traceid, err)
+		fmterr := fmt.Sprintf("Error committing transaction: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		deletemap["InternalServerError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
@@ -181,14 +188,15 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	}
 }
 func (as *AuthService) Logout(ctx context.Context, sessionID string) *ServiceResponse {
+	var place = "Logout"
 	logMap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 		return as.GrpcClient.DeleteSession(ctx, sessionID)
-	}, traceid, logMap, "Logout")
+	}, traceid, logMap, place, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	log.Printf("[INFO] [UserManagement] [TraceID: %s] Logout: The user has successfully logged out of the account!", traceid)
+	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "The session was deleted successfully")
 	return &ServiceResponse{Success: grpcresponse.Success}
 }
