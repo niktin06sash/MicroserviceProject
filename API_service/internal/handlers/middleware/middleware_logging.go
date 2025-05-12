@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 )
 
 func (mw *Middleware) Logging() gin.HandlerFunc {
@@ -18,6 +19,9 @@ func (mw *Middleware) Logging() gin.HandlerFunc {
 		defer cancel()
 
 		c.Request = c.Request.WithContext(ctx)
+		start := time.Now()
+		c.Set("starttime", start)
+		metrics.APITotalRequests.Inc()
 		c.Next()
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 	"golang.org/x/time/rate"
 )
 
@@ -15,12 +16,17 @@ func (m *Middleware) RateLimiter() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var place = "RateLimiter"
 		traceID := c.MustGet("traceID").(string)
+		start := c.MustGet("starttime").(time.Time)
 		ip := c.Request.RemoteAddr
 		limiter := getLimit(m, ip)
 		if !limiter.Allow() {
 			m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Too many requests")
 			response.SendResponse(c, http.StatusTooManyRequests, false, nil, map[string]string{"ClientError": "Too Many Requests"}, traceID, place, m.KafkaProducer)
 			c.Abort()
+			duration := time.Since(start).Seconds()
+			metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
+			metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
+			metrics.APIRateLimitExceededTotal.Inc()
 			return
 		}
 		c.Next()

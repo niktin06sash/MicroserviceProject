@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -11,17 +10,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 )
 
 func (h *Handler) ProxyHTTP(c *gin.Context) {
 	var place = "ProxyHTTP"
 	traceID := c.MustGet("traceID").(string)
+	start := c.MustGet("starttime").(time.Time)
 	maparesponse := make(map[string]string)
 	reqpath := c.Request.URL.Path
 	targetURL, ok := h.Routes[reqpath]
 	if !ok {
 		maparesponse["ClientError"] = "Page not found"
 		response.SendResponse(c, http.StatusBadRequest, false, nil, maparesponse, traceID, place, h.KafkaProducer)
+		duration := time.Since(start).Seconds()
+		metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
+		metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
 		return
 	}
 	target, err := url.Parse(targetURL)
@@ -29,15 +33,21 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		strerr := fmt.Sprintf("URL-Parse Error: %s", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
 		maparesponse["InternalServerError"] = "Url-Parse Error"
-		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "ProxyHTTP", h.KafkaProducer)
+		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
+		duration := time.Since(start).Seconds()
+		metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
+		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return
 	}
-	err = response.CheckContext(c.Request.Context(), traceID, "ProxyHTTP")
+	err = response.CheckContext(c.Request.Context(), traceID, place)
 	if err != nil {
 		fmterr := fmt.Sprintf("Context error: %v", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
 		maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
-		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "ProxyHTTP", h.KafkaProducer)
+		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
+		duration := time.Since(start).Seconds()
+		metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
+		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
@@ -66,20 +76,17 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		strerr := fmt.Sprintf("Proxy error: %s", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
 		maparesponse := map[string]string{"InternalServerError": "Proxy Error"}
-		response := response.HTTPResponse{
-			Success: false,
-			Data:    nil,
-			Errors:  maparesponse,
-			Status:  http.StatusInternalServerError,
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			strerr := fmt.Sprintf("Failed to send response: %s", err)
-			h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		}
+		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
+		duration := time.Since(start).Seconds()
+		metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
+		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
+		return
 	}
 	resp := fmt.Sprintf("Successful HTTP-request to %s", targetURL)
 	h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, resp)
+	duration := time.Since(start).Seconds()
+	metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
+	metrics.APIBackendRequestsTotal.WithLabelValues("User-Service").Inc()
+	metrics.APITotalSuccessfulRequests.Inc()
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
