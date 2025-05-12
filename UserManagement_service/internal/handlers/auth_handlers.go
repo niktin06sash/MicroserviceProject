@@ -69,7 +69,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data := make(map[string]string)
-	if !getAllData(r, w, traceID, maparesponse, place, data, h.KafkaProducer) {
+	if !getAllData(r, w, traceID, maparesponse, place, &data, h.KafkaProducer) {
 		return
 	}
 	password, ok := data["password"]
