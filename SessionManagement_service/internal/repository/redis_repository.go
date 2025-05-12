@@ -87,7 +87,7 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 	}
 	if len(result) == 0 {
 		if flagvalidate {
-			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Session is empty or invalid")
+			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Session is empty or invalid")
 			return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session is empty or invalid")}
 		}
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful verification of missing session")
