@@ -14,7 +14,7 @@ import (
 
 func (m *Middleware) RateLimiter() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var place = "RateLimiter"
+		var place = "Middleware-RateLimiter"
 		traceID := c.MustGet("traceID").(string)
 		start := c.MustGet("starttime").(time.Time)
 		ip := c.Request.RemoteAddr

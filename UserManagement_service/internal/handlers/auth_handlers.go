@@ -11,7 +11,7 @@ import (
 )
 
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
-	var place = "Registration"
+	var place = "API-Registration"
 	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
@@ -34,7 +34,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
-	var place = "Authentication"
+	var place = "API-Authentication"
 	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
@@ -57,7 +57,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
-	var place = "DeleteAccount"
+	var place = "API-DeleteAccount"
 	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
@@ -85,12 +85,12 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.DeleteSessionCookie(w)
-	msg := fmt.Sprintf("Person with id %v has successfully deleted account", delresponse.UserId)
+	msg := fmt.Sprintf("Person with id %v has successfully deleted account", userIDstr)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 }
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	var place = "Logout"
+	var place = "API-Logout"
 	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)

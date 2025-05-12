@@ -35,7 +35,7 @@ func (redisrepo *AuthRedis) validateContext(ctx context.Context, place string) (
 	}
 }
 func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Session) *RepositoryResponse {
-	var place = "SetSession"
+	var place = "Repository-SetSession"
 	traceID, err := redisrepo.validateContext(ctx, place)
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
@@ -61,7 +61,7 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 }
 
 func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
-	var place = "GetSession"
+	var place = "Repository-GetSession"
 	traceID, err := redisrepo.validateContext(ctx, place)
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}
@@ -123,7 +123,7 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 	return &RepositoryResponse{Success: true, UserID: userID.String(), ExpirationTime: expirationTime}
 }
 func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
-	var place = "DeleteSession"
+	var place = "Repository-DeleteSession"
 	traceID, err := redisrepo.validateContext(ctx, place)
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: err}

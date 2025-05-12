@@ -13,7 +13,7 @@ import (
 
 func (m *Middleware) Authorized() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var place = "Authority"
+		var place = "Middleware-Authority"
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
 		start := c.MustGet("starttime").(time.Time)
@@ -62,7 +62,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 
 func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var place = "Not-Authority"
+		var place = "Middleware-Not-Authority"
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
 		start := c.MustGet("starttime").(time.Time)

@@ -31,7 +31,7 @@ func NewAuthService(dbrepo repository.DBAuthenticateRepos, dbtxmanager repositor
 	return &AuthService{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
 }
 func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
-	var place = "RegistrateAndLogin"
+	var place = "UseCase-RegistrateAndLogin"
 	registrateMap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
 	errorvalidate := validatePerson(as.Validator, user, true, traceid, place, as.KafkaProducer)
@@ -104,7 +104,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
 func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
-	var place = "AuthenticateAndLogin"
+	var place = "UseCase-AuthenticateAndLogin"
 	authenticateMap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
 	errorvalidate := validatePerson(as.Validator, user, false, traceid, place, as.KafkaProducer)
@@ -129,7 +129,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
 }
 func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, useridstr string, password string) *ServiceResponse {
-	var place = "DeleteAccount"
+	var place = "UseCase-DeleteAccount"
 	deletemap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
 	userid, err := uuid.Parse(useridstr)
@@ -188,7 +188,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	}
 }
 func (as *AuthService) Logout(ctx context.Context, sessionID string) *ServiceResponse {
-	var place = "Logout"
+	var place = "UseCase-Logout"
 	logMap := make(map[string]error)
 	traceid := ctx.Value("traceID").(string)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
