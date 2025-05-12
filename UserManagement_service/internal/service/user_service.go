@@ -60,7 +60,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 			rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 			isTransactionActive = false
 		} else {
-			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Transaction was successfully committed and session received")
+			as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
 		}
 	}()
 
@@ -161,7 +161,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 			rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 			isTransactionActive = false
 		} else {
-			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, "The user has successfully deleted his account with all data")
+			as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and user has successfully deleted his account with all data")
 		}
 	}()
 	_, serviceresponse := retryOperationDB(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
