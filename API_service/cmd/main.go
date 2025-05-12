@@ -17,6 +17,7 @@ import (
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/server"
 )
 
@@ -29,6 +30,7 @@ import (
 
 func main() {
 	config := configs.LoadConfig()
+	metrics.Start()
 	kafkaprod := kafka.NewKafkaProducer(config.Kafka)
 	grpcclient := client.NewGrpcClient(config.SessionService)
 	middleware := middleware.NewMiddleware(grpcclient, kafkaprod)
@@ -61,6 +63,7 @@ func main() {
 	}
 	log.Println("[INFO] [API-Service] Service has shutted down successfully")
 	defer func() {
+		metrics.Stop()
 		middleware.Stop()
 		grpcclient.Close()
 		kafkaprod.Close()
