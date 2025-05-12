@@ -79,21 +79,21 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 				m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Authorized-request for unauthorized users")
 				maparesponse["ClientError"] = errv.Error()
 				response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse, traceID, place, m.KafkaProducer)
-				c.Abort()
 				duration := time.Since(start).Seconds()
 				metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
 				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 				metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
+				c.Abort()
 				return
 
 			case erro.ServerErrorType:
 				maparesponse["InternalServerError"] = errv.Error()
 				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, m.KafkaProducer)
-				c.Abort()
 				duration := time.Since(start).Seconds()
 				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 				metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
+				c.Abort()
 				return
 			}
 		}
