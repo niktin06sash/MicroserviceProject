@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"log"
 	"runtime"
 	"time"
 
@@ -58,4 +59,5 @@ func Start() {
 }
 func Stop() {
 	close(stop)
+	log.Println("[INFO] [API-Service] Successful close Metrics-Goroutine")
 }
