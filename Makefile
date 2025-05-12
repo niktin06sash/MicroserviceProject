@@ -20,6 +20,9 @@ kafka:
 	@echo "Starting Kafka..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd C:\Users\nikit\kafka; .\bin\windows\kafka-server-start.bat .\config\server.properties'"
 	powershell -Command "Start-Sleep -Seconds 5"
+prometheus:
+	@echo "Starting Prometheus..."
+	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd C:\Users\nikit\prometheus; .\prometheus.exe --config.file=prometheus.yml'"
 redis:
 	@echo "Starting Redis CLI..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'wsl redis-cli'"
@@ -38,6 +41,7 @@ stop:
 	@echo "Stopping all services..."
 	taskkill /F /IM go.exe || true
 	taskkill /F /IM java.exe || true
+	taskkill /IM prometheus.exe /F
 	wsl pkill redis-cli || true
 	@echo "All services stopped."
 
@@ -46,6 +50,6 @@ clean:
 	powershell -Command "Remove-Item -Recurse -Force $(Swagger_DIR)" || true
 	@echo "Cleanup complete."
 
-run: kafka swagger redis start
+run: kafka swagger prometheus redis start
 
 shutdown: stop clean
