@@ -12,7 +12,7 @@ import (
 
 func (m *Middleware) Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var place = "Logging"
+		var place = "Middleware-Logging"
 		traceID := r.Header.Get("X-Trace-ID")
 		if traceID == "" {
 			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Required Trace-ID")

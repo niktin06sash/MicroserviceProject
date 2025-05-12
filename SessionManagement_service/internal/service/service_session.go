@@ -35,7 +35,7 @@ func (s *SessionService) validateContext(ctx context.Context, place string) (str
 	}
 }
 func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
-	var place = "CreateSession"
+	var place = "UseCase-CreateSession"
 	traceID, err := s.validateContext(ctx, place)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessio
 	}, nil
 }
 func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
-	var place = "ValidateSession"
+	var place = "UseCase-ValidateSession"
 	traceID, err := s.validateContext(ctx, place)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 	}, nil
 }
 func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
-	var place = "DeleteSession"
+	var place = "UseCase-DeleteSession"
 	traceID, err := s.validateContext(ctx, place)
 	if err != nil {
 		return nil, err

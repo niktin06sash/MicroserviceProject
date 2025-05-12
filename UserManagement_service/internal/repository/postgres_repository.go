@@ -23,7 +23,7 @@ func NewAuthPostgresRepo(db *DBObject, kafkaprod kafka.KafkaProducerService) *Au
 }
 
 func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.Person) *DBRepositoryResponse {
-	var place = "CreateUser"
+	var place = "Repository-CreateUser"
 	traceid := ctx.Value("traceID").(string)
 	var createdUserID uuid.UUID
 	err := tx.QueryRowContext(ctx,
@@ -42,7 +42,7 @@ func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 }
 
 func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpassword string) *DBRepositoryResponse {
-	var place = "GetUser"
+	var place = "Repository-GetUser"
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	var userId uuid.UUID
@@ -64,7 +64,7 @@ func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 	return &DBRepositoryResponse{Success: true, UserId: userId, Errors: nil}
 }
 func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *DBRepositoryResponse {
-	var place = "DeleteUser"
+	var place = "Repository-DeleteUser"
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := tx.QueryRowContext(ctx, "SELECT userpassword FROM userZ WHERE userid = $1", userId).Scan(&hashpass)

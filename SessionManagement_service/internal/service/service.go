@@ -30,7 +30,7 @@ func NewSessionAPI(repos *repository.Repository, kafka kafka.KafkaProducerServic
 	}
 }
 func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
-	var place = "CreateSession"
+	var place = "API-CreateSession"
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	resp, err := s.sessionService.CreateSession(ctx, req)
@@ -39,7 +39,7 @@ func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionReq
 }
 
 func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
-	var place = "ValidateSession"
+	var place = "API-ValidateSession"
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	flag := s.getFlagValidate(ctx, place, traceID)
 	if flag == "" {
@@ -53,7 +53,7 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 }
 
 func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
-	var place = "DeleteSession"
+	var place = "API-DeleteSession"
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	resp, err := s.sessionService.DeleteSession(ctx, req)
