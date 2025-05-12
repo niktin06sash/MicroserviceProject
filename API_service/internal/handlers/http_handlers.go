@@ -5,6 +5,7 @@ import (
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/docs"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -25,6 +26,7 @@ func NewHandler(middleware middleware.MiddlewareService, kafkaproducer kafka.Kaf
 func (h *Handler) InitRoutes() *gin.Engine {
 	r := gin.New()
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.Use(h.Middleware.Logging())
 	r.Use(h.Middleware.RateLimiter())
 	r.POST("/api/reg", h.Middleware.AuthorizedNot(), h.Registration)
