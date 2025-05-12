@@ -69,18 +69,10 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		context: ctx,
 		cancel:  cancel,
 	}
-	startmsg := "Successful connect to Kafka-Producer"
-	startlog := UserLog{
-		Level:     LogLevelInfo,
-		Service:   "User-Service",
-		Timestamp: time.Now().Format(time.RFC3339),
-		Message:   startmsg,
-	}
 	for i := 1; i <= 3; i++ {
 		producer.wg.Add(1)
 		go producer.sendLogs(i)
 	}
-	producer.logchan <- startlog
 	log.Println("[INFO] [User-Service] [KafkaProducer] Successful connect to Kafka-Producer")
 	return producer
 }

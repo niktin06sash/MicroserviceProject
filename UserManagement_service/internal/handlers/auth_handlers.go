@@ -28,9 +28,9 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	}
 	respdata := map[string]any{"UserID": regresponse.UserId}
 	response.AddSessionCookie(w, regresponse.SessionId, regresponse.ExpireSession)
-	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 	msg := fmt.Sprintf("Person with id %v has successfully registered", regresponse.UserId)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
+	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 }
 
 func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
@@ -51,9 +51,9 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	}
 	respdata := map[string]any{"UserID": auresponse.UserId}
 	response.AddSessionCookie(w, auresponse.SessionId, auresponse.ExpireSession)
-	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 	msg := fmt.Sprintf("Person with id %v has successfully authenticated", auresponse.UserId)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
+	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
@@ -85,9 +85,9 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.DeleteSessionCookie(w)
-	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 	msg := fmt.Sprintf("Person with id %v has successfully deleted account", delresponse.UserId)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
+	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 }
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	var place = "Logout"
@@ -106,7 +106,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.DeleteSessionCookie(w)
-	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 	msg := fmt.Sprintf("Person with id %v has successfully logout", userIDStr)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
+	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
 }

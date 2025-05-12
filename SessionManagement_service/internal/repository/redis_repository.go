@@ -94,7 +94,7 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 		return &RepositoryResponse{Success: true}
 	}
 	if !flagvalidate {
-		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Unauthorized-request for authorized users")
+		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Authorized-request for unauthorized users")
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Already Authorized")}
 	}
 	userIDString, ok := result["UserID"]

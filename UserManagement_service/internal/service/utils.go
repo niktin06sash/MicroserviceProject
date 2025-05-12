@@ -30,7 +30,7 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool, trac
 			for _, err := range validationErrors {
 				switch err.Tag() {
 				case "email":
-					fmterr := fmt.Sprintf("Email format error: %v", err)
+					fmterr := fmt.Sprintf("Email format error: %v", err.Error())
 					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
 					erors[err.Field()] = erro.ErrorNotEmail
 				case "min":

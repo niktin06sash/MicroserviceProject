@@ -72,7 +72,7 @@ func (kf *KafkaConsumer) startLogs() {
 			}
 			atomic.AddInt64(&kf.counter, 1)
 			parts := strings.Split(kf.reader.Config().Topic, "-")
-			level := strings.ToTitle(parts[1])
+			level := parts[1]
 			switch level {
 			case "info":
 				kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter))
