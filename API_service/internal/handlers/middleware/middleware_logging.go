@@ -13,7 +13,7 @@ func (mw *Middleware) Logging() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Set("starttime", start)
-		metrics.APITotalRequests.WithLabelValues(c.Request.URL.Path)
+		metrics.APITotalRequests.WithLabelValues(c.Request.URL.Path).Inc()
 		traceID := uuid.New().String()
 		c.Set("traceID", traceID)
 		ctx := c.Request.Context()

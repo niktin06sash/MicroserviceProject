@@ -37,9 +37,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 				response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, place, m.KafkaProducer)
 				c.Abort()
 				duration := time.Since(start).Seconds()
-				metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
 				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
-				metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 				return
 
 			case erro.ServerErrorType:
@@ -47,9 +45,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Authority", m.KafkaProducer)
 				c.Abort()
 				duration := time.Since(start).Seconds()
-				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
-				metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 				return
 			}
 		}
@@ -79,21 +75,17 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 				m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Authorized-request for unauthorized users")
 				maparesponse["ClientError"] = errv.Error()
 				response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse, traceID, place, m.KafkaProducer)
-				duration := time.Since(start).Seconds()
-				metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
-				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
-				metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 				c.Abort()
+				duration := time.Since(start).Seconds()
+				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 				return
 
 			case erro.ServerErrorType:
 				maparesponse["InternalServerError"] = errv.Error()
 				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, m.KafkaProducer)
-				duration := time.Since(start).Seconds()
-				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
-				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
-				metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 				c.Abort()
+				duration := time.Since(start).Seconds()
+				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 				return
 			}
 		}
