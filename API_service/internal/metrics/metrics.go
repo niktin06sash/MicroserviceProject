@@ -38,6 +38,18 @@ var APIMemoryUsage = promauto.NewGauge(prometheus.GaugeOpts{
 	Name: "api_service_memory_usage_bytes",
 	Help: "Current memory usage in bytes",
 })
+var APIKafkaProducerMessagesSent = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "api_service_kafka_producer_messages_sent_total",
+	Help: "Total number of messages sent to Kafka by API-Service",
+}, []string{"topics"})
+var APIKafkaProducerErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "api_service_kafka_producer_send_errors_total",
+	Help: "Total number of errors encountered while sending messages to Kafka by API-Service",
+}, []string{"topics"})
+var APIKafkaProducerBufferSize = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "api_service_kafka_producer_queue_size",
+	Help: "Current size of the Kafka producer message queue in API-Service",
+})
 var stop = make(chan struct{})
 
 func Start() {
