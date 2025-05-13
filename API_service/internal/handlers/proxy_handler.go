@@ -87,6 +87,6 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	duration := time.Since(start).Seconds()
 	metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 	metrics.APIBackendRequestsTotal.WithLabelValues("User-Service").Inc()
-	metrics.APITotalSuccessfulRequests.Inc()
+	metrics.APITotalSuccessfulRequests.WithLabelValues(c.Request.URL.Path)
 	proxy.ServeHTTP(c.Writer, c.Request)
 }

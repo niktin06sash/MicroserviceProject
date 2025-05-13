@@ -21,7 +21,7 @@ func (mw *Middleware) Logging() gin.HandlerFunc {
 		c.Request = c.Request.WithContext(ctx)
 		start := time.Now()
 		c.Set("starttime", start)
-		metrics.APITotalRequests.Inc()
+		metrics.APITotalRequests.WithLabelValues(c.Request.URL.Path)
 		c.Next()
 	}
 }
