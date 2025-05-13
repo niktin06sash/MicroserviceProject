@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -34,5 +35,6 @@ func (g *GrpcClient) Close() {
 }
 func (g *GrpcClient) ValidateSession(ctx context.Context, sessionid string) (*pb.ValidateSessionResponse, error) {
 	req := &pb.ValidateSessionRequest{SessionID: sessionid}
+	metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 	return g.client.ValidateSession(ctx, req)
 }
