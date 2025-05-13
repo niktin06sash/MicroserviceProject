@@ -9,6 +9,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -28,6 +29,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 			return nil, &erro.CustomError{ErrorName: "Context Error", ErrorType: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
+		metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 		if err == nil && protoresponse.Success {
 			return protoresponse, nil
 		}
@@ -39,9 +41,11 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 			case codes.Internal, codes.Unavailable, codes.Canceled:
 				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
 				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
+				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
+				metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
 				return nil, &erro.CustomError{ErrorName: "Invalid Session Data", ErrorType: erro.ClientErrorType}
 			}
 		}
@@ -62,6 +66,7 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			return nil, &erro.CustomError{ErrorName: "Context Error", ErrorType: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
+		metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 		if err == nil && protoresponse.Success {
 			return protoresponse, nil
 		}
@@ -73,9 +78,11 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			case codes.Internal, codes.Unavailable, codes.Canceled:
 				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
 				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
+				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
+				metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
 				return nil, &erro.CustomError{ErrorName: "Already authorized", ErrorType: erro.ClientErrorType}
 			}
 		}
