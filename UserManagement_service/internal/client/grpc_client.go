@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -36,9 +37,11 @@ func (g *GrpcClient) Close() {
 }
 func (g *GrpcClient) CreateSession(ctx context.Context, userd string) (*pb.CreateSessionResponse, error) {
 	req := &pb.CreateSessionRequest{UserID: userd}
+	metrics.UserBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 	return g.client.CreateSession(ctx, req)
 }
 func (g *GrpcClient) DeleteSession(ctx context.Context, sessionid string) (*pb.DeleteSessionResponse, error) {
 	req := &pb.DeleteSessionRequest{SessionID: sessionid}
+	metrics.UserBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 	return g.client.DeleteSession(ctx, req)
 }

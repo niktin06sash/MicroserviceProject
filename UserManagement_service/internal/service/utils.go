@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	"google.golang.org/grpc/codes"
@@ -42,6 +43,7 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool, trac
 					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr.Error())
 					erors[err.Field()] = fmterr
 				}
+				metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
 			}
 			return erors
 		}
@@ -57,11 +59,14 @@ func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, trac
 	for attempt < maxAttempts {
 		attempt++
 		err := txMgr.RollbackTx(tx)
+		metrics.UserDBQueriesTotal.WithLabelValues("Rollback Transaction").Inc()
 		if err == nil {
 			msg := fmt.Sprintf("Successful rollback on attempt %d", attempt)
 			kafkaprod.NewUserLog(kafka.LogLevelInfo, place, traceid, msg)
 			return
 		}
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
+		metrics.UserDBErrorsTotal.WithLabelValues("Rollback Transaction").Inc()
 		if errors.Is(err, sql.ErrTxDone) {
 			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceid, "Transaction is already completed, skipping rollback")
 			return
@@ -75,12 +80,44 @@ func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, trac
 		time.Sleep(100 * time.Millisecond)
 	}
 }
+func commitTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, traceid string, place string, kafkaprod kafka.KafkaProducerService) error {
+	if tx == nil {
+		return fmt.Errorf("Transaction is not active")
+	}
+	maxAttempts := 3
+	attempt := 0
+	for attempt < maxAttempts {
+		attempt++
+		err := txMgr.CommitTx(tx)
+		metrics.UserDBQueriesTotal.WithLabelValues("Commit Transaction").Inc()
+		if err == nil {
+			msg := fmt.Sprintf("Successful commit on attempt %d", attempt)
+			kafkaprod.NewUserLog(kafka.LogLevelInfo, place, traceid, msg)
+			return nil
+		}
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
+		metrics.UserDBErrorsTotal.WithLabelValues("Commit Transaction").Inc()
+		if errors.Is(err, sql.ErrTxDone) {
+			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceid, "Transaction is already completed, skipping commit")
+			return nil
+		}
+		fmterr := fmt.Sprintf("Error commiting back transaction on attempt %d: %v", attempt, err)
+		kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
+		if attempt == maxAttempts {
+			kafkaprod.NewUserLog(kafka.LogLevelError, place, traceid, "Failed to commit transaction after all attempts")
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return fmt.Errorf("Failed to commit transaction after all attempts")
+}
 func checkContext(ctx context.Context, mapa map[string]error, place string, traceID string, kafkaprod kafka.KafkaProducerService) (*ServiceResponse, bool) {
 	select {
 	case <-ctx.Done():
 		fmterr := fmt.Sprintf("Context cancelled before operation: %v", ctx.Err())
 		kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
 		mapa["InternalServerError"] = erro.ErrorContextTimeout
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: mapa, Type: erro.ServerErrorType}, true
 	default:
 		return nil, false
@@ -104,10 +141,12 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 			case codes.Internal, codes.Unavailable, codes.Canceled:
 				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
 				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
+				metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
 				errorMap["ClientError"] = err
+				metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
 				return response, &ServiceResponse{
 					Success: false,
 					Errors:  errorMap,
@@ -139,10 +178,12 @@ func retryOperationDB(ctx context.Context, operation func(context.Context) *repo
 			if response.Type == erro.ServerErrorType {
 				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", response.Errors)
 				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
+				metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			}
 			errorMap["ClientError"] = response.Errors
+			metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
 			return nil, &ServiceResponse{Success: response.Success, Errors: errorMap, Type: response.Type}
 		} else {
 			return response, nil
