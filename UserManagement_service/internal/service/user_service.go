@@ -10,6 +10,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 
@@ -40,10 +41,13 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	}
 	var tx *sql.Tx
 	tx, err := as.Dbtxmanager.BeginTx(ctx)
+	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	if err != nil {
 		fmterr := fmt.Sprintf("Transaction Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		registrateMap["InternalServerError"] = erro.ErrorStartTransaction
+		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction").Inc()
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive := true
@@ -69,6 +73,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		fmterr := fmt.Sprintf("HashPass Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		registrateMap["InternalServerError"] = erro.ErrorHashPass
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	user.Password = string(hashpass)
@@ -87,9 +92,8 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
-		fmterr := fmt.Sprintf("Error committing transaction: %v", err)
-		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+	err = commitTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
+	if err != nil {
 		_, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 			return as.GrpcClient.DeleteSession(ctx, grpcresponse.SessionID)
 		}, traceid, registrateMap, place, as.KafkaProducer)
@@ -137,14 +141,18 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		deletemap["InternalServerError"] = erro.ErrorMissingUserID
+		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	var tx *sql.Tx
 	tx, err = as.Dbtxmanager.BeginTx(ctx)
+	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	if err != nil {
 		fmterr := fmt.Sprintf("Transaction Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		deletemap["InternalServerError"] = erro.ErrorStartTransaction
+		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction").Inc()
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive := true
@@ -176,9 +184,8 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	if err := as.Dbtxmanager.CommitTx(tx); err != nil {
-		fmterr := fmt.Sprintf("Error committing transaction: %v", err)
-		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+	err = commitTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
+	if err != nil {
 		deletemap["InternalServerError"] = erro.ErrorCommitTransaction
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}

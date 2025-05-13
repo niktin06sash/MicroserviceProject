@@ -85,10 +85,8 @@ func serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.Resp
 		switch resp.Type {
 		case erro.ClientErrorType:
 			response.SendResponse(r.Context(), w, false, nil, stringMap, http.StatusBadRequest, traceID, place, kafkaproducer)
-			metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
 		case erro.ServerErrorType:
 			response.SendResponse(r.Context(), w, false, nil, stringMap, http.StatusInternalServerError, traceID, place, kafkaproducer)
-			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		}
 		duration := time.Since(start).Seconds()
 		metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)

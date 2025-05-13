@@ -27,7 +27,7 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data
 		w.WriteHeader(http.StatusInternalServerError)
 		badreq := HTTPResponse{
 			Success: false,
-			Errors:  map[string]string{"InternalServerError": "Context deadline exceeded"},
+			Errors:  map[string]string{"InternalServerError": "Context request error"},
 			Status:  http.StatusInternalServerError,
 		}
 		json.NewEncoder(w).Encode(badreq)
@@ -54,8 +54,6 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data
 		}
 		json.NewEncoder(w).Encode(badreq)
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		duration := time.Since(start).Seconds()
-		metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
 	}
 	kafkaprod.NewUserLog(kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
 	metrics.UserTotalSuccessfulRequests.WithLabelValues(place).Inc()

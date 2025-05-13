@@ -6,6 +6,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/middleware"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/gorilla/mux"
 )
@@ -21,6 +22,7 @@ func NewHandler(services *service.Service, middleware middleware.MiddlewareServi
 }
 func (h *Handler) InitRoutes() *mux.Router {
 	m := mux.NewRouter()
+	m.Handle("/metrics", promhttp.Handler())
 	authNotGroup := m.PathPrefix("/").Subrouter()
 	authNotGroup.Use(func(next http.Handler) http.Handler {
 		return h.Middlewares.Logging(h.Middlewares.AuthorizedNot(next))

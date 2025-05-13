@@ -46,7 +46,7 @@ var UserDBQueriesTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 var UserDBErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "user_service_db_errors_total",
 	Help: "Total number of errors encountered when interacting with the database",
-}, []string{"error_type"})
+}, []string{"error_type", "query_type"})
 var UserKafkaProducerMessagesSent = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "user_service_kafka_producer_messages_sent_total",
 	Help: "Total number of messages sent to Kafka by User-Service",
