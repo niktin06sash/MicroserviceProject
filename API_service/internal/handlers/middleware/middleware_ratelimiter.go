@@ -26,7 +26,7 @@ func (m *Middleware) RateLimiter() gin.HandlerFunc {
 			duration := time.Since(start).Seconds()
 			metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 			metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
-			metrics.APIRateLimitExceededTotal.WithLabelValues(c.Request.URL.Path)
+			metrics.APIRateLimitExceededTotal.WithLabelValues(c.Request.URL.Path).Inc()
 			return
 		}
 		c.Next()

@@ -26,10 +26,10 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 		if err = response.CheckContext(ctx, traceID, place); err != nil {
 			fmterr := fmt.Sprintf("Context error: %v", err)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
+			metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			return nil, &erro.CustomError{ErrorName: "Context Error", ErrorType: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
-		metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 		if err == nil && protoresponse.Success {
 			return protoresponse, nil
 		}
@@ -63,10 +63,10 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 		if err = response.CheckContext(ctx, traceID, place); err != nil {
 			fmterr := fmt.Sprintf("Context error: %v", err)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
+			metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			return nil, &erro.CustomError{ErrorName: "Context Error", ErrorType: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
-		metrics.APIBackendRequestsTotal.WithLabelValues("Session-Service").Inc()
 		if err == nil && protoresponse.Success {
 			return protoresponse, nil
 		}
