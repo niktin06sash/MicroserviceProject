@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -87,6 +88,7 @@ func (kf *KafkaProducer) NewUserLog(level, place, traceid, msg string) {
 	}
 	select {
 	case kf.logchan <- newlog:
+		metrics.UserKafkaProducerBufferSize.Set(float64(len(kf.logchan)))
 	default:
 		log.Printf("[WARN] [User-Service] [KafkaProducer] Log channel is full, dropping log: %+v", newlog)
 	}
@@ -109,6 +111,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 				log.Printf("[INFO] [User-Service] [KafkaProducer] [Worker: %v] Log channel closed, stopping worker", num)
 				return
 			}
+			metrics.UserKafkaProducerBufferSize.Set(float64(len(kf.logchan)))
 			ctx, cancel := context.WithTimeout(kf.context, 5*time.Second)
 			defer cancel()
 			topic := "user-" + strings.ToLower(logg.Level) + "-log-topic"
@@ -130,6 +133,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 						Value: data,
 					})
 					if err == nil {
+						metrics.UserKafkaProducerMessagesSent.WithLabelValues(topic).Inc()
 						break label
 					}
 					log.Printf("[WARN] [User-Service] [KafkaProducer] [Worker: %v] Retry %d failed to send log: %v", num, i+1, err)
@@ -138,6 +142,8 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			}
 			if err != nil {
 				log.Printf("[ERROR] [User-Service] [KafkaProducer] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
+				metrics.UserKafkaProducerErrorsTotal.WithLabelValues(topic).Inc()
+				metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			}
 		}
 	}
