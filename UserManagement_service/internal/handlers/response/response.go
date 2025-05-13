@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 )
 
 type HTTPResponse struct {
@@ -19,6 +19,7 @@ type HTTPResponse struct {
 }
 
 func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data map[string]any, errors map[string]string, status int, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
+	start := ctx.Value("starttime").(time.Time)
 	w.Header().Set("Content-Type", "application/json")
 	if ctx.Err() != nil {
 		fmterr := fmt.Sprintf("Context error: %v", ctx.Err())
@@ -29,9 +30,10 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data
 			Errors:  map[string]string{"InternalServerError": "Context deadline exceeded"},
 			Status:  http.StatusInternalServerError,
 		}
-		if err := json.NewEncoder(w).Encode(badreq); err != nil {
-			log.Printf("[ERROR] [UserManagement] [TraceID: %s] %s: Failed to send timeout response: %v", traceid, place, err)
-		}
+		json.NewEncoder(w).Encode(badreq)
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
+		duration := time.Since(start).Seconds()
+		metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
 		return
 	}
 	resp := HTTPResponse{
@@ -51,8 +53,14 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data
 			Status:  http.StatusInternalServerError,
 		}
 		json.NewEncoder(w).Encode(badreq)
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
+		duration := time.Since(start).Seconds()
+		metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
 	}
 	kafkaprod.NewUserLog(kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
+	metrics.UserTotalSuccessfulRequests.WithLabelValues(place).Inc()
+	duration := time.Since(start).Seconds()
+	metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
 }
 func AddSessionCookie(w http.ResponseWriter, sessionID string, expireTime time.Time) {
 	maxAge := int(time.Until(expireTime).Seconds())
