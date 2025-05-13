@@ -47,6 +47,18 @@ var UserDBErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "user_service_db_errors_total",
 	Help: "Total number of errors encountered when interacting with the database",
 }, []string{"error_type"})
+var UserKafkaProducerMessagesSent = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "user_service_kafka_producer_messages_sent_total",
+	Help: "Total number of messages sent to Kafka by User-Service",
+}, []string{"topics"})
+var UserKafkaProducerErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "user_service_kafka_producer_send_errors_total",
+	Help: "Total number of errors encountered while sending messages to Kafka by User-Service",
+}, []string{"topics"})
+var UserKafkaProducerBufferSize = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "user_service_kafka_producer_queue_size",
+	Help: "Current size of the Kafka producer message queue in User-Service",
+})
 var stop = make(chan struct{})
 
 func Start() {
