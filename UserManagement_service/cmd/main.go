@@ -15,6 +15,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/middleware"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/server"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
@@ -26,6 +27,7 @@ func main() {
 	if err != nil {
 		return
 	}
+	metrics.Start()
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
 	repositories := repository.NewRepository(db, kafkaProducer)
 	grpcclient := client.NewGrpcClient(config.SessionService)
@@ -60,11 +62,12 @@ func main() {
 	}
 	log.Println("[INFO] [User-Service] Service has shutted down successfully")
 	defer func() {
+		metrics.Stop()
 		kafkaProducer.Close()
 		db.Close()
 		grpcclient.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
-		log.Printf("Active goroutines:\n%s", buf[:n])
+		log.Printf("[INFO] [User-Service] Active goroutines:\n%s", buf[:n])
 	}()
 }
