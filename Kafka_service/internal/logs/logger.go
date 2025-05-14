@@ -2,17 +2,17 @@ package logs
 
 import (
 	"log"
+	"os"
 	"strings"
 
 	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/configs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type Logger struct {
 	ZapLogger *zap.Logger
-	Writers   *lumberjack.Logger
+	File      *os.File
 	Level     string
 	Topic     string
 }
@@ -27,7 +27,7 @@ func (logg *Logger) Sync() {
 		logg.ZapLogger.Warn("----------CLOSE SERVICE----------")
 	}
 	logg.ZapLogger.Sync()
-	logg.Writers.Close()
+	logg.File.Close()
 	log.Printf("[INFO] [Logger-Service] [Logger: %s] Successful sync and close Logger", logg.Topic)
 }
 func NewLogger(config configs.LoggerConfig, topic string) *Logger {
@@ -40,21 +40,18 @@ func NewLogger(config configs.LoggerConfig, topic string) *Logger {
 		log.Fatalf("[ERROR] [Logger-Service] Error getting the logging level: %v", err)
 		return nil
 	}
-	writer := &lumberjack.Logger{
-		Filename:   fn,
-		MaxSize:    config.Rotation.MaxSize,
-		MaxAge:     config.Rotation.MaxAge,
-		MaxBackups: config.Rotation.MaxBackups,
-		Compress:   config.Rotation.Compress,
+	file, err := os.OpenFile(fn, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		println("[ERROR] [Logger-Service] Error opening log file:", err)
+		return nil
 	}
-
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoder := zapcore.NewJSONEncoder(encoderConfig)
 	levelEnabler := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
 		return level == zapLevel
 	})
-	core := zapcore.NewCore(encoder, zapcore.AddSync(writer), levelEnabler)
+	core := zapcore.NewCore(encoder, zapcore.AddSync(file), levelEnabler)
 	logger := zap.New(core)
 	log.Printf("[INFO] [Logger-Service] [Logger: %s] Successful connect to Logger", topic)
 	switch level {
@@ -67,7 +64,7 @@ func NewLogger(config configs.LoggerConfig, topic string) *Logger {
 	}
 	return &Logger{
 		ZapLogger: logger,
-		Writers:   writer,
+		File:      file,
 		Level:     level,
 		Topic:     topic,
 	}
