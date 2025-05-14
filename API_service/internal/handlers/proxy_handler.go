@@ -23,8 +23,6 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	if !ok {
 		maparesponse["ClientError"] = "Page not found"
 		response.SendResponse(c, http.StatusBadRequest, false, nil, maparesponse, traceID, place, h.KafkaProducer)
-		duration := time.Since(start).Seconds()
-		metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 		metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
 		return
 	}
@@ -34,8 +32,6 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
 		maparesponse["InternalServerError"] = "Url-Parse Error"
 		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
-		duration := time.Since(start).Seconds()
-		metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return
 	}
@@ -45,8 +41,6 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
 		maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
 		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
-		duration := time.Since(start).Seconds()
-		metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return
 	}
@@ -77,8 +71,6 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
 		maparesponse := map[string]string{"InternalServerError": "Proxy Error"}
 		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
-		duration := time.Since(start).Seconds()
-		metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return
 	}

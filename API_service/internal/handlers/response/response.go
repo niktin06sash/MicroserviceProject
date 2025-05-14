@@ -2,9 +2,11 @@ package response
 
 import (
 	"context"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 )
 
 // swagger:model HTTPResponse
@@ -34,6 +36,7 @@ type PersonDelete struct {
 }
 
 func SendResponse(c *gin.Context, status int, success bool, data map[string]any, errors map[string]string, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
+	start := c.MustGet("starttime").(time.Time)
 	response := HTTPResponse{
 		Success: success,
 		Data:    data,
@@ -42,6 +45,8 @@ func SendResponse(c *gin.Context, status int, success bool, data map[string]any,
 	}
 	c.JSON(status, response)
 	kafkaprod.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
+	duration := time.Since(start).Seconds()
+	metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 }
 func CheckContext(ctx context.Context, traceID string, place string) error {
 	select {
