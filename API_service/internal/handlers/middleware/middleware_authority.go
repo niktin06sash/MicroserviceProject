@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/erro"
@@ -16,16 +15,13 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		var place = "Middleware-Authority"
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
-		start := c.MustGet("starttime").(time.Time)
 		sessionID, err := c.Cookie("session")
 		if err != nil {
 			m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Required session in cookie")
 			maparesponse["ClientError"] = "Required session in cookie"
 			response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, place, m.KafkaProducer)
 			c.Abort()
-			duration := time.Since(start).Seconds()
 			metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
-			metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 			return
 		}
 		grpcresponse, errv := retryAuthorized(c, m, sessionID, traceID, place)
@@ -36,16 +32,12 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 				maparesponse["ClientError"] = errv.Error()
 				response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, place, m.KafkaProducer)
 				c.Abort()
-				duration := time.Since(start).Seconds()
-				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 				return
 
 			case erro.ServerErrorType:
 				maparesponse["InternalServerError"] = errv.Error()
 				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Authority", m.KafkaProducer)
 				c.Abort()
-				duration := time.Since(start).Seconds()
-				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 				return
 			}
 		}
@@ -61,7 +53,6 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		var place = "Middleware-Not-Authority"
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
-		start := c.MustGet("starttime").(time.Time)
 		sessionID, err := c.Cookie("session")
 		if err != nil || sessionID == "" {
 			m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Successful unauthorization verification")
@@ -76,16 +67,12 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 				maparesponse["ClientError"] = errv.Error()
 				response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse, traceID, place, m.KafkaProducer)
 				c.Abort()
-				duration := time.Since(start).Seconds()
-				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 				return
 
 			case erro.ServerErrorType:
 				maparesponse["InternalServerError"] = errv.Error()
 				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, m.KafkaProducer)
 				c.Abort()
-				duration := time.Since(start).Seconds()
-				metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
 				return
 			}
 		}

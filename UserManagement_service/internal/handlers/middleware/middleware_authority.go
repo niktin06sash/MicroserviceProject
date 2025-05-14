@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
@@ -15,7 +14,6 @@ func (m *Middleware) Authorized(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var place = "Middleware-Authority"
 		traceID := r.Context().Value("traceID").(string)
-		start := r.Context().Value("starttime").(time.Time)
 		maparesponse := make(map[string]string)
 		userID := r.Header.Get("X-User-ID")
 		if userID == "" {
@@ -23,8 +21,6 @@ func (m *Middleware) Authorized(next http.Handler) http.Handler {
 			maparesponse["InternalServerError"] = erro.ErrorRequiredUserID.Error()
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			duration := time.Since(start).Seconds()
-			metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
@@ -33,8 +29,6 @@ func (m *Middleware) Authorized(next http.Handler) http.Handler {
 			maparesponse["InternalServerError"] = erro.ErrorRequiredSessionID.Error()
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			duration := time.Since(start).Seconds()
-			metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
 			return
 		}
 		ctx := context.WithValue(r.Context(), "userID", userID)
@@ -48,7 +42,6 @@ func (m *Middleware) AuthorizedNot(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var place = "Middleware-Not-Authority"
 		traceID := r.Context().Value("traceID").(string)
-		start := r.Context().Value("starttime").(time.Time)
 		maparesponse := make(map[string]string)
 		userID := r.Header.Get("X-User-ID")
 		if userID != "" {
@@ -56,8 +49,6 @@ func (m *Middleware) AuthorizedNot(next http.Handler) http.Handler {
 			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			duration := time.Since(start).Seconds()
-			metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
@@ -66,8 +57,6 @@ func (m *Middleware) AuthorizedNot(next http.Handler) http.Handler {
 			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			duration := time.Since(start).Seconds()
-			metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
 			return
 		}
 		m.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, "Successful unauthorization verification")
