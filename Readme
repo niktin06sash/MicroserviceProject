@@ -1,11 +1,11 @@
 /////////////////////////////////////////////////////////////////////////
-Client --> API-Gateway
-API-Gateway --> SessionManagement; API-Gateway --> UserManagement  
+Client --> API-Service
+API-Service --> SessionManagement; API-Service --> UserManagement  
 UserManagement --> SessionManagement
-SessionManagement --> API-Gateway
-API-Gateway -->  Client
+SessionManagement --> API-Service
+API-Service -->  Client
 /////////////////////////////////////////////////////////////////////////
-1. API-Gateway
+1. API-Service
 Обрабатывает входящие запросы, выполняет маршрутизацию и базовую авторизацию.
 Основные функции:
     • Middleware:
@@ -13,8 +13,9 @@ API-Gateway -->  Client
         ◦ Rate-Limiter
         ◦ Authorization через SessionManagement
     • Проксирование: /reg, /auth, /logout, /delete → UserManagement
-    • Graceful Shutdown
-Технологии: Gin, gRPC, Swagger
+    • Отправка логов в единый сервис логирования в формате JSON
+    • Отправка метрик в Prometheus
+Технологии: Gin, gRPC, Swagger, Kafka-Producer, Prometheus
 /////////////////////////////////////////////////////////////////////////
 2. UserManagement
 Управляет пользователями (регистрация/аутентификация/удаление).
@@ -28,7 +29,9 @@ API-Gateway -->  Client
     • AuthenticateAndLogin
     • Logout
     • DeleteAccount
-Технологии: REST API, PostgreSQL, gRPC, bcrypt
+• Отправка логов в единый сервис логирования в формате JSON
+• Отправка метрик в Prometheus
+Технологии: REST API, PostgreSQL, gRPC, bcrypt, Kafka-Producer, Prometheus
 /////////////////////////////////////////////////////////////////////////
 3. SessionManagement
 Управляет сессиями пользователей.
@@ -37,7 +40,12 @@ gRPC методы:
     • ValidateSession
     • DeleteSession
 Хранение: Redis с TTL
-Технологии: gRPC, Redis, Zap Logger
+• Отправка логов в единый сервис логирования в формате JSON
+Технологии: gRPC, Redis, Kafka-Producer
+/////////////////////////////////////////////////////////////////////////
+4. Kafka_Service
+Управляет за единый сбор логов со всех сервисов.
+Технологии: Kafka-Consumer, Zap-Logger, os
 /////////////////////////////////////////////////////////////////////////
 Общие характеристики:
     • Конфигурация: config.yml (Viper)
@@ -45,6 +53,6 @@ gRPC методы:
     • Модульность: разделение на пакеты
     • Обработка ошибок и разделение их на клиентские и серверные
 Особенности реализации:
-    • Retry-логика для всех внешних вызовов
+    • Retry-логика для внешних вызовов
     • Timeout handling
     • Graceful shutdown во всех сервисах
