@@ -78,7 +78,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, resp)
 	proxy.ServeHTTP(c.Writer, c.Request)
 	duration := time.Since(start).Seconds()
-	metrics.APIRequestDuration.WithLabelValues(place).Observe(duration)
+	metrics.APIRequestDuration.WithLabelValues(place, c.Request.URL.Path).Observe(duration)
 	metrics.APIBackendRequestsTotal.WithLabelValues("User-Service").Inc()
 	metrics.APITotalSuccessfulRequests.WithLabelValues(c.Request.URL.Path).Inc()
 }

@@ -17,7 +17,7 @@ var APIRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 	Name:    "api_service_duration_seconds",
 	Help:    "Histogram for the request duration in seconds in API-Service",
 	Buckets: []float64{0.1, 0.5, 1, 2, 5},
-}, []string{"handler"})
+}, []string{"handler", "path"})
 var APIErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "api_service_errors_total",
 	Help: "Total number of errors encountered by the API-Service",
