@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	configs "github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/configs"
-	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/logs"
+	configs "github.com/niktin06sash/MicroserviceProject/Logs_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/logs"
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
@@ -44,7 +44,7 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 	}
 	consumer.wg.Add(1)
 	go consumer.startLogs()
-	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", consumer.reader.Config().Topic)
+	log.Printf("[INFO] [Logs-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", consumer.reader.Config().Topic)
 	return consumer
 }
 func (kf *KafkaConsumer) Close() {
@@ -52,7 +52,7 @@ func (kf *KafkaConsumer) Close() {
 	kf.wg.Wait()
 	kf.logger.Sync()
 	kf.reader.Close()
-	log.Printf("[INFO] [Kafka-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", kf.reader.Config().Topic, kf.counter)
+	log.Printf("[INFO] [Logs-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", kf.reader.Config().Topic, kf.counter)
 }
 func (kf *KafkaConsumer) startLogs() {
 	defer kf.wg.Done()
@@ -66,7 +66,7 @@ func (kf *KafkaConsumer) startLogs() {
 			msg, err := kf.reader.FetchMessage(ctx)
 			if err != nil {
 				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-					log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to read log: %v", kf.reader.Config().Topic, err)
+					log.Printf("[ERROR] [Logs-Service] [KafkaConsumer:%s] Failed to read log: %v", kf.reader.Config().Topic, err)
 				}
 				continue
 			}
@@ -82,7 +82,7 @@ func (kf *KafkaConsumer) startLogs() {
 				kf.logger.ZapLogger.Warn(string(msg.Value), zap.Int64("number", kf.counter))
 			}
 			if err := kf.reader.CommitMessages(ctx, msg); err != nil {
-				log.Printf("[ERROR] [Kafka-Service] [KafkaConsumer:%s] Failed to commit offset: %v", kf.reader.Config().Topic, err)
+				log.Printf("[ERROR] [Logs-Service] [KafkaConsumer:%s] Failed to commit offset: %v", kf.reader.Config().Topic, err)
 			}
 		}
 	}

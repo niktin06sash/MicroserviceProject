@@ -69,16 +69,16 @@ func LoadConfig() Config {
 	err := viper.ReadInConfig()
 	if err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Printf("[ERROR] [Kafka-Service] Config file not found; using defaults or environment variables")
+			log.Printf("[ERROR] [Logs-Service] Config file not found; using defaults or environment variables")
 		} else {
-			log.Fatalf("[ERROR] [Kafka-Service] Error reading config file: %s", err)
+			log.Fatalf("[ERROR] [Logs-Service] Error reading config file: %s", err)
 		}
 	}
 	var config Config
 	err = viper.Unmarshal(&config)
 	if err != nil {
-		log.Fatalf("[ERROR] [Kafka-Service] Unable to decode into struct, %v", err)
+		log.Fatalf("[ERROR] [Logs-Service] Unable to decode into struct, %v", err)
 	}
-	log.Println("[INFO] [Kafka-Service] Successful Load Config")
+	log.Println("[INFO] [Logs-Service] Successful Load Config")
 	return config
 }
