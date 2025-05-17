@@ -58,6 +58,6 @@ func main() {
 		kafkaProducer.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
-		log.Printf("Active goroutines:\n%s", buf[:n])
+		log.Printf("[INFO] [Session-Service] Active goroutines:\n%s", buf[:n])
 	}()
 }
