@@ -11,6 +11,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/lib/pq v1.10.9
 	github.com/niktin06sash/MicroserviceProject/SessionManagement_service v0.0.0-00010101000000-000000000000
+	github.com/prometheus/client_golang v1.22.0
 	github.com/segmentio/kafka-go v0.4.47
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
@@ -33,7 +34,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
