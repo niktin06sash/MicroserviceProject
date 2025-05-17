@@ -8,9 +8,9 @@ import (
 	"sync"
 	"syscall"
 
-	configs "github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/configs"
-	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/kafka"
-	"github.com/niktin06sash/MicroserviceProject/Kafka_service/internal/logs"
+	configs "github.com/niktin06sash/MicroserviceProject/Logs_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/logs"
 )
 
 func main() {
@@ -33,16 +33,16 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-quit
-	log.Printf("[INFO] [Kafka-Service] Service shutting down with signal: %v", sig)
-	log.Println("[INFO] [Kafka-Service] Shutting down Kafka consumers...")
+	log.Printf("[INFO] [Logs-Service] Service shutting down with signal: %v", sig)
+	log.Println("[INFO] [Logs-Service] Shutting down Kafka consumers...")
 	for _, consumer := range consumers {
 		consumer.Close()
 	}
 	wg.Wait()
-	log.Println("[INFO] [Kafka-Service] All Kafka consumers have been successfully closed")
+	log.Println("[INFO] [Logs-Service] All Kafka consumers have been successfully closed")
 	defer func() {
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
-		log.Printf("Active goroutines:\n%s", buf[:n])
+		log.Printf("[INFO] [Logs-Service] Active goroutines:\n%s", buf[:n])
 	}()
 }
