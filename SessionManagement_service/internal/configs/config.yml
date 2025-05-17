@@ -1,12 +1,12 @@
 server:
   port: "50052"
 redis:  
-  host: localhost   
+  host: sessiondb
   port: 6379        
   password: ""      
   db: 0
 kafka:
-  bootstrap_servers: "localhost:9092" 
+  bootstrap_servers: "kafka:9092" 
   retry_backoff_ms: 500
   batch_size: 16384
   acks: "all" 

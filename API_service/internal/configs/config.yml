@@ -1,14 +1,14 @@
 server:
   port: "8083"
 session_service:
-  grpc_address: "localhost:50052"
+  grpc_address: "session_service:50052"
 routes:
-   /api/reg: "http://localhost:8082/reg"
-   /api/auth: "http://localhost:8082/auth"
-   /api/del: "http://localhost:8082/del"
-   /api/logout: "http://localhost:8082/logout"
+   /api/reg: "http://user_service:8082/reg"
+   /api/auth: "http://user_service:8082/auth"
+   /api/del: "http://user_service:8082/del"
+   /api/logout: "http://user_service:8082/logout"
 kafka:
-  bootstrap_servers: "localhost:9092"
+  bootstrap_servers: "kafka:9092"
   retry_backoff_ms: 500
   batch_size: 16384
   acks: "all"  
