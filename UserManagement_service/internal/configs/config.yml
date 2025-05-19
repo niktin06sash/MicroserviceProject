@@ -2,14 +2,14 @@ server:
   port: "8082"
 database:
   driver: postgres
-  host: userdb
+  host: ${DB_HOST:localhost}
   port: 5432
   user: postgres
   password: my_password
   name: fc2
   sslmode: disable      
 kafka:
-  bootstrap_servers: "kafka:9092"
+  bootstrap_servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   retry_backoff_ms: 500
   batch_size: 16384
   acks: "all"  
@@ -18,4 +18,4 @@ kafka:
     error_log: "user-error-log-topic"
     warn_log: "user-warn-log-topic"
 session_service:
-  grpc_address: "session_service:50052"
+  grpc_address: "${SESSION_SERVICE_GRPC_ADDRESS:localhost:50052}"

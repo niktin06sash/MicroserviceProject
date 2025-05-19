@@ -1,5 +1,5 @@
 kafka:
-  bootstrap_servers: "kafka:9092"
+  bootstrap_servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092} 
   group_id: "servers_log"
   topics:
     api_info_log: "api-info-log-topic"
@@ -15,10 +15,6 @@ kafka:
   session_timeout: 60000
   heartbeat_interval: 20000    
 logger:
-  levels:
-    info: "info"
-    error: "error"
-    warn: "warn"
   files:
     api_info: "internal/logs/api-service/info.log"
     api_error: "internal/logs/api-service/error.log"
