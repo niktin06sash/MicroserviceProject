@@ -34,7 +34,7 @@ func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 	traceid := ctx.Value("traceID").(string)
 	var createdUserID uuid.UUID
 	err := tx.QueryRowContext(ctx,
-		"INSERT INTO UserZ (userid, username, useremail, userpassword) values ($1, $2, $3, $4) ON CONFLICT (useremail) DO NOTHING RETURNING userid;",
+		"INSERT INTO users (userid, username, useremail, userpassword) values ($1, $2, $3, $4) ON CONFLICT (useremail) DO NOTHING RETURNING userid;",
 		user.Id, user.Name, user.Email, user.Password).Scan(&createdUserID)
 	metrics.UserDBQueriesTotal.WithLabelValues("INSERT").Inc()
 	if err != nil {
@@ -61,7 +61,7 @@ func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	var userId uuid.UUID
-	err := repoap.Db.DB.QueryRowContext(ctx, "SELECT userid, userpassword FROM userZ WHERE useremail = $1", useremail).Scan(&userId, &hashpass)
+	err := repoap.Db.DB.QueryRowContext(ctx, "SELECT userid, userpassword FROM users WHERE useremail = $1", useremail).Scan(&userId, &hashpass)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -92,7 +92,7 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 	var place = "Repository-DeleteUser"
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
-	err := tx.QueryRowContext(ctx, "SELECT userpassword FROM userZ WHERE userid = $1", userId).Scan(&hashpass)
+	err := tx.QueryRowContext(ctx, "SELECT userpassword FROM users WHERE userid = $1", userId).Scan(&hashpass)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT-DELETE").Inc()
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -111,7 +111,7 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 		metrics.UserDBErrorsTotal.WithLabelValues("ClientError", "CompareHashAndPassword").Inc()
 		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword, Type: erro.ClientErrorType}
 	}
-	_, err = tx.ExecContext(ctx, "DELETE FROM userZ where userid = $1", userId)
+	_, err = tx.ExecContext(ctx, "DELETE FROM users where userid = $1", userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT-DELETE").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
