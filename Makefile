@@ -1,10 +1,10 @@
 API_Service_DIR := API_service
 Session_Service_DIR := SessionManagement_service
 User_Service_DIR := UserManagement_service
-Kafka_Service_DIR := Kafka_service
+Logs_Service_DIR := Logs_service
 Swagger_DIR := $(API_Service_DIR)/docs
 
-.PHONY: all start stop clean swagger redis kafka run shutdown
+.PHONY: all start stop clean swagger redis kafka run shutdown dockerstart dockerstop dockerrun dockershutdown
 
 all: start
 
@@ -28,7 +28,7 @@ redis:
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'wsl redis-cli'"
 start:
 	@echo "Starting Kafka Service..."
-	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(Kafka_Service_DIR); go run cmd/main.go'"
+	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(Logs_Service_DIR); go run cmd/main.go'"
 	@echo "Starting API-Service..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(API_Service_DIR); go run cmd/main.go'"
 	@echo "Starting Session-Service..."
@@ -51,5 +51,23 @@ clean:
 	@echo "Cleanup complete."
 
 run: kafka swagger prometheus redis start
-
 shutdown: stop clean
+
+
+
+
+
+
+dockerstart: 
+	@echo "Starting all services..."
+	docker-compose up -d
+
+dockerstop:
+	@echo "Stopping all services..."
+	docker-compose stop kafka
+	docker-compose stop zookeeper
+	docker-compose stop logs_service
+	docker-compose stop
+	@echo "All services stopped."
+dockerrun: swagger dockerstart
+dockershutdown: dockerstop clean
