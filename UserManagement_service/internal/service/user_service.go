@@ -79,11 +79,17 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	user.Password = string(hashpass)
 	userID := uuid.New()
 	user.Id = userID
-	bdresponse, serviceresponse := retryOperationDB(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
-		return as.Dbrepo.CreateUser(ctx, tx, user)
-	}, traceid, registrateMap, place, as.KafkaProducer)
-	if serviceresponse != nil {
-		return serviceresponse
+	bdresponse := as.Dbrepo.CreateUser(ctx, tx, user)
+	if !bdresponse.Success && bdresponse.Errors != nil {
+		if bdresponse.Type == erro.ServerErrorType {
+			registrateMap["InternalServerError"] = fmt.Errorf("DataBase Error")
+			as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, bdresponse.Errors.Error())
+			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
+			return &ServiceResponse{Success: bdresponse.Success, Errors: registrateMap, Type: bdresponse.Type}
+		}
+		registrateMap["ClientError"] = bdresponse.Errors
+		metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
+		return &ServiceResponse{Success: bdresponse.Success, Errors: registrateMap, Type: bdresponse.Type}
 	}
 	userID = bdresponse.UserId
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
@@ -115,11 +121,17 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	if errorvalidate != nil {
 		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
 	}
-	bdresponse, serviceresponse := retryOperationDB(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
-		return as.Dbrepo.GetUser(ctx, user.Email, user.Password)
-	}, traceid, authenticateMap, place, as.KafkaProducer)
-	if serviceresponse != nil {
-		return serviceresponse
+	bdresponse := as.Dbrepo.GetUser(ctx, user.Email, user.Password)
+	if !bdresponse.Success && bdresponse.Errors != nil {
+		if bdresponse.Type == erro.ServerErrorType {
+			authenticateMap["InternalServerError"] = fmt.Errorf("DataBase Error")
+			as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, bdresponse.Errors.Error())
+			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
+			return &ServiceResponse{Success: bdresponse.Success, Errors: authenticateMap, Type: bdresponse.Type}
+		}
+		authenticateMap["ClientError"] = bdresponse.Errors
+		metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
+		return &ServiceResponse{Success: bdresponse.Success, Errors: authenticateMap, Type: bdresponse.Type}
 	}
 	userID := bdresponse.UserId
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
@@ -172,11 +184,17 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 			as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and user has successfully deleted his account with all data")
 		}
 	}()
-	_, serviceresponse := retryOperationDB(ctx, func(ctx context.Context) *repository.DBRepositoryResponse {
-		return as.Dbrepo.DeleteUser(ctx, tx, userid, password)
-	}, traceid, deletemap, place, as.KafkaProducer)
-	if serviceresponse != nil {
-		return serviceresponse
+	bdresponse := as.Dbrepo.DeleteUser(ctx, tx, userid, password)
+	if !bdresponse.Success && bdresponse.Errors != nil {
+		if bdresponse.Type == erro.ServerErrorType {
+			deletemap["InternalServerError"] = fmt.Errorf("DataBase Error")
+			as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, bdresponse.Errors.Error())
+			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
+			return &ServiceResponse{Success: bdresponse.Success, Errors: deletemap, Type: bdresponse.Type}
+		}
+		deletemap["ClientError"] = bdresponse.Errors
+		metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
+		return &ServiceResponse{Success: bdresponse.Success, Errors: deletemap, Type: bdresponse.Type}
 	}
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 		return as.GrpcClient.DeleteSession(ctx, sessionID)
