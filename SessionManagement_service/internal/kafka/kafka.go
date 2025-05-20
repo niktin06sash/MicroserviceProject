@@ -73,7 +73,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		producer.wg.Add(1)
 		go producer.sendLogs(i)
 	}
-	log.Println("[INFO] [Session-Service] [KafkaProducer] Successful connect to Kafka-Producer")
+	log.Println("[DEBUG] [Session-Service] [KafkaProducer] Successful connect to Kafka-Producer")
 	return producer
 }
 func (kf *KafkaProducer) NewSessionLog(level, place, traceid, msg string) {
@@ -96,7 +96,7 @@ func (kf *KafkaProducer) Close() {
 	kf.cancel()
 	kf.wg.Wait()
 	kf.writer.Close()
-	log.Println("[INFO] [Session-Service] [KafkaProducer] Successful close Kafka-Producer")
+	log.Println("[DEBUG] [Session-Service] [KafkaProducer] Successful close Kafka-Producer")
 }
 func (kf *KafkaProducer) sendLogs(num int) {
 	defer kf.wg.Done()

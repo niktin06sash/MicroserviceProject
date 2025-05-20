@@ -26,10 +26,10 @@ func NewRedisConnection(cfg configs.RedisConfig) (*RedisObject, error) {
 	err := redisobject.Ping()
 	if err != nil {
 		redisobject.Close()
-		log.Printf("[INFO] [Session-Service] Failed to establish Redis-Client connection: %v", err)
+		log.Printf("[DEBUG] [Session-Service] Failed to establish Redis-Client connection: %v", err)
 		return nil, err
 	}
-	log.Println("[INFO] [Session-Service] Successful connect to Redis-Client")
+	log.Println("[DEBUG] [Session-Service] Successful connect to Redis-Client")
 	return redisobject, nil
 }
 func (r *RedisObject) Open(host string, port int, password string, db int) {
@@ -47,5 +47,5 @@ func (r *RedisObject) Ping() error {
 
 func (r *RedisObject) Close() {
 	r.RedisClient.Close()
-	log.Println("[INFO] [Session-Service] Successful close Redis-Client")
+	log.Println("[DEBUG] [Session-Service] Successful close Redis-Client")
 }

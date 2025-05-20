@@ -44,7 +44,7 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 	}
 	consumer.wg.Add(1)
 	go consumer.startLogs()
-	log.Printf("[INFO] [Logs-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", consumer.reader.Config().Topic)
+	log.Printf("[DEBUG] [Logs-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", consumer.reader.Config().Topic)
 	return consumer
 }
 func (kf *KafkaConsumer) Close() {
@@ -52,7 +52,7 @@ func (kf *KafkaConsumer) Close() {
 	kf.wg.Wait()
 	kf.logger.Sync()
 	kf.reader.Close()
-	log.Printf("[INFO] [Logs-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", kf.reader.Config().Topic, kf.counter)
+	log.Printf("[DEBUG] [Logs-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", kf.reader.Config().Topic, kf.counter)
 }
 func (kf *KafkaConsumer) startLogs() {
 	defer kf.wg.Done()

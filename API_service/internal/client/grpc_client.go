@@ -22,16 +22,16 @@ type GrpcClient struct {
 func NewGrpcClient(cfg configs.SessionServiceConfig) *GrpcClient {
 	conn, err := grpc.Dial(cfg.GrpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Printf("[ERROR] [API-Service] [gRPC-Client] Failed to connect to GRPC-Session Client: %v", err)
+		log.Printf("[DEBUG] [API-Service] [gRPC-Client] Failed to connect to GRPC-Session Client: %v", err)
 		return nil
 	}
 	client := pb.NewSessionServiceClient(conn)
-	log.Println("[INFO] [API-Service] [gRPC-Client] Successful connect to GRPC-Session Client")
+	log.Println("[DEBUG] [API-Service] [gRPC-Client] Successful connect to GRPC-Session Client")
 	return &GrpcClient{client: client, conn: conn}
 }
 func (g *GrpcClient) Close() {
 	g.conn.Close()
-	log.Println("[INFO] [API-Service] [gRPC-Client] Successful close GRPC-Session Client")
+	log.Println("[DEBUG] [API-Service] [gRPC-Client] Successful close GRPC-Session Client")
 }
 func (g *GrpcClient) ValidateSession(ctx context.Context, sessionid string) (*pb.ValidateSessionResponse, error) {
 	req := &pb.ValidateSessionRequest{SessionID: sessionid}

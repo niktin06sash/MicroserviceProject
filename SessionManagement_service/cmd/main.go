@@ -39,25 +39,25 @@ func main() {
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	select {
 	case sig := <-quit:
-		log.Printf("[INFO] [Session-Service] Service shutting down with signal: %v", sig)
+		log.Printf("[DEBUG] [Session-Service] Service shutting down with signal: %v", sig)
 	case err := <-serverError:
-		log.Printf("[ERROR] [Session-Service] Service startup failed: %v", err)
+		log.Printf("[DEBUG] [Session-Service] Service startup failed: %v", err)
 		return
 	}
 	shutdownTimeout := 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
-	log.Println("[INFO] [Session-Service] Service is shutting down...")
+	log.Println("[DEBUG] [Session-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("[ERROR] [Session-Service] Server shutdown error: %v", err)
+		log.Printf("[DEBUG] [Session-Service] Server shutdown error: %v", err)
 		return
 	}
-	log.Println("[INFO] [Session-Service] Service has shutted down successfully")
+	log.Println("[DEBUG] [Session-Service] Service has shutted down successfully")
 	defer func() {
 		redis.Close()
 		kafkaProducer.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
-		log.Printf("[INFO] [Session-Service] Active goroutines:\n%s", buf[:n])
+		log.Printf("[DEBUG] [Session-Service] Active goroutines:\n%s", buf[:n])
 	}()
 }
