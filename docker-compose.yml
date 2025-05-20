@@ -98,7 +98,7 @@ services:
     environment:
       DATABASE_URL: "postgres://postgres:my_password@userdb:5432/fc2?sslmode=disable"
     volumes:
-      - ./UserManagement_service/migrations:/schema
+      - ./UserManagement_service/schema:/schema
     networks:
       - data_net
     command: ["migrate", "-path", "/schema", "-database", "$$DATABASE_URL", "up"]
