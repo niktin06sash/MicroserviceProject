@@ -48,20 +48,20 @@ func main() {
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	select {
 	case sig := <-quit:
-		log.Printf("[INFO] [API-Service] Service shutting down with signal: %v", sig)
+		log.Printf("[DEBUG] [API-Service] Service shutting down with signal: %v", sig)
 	case err := <-serverError:
-		log.Printf("[ERROR] [API-Service] Service startup failed: %v", err)
+		log.Printf("[DEBUG] [API-Service] Service startup failed: %v", err)
 		return
 	}
 	shutdownTimeout := 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
-	log.Println("[INFO] [API-Service] Service is shutting down...")
+	log.Println("[DEBUG] [API-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("[INFO] [API-Service] Server shutdown error: %v", err)
+		log.Printf("[DEBUG] [API-Service] Server shutdown error: %v", err)
 		return
 	}
-	log.Println("[INFO] [API-Service] Service has shutted down successfully")
+	log.Println("[DEBUG] [API-Service] Service has shutted down successfully")
 	defer func() {
 		metrics.Stop()
 		middleware.Stop()
@@ -69,6 +69,6 @@ func main() {
 		kafkaprod.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
-		log.Printf("[INFO] [API-Service] Active goroutines:\n%s", buf[:n])
+		log.Printf("[DEBUG] [API-Service] Active goroutines:\n%s", buf[:n])
 	}()
 }

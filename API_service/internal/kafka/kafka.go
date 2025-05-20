@@ -79,7 +79,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		producer.wg.Add(1)
 		go producer.sendLogs(i)
 	}
-	log.Println("[INFO] [API-Service] [KafkaProducer] Successful connect to Kafka-Producer")
+	log.Println("[DEBUG] [API-Service] [KafkaProducer] Successful connect to Kafka-Producer")
 	return producer
 }
 
@@ -88,7 +88,7 @@ func (kf *KafkaProducer) Close() {
 	kf.cancel()
 	kf.wg.Wait()
 	kf.writer.Close()
-	log.Println("[INFO] [API-Service] [KafkaProducer] Successful close Kafka-Producer")
+	log.Println("[DEBUG] [API-Service] [KafkaProducer] Successful close Kafka-Producer")
 }
 func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg string) {
 	if err := c.Context().Err(); err != nil {

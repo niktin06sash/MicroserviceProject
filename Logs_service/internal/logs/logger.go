@@ -28,7 +28,7 @@ func (logg *Logger) Sync() {
 	}
 	logg.ZapLogger.Sync()
 	logg.File.Close()
-	log.Printf("[INFO] [Logs-Service] [Logger: %s] Successful sync and close Logger", logg.Topic)
+	log.Printf("[DEBUG] [Logs-Service] [Logger: %s] Successful sync and close Logger", logg.Topic)
 }
 func NewLogger(config configs.LoggerConfig, topic string) *Logger {
 	parts := strings.Split(topic, "-")
@@ -37,12 +37,12 @@ func NewLogger(config configs.LoggerConfig, topic string) *Logger {
 	fn := config.Files[service+"_"+level]
 	zapLevel, err := zapcore.ParseLevel(strings.ToUpper(level))
 	if err != nil {
-		log.Fatalf("[ERROR] [Logs-Service] Error getting the logging level: %v", err)
+		log.Fatalf("[DEBUG] [Logs-Service] Error getting the logging level: %v", err)
 		return nil
 	}
 	file, err := os.OpenFile(fn, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		println("[ERROR] [Logs-Service] Error opening log file:", err)
+		println("[DEBUG] [Logs-Service] Error opening log file:", err)
 		return nil
 	}
 	encoderConfig := zap.NewProductionEncoderConfig()
@@ -53,7 +53,7 @@ func NewLogger(config configs.LoggerConfig, topic string) *Logger {
 	})
 	core := zapcore.NewCore(encoder, zapcore.AddSync(file), levelEnabler)
 	logger := zap.New(core)
-	log.Printf("[INFO] [Logs-Service] [Logger: %s] Successful connect to Logger", topic)
+	log.Printf("[DEBUG] [Logs-Service] [Logger: %s] Successful connect to Logger", topic)
 	switch level {
 	case "info":
 		logger.Info("----------START SERVICE----------")

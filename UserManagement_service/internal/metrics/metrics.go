@@ -79,5 +79,5 @@ func Start() {
 }
 func Stop() {
 	close(stop)
-	log.Println("[INFO] [User-Service] Successful close Metrics-Goroutine")
+	log.Println("[DEBUG] [User-Service] Successful close Metrics-Goroutine")
 }

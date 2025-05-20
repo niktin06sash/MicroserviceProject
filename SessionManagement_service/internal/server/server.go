@@ -25,7 +25,7 @@ func (s *GrpcServer) Run(port string) error {
 	}
 	s.server = grpc.NewServer()
 	pb.RegisterSessionServiceServer(s.server, s.service)
-	log.Println("[INFO] [Session-Service] Starting gRPC-server on port:", port)
+	log.Println("[DEBUG] [Session-Service] Starting gRPC-server on port:", port)
 	return s.server.Serve(lis)
 }
 func (s *GrpcServer) Shutdown(ctx context.Context) error {
@@ -36,10 +36,10 @@ func (s *GrpcServer) Shutdown(ctx context.Context) error {
 	}()
 	select {
 	case <-done:
-		log.Println("[INFO] [Session-Service] Starting gRPC-server gracefully stopped")
+		log.Println("[DEBUG] [Session-Service] Starting gRPC-server gracefully stopped")
 		return nil
 	case <-ctx.Done():
-		log.Println("[INFO] [Session-Service] Graceful shutdown timed out, forcefully stopping the server")
+		log.Println("[DEBUG] [Session-Service] Graceful shutdown timed out, forcefully stopping the server")
 		s.server.Stop()
 		return ctx.Err()
 	}

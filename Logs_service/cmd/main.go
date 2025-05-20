@@ -33,16 +33,16 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-quit
-	log.Printf("[INFO] [Logs-Service] Service shutting down with signal: %v", sig)
-	log.Println("[INFO] [Logs-Service] Shutting down Kafka consumers...")
+	log.Printf("[DEBUG] [Logs-Service] Service shutting down with signal: %v", sig)
+	log.Println("[DEBUG] [Logs-Service] Shutting down Kafka consumers...")
 	for _, consumer := range consumers {
 		consumer.Close()
 	}
 	wg.Wait()
-	log.Println("[INFO] [Logs-Service] All Kafka consumers have been successfully closed")
+	log.Println("[DEBUG] [Logs-Service] All Kafka consumers have been successfully closed")
 	defer func() {
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
-		log.Printf("[INFO] [Logs-Service] Active goroutines:\n%s", buf[:n])
+		log.Printf("[DEBUG] [Logs-Service] Active goroutines:\n%s", buf[:n])
 	}()
 }
