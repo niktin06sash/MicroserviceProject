@@ -96,6 +96,7 @@ services:
       dockerfile: Dockerfile
     container_name: session_service
     environment:
+      DOCKER: TRUE
       REDIS_HOST: sessiondb
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
@@ -112,6 +113,7 @@ services:
       context: .
       dockerfile: UserManagement_service/Dockerfile
     environment:
+      DOCKER: TRUE
       DB_HOST: userdb
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
@@ -130,6 +132,7 @@ services:
       context: ./Logs_service
       dockerfile: Dockerfile
     environment:
+      DOCKER: TRUE
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     container_name: logs_service
     volumes:
@@ -145,6 +148,7 @@ services:
       context: .
       dockerfile: API_service/Dockerfile
     environment:
+      DOCKER: TRUE
       SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       USER_SERVICE_HOST: user_service

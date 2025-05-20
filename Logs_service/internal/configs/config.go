@@ -2,6 +2,7 @@ package configs
 
 import (
 	"log"
+	"os"
 	"time"
 
 	"github.com/spf13/viper"
@@ -69,16 +70,26 @@ func LoadConfig() Config {
 	err := viper.ReadInConfig()
 	if err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Printf("[ERROR] [Logs-Service] Config file not found; using defaults or environment variables")
+			log.Printf("[DEBUG] [Logs-Service] Config file not found; using defaults or environment variables")
 		} else {
-			log.Fatalf("[ERROR] [Logs-Service] Error reading config file: %s", err)
+			log.Fatalf("[DEBUG]] [Logs-Service] Error reading config file: %s", err)
 		}
 	}
 	var config Config
 	err = viper.Unmarshal(&config)
 	if err != nil {
-		log.Fatalf("[ERROR] [Logs-Service] Unable to decode into struct, %v", err)
+		log.Fatalf("[DEBUG] [Logs-Service] Unable to decode into struct, %v", err)
 	}
-	log.Println("[INFO] [Logs-Service] Successful Load Config")
+	docker_flag := os.Getenv("DOCKER")
+	if docker_flag == "TRUE" {
+		LoadDockerConfig(&config)
+		log.Println("[DEBUG] [Logs-Service] Successful Load Config (docker)")
+		return config
+	}
+	log.Println("[DEBUG] [Logs-Service] Successful Load Config (localhost)")
 	return config
+}
+func LoadDockerConfig(config *Config) {
+	kafka := os.Getenv("KAFKA_BOOTSTRAP_SERVERS")
+	config.Kafka.BootstrapServers = kafka
 }

@@ -2,6 +2,7 @@ package configs
 
 import (
 	"log"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -50,16 +51,30 @@ func LoadConfig() Config {
 	err := viper.ReadInConfig()
 	if err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Printf("[ERROR] [User-Service] Config file not found; using defaults or environment variables")
+			log.Printf("[DEBUG] [User-Service] Config file not found; using defaults or environment variables")
 		} else {
-			log.Fatalf("[ERROR] [User-Service] Error reading config file: %s", err)
+			log.Fatalf("[DEBUG] [User-Service] Error reading config file: %s", err)
 		}
 	}
 	var config Config
 	err = viper.Unmarshal(&config)
 	if err != nil {
-		log.Fatalf("[ERROR] [User-Service] Unable to decode into struct, %v", err)
+		log.Fatalf("[DEBUG] [Session-Service] Unable to decode into struct, %v", err)
 	}
-	log.Println("[INFO] [User-Service] Successful Load Config")
+	docker_flag := os.Getenv("DOCKER")
+	if docker_flag == "TRUE" {
+		LoadDockerConfig(&config)
+		log.Println("[DEBUG] [User-Service] Successful Load Config (docker)")
+		return config
+	}
+	log.Println("[DEBUG] [User-Service] Successful Load Config")
 	return config
+}
+func LoadDockerConfig(config *Config) {
+	db := os.Getenv("DB_HOST")
+	kafka := os.Getenv("KAFKA_BOOTSTRAP_SERVERS")
+	grpcaddr := os.Getenv("SESSION_SERVICE_GRPC_ADDRESS")
+	config.Database.Host = db
+	config.Kafka.BootstrapServers = kafka
+	config.SessionService.GrpcAddress = grpcaddr
 }
