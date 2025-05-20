@@ -165,35 +165,3 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 		Type:    erro.ServerErrorType,
 	}
 }
-func retryOperationDB(ctx context.Context, operation func(context.Context) *repository.DBRepositoryResponse, traceID string, errorMap map[string]error, place string, kafkaprod kafka.KafkaProducerService) (*repository.DBRepositoryResponse, *ServiceResponse) {
-	var response *repository.DBRepositoryResponse
-	for i := 1; i <= 3; i++ {
-		if ctxresponse, shouldReturn := checkContext(ctx, errorMap, place, traceID, kafkaprod); shouldReturn {
-			return nil, ctxresponse
-		}
-		response = operation(ctx)
-		if !response.Success && response.Errors != nil {
-			fmterr := fmt.Sprintf("Operation attempt %d failed", i)
-			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
-			if response.Type == erro.ServerErrorType {
-				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", response.Errors)
-				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
-				metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-				time.Sleep(time.Duration(i) * time.Second)
-				continue
-			}
-			errorMap["ClientError"] = response.Errors
-			metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
-			return nil, &ServiceResponse{Success: response.Success, Errors: errorMap, Type: response.Type}
-		} else {
-			return response, nil
-		}
-	}
-	kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
-	return nil, &ServiceResponse{
-		Success: false,
-		Errors:  errorMap,
-		Type:    erro.ServerErrorType,
-	}
-}
