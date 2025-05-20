@@ -35,6 +35,20 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_CREATE_TOPICS: >
+        api-info-log-topic:1:1,
+        api-warn-log-topic:1:1,
+        api-error-log-topic:1:1,
+        user-info-log-topic:1:1,
+        user-warn-log-topic:1:1,
+        user-error-log-topic:1:1,
+        session-info-log-topic:1:1,
+        session-warn-log-topic:1:1,
+        session-error-log-topic:1:1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 3000
+      KAFKA_LOG_RETENTION_HOURS: 168 
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824  
     ports:
       - "9092:9092"
     healthcheck:
@@ -96,7 +110,7 @@ services:
       dockerfile: Dockerfile
     container_name: session_service
     environment:
-      DOCKER: TRUE
+      DOCKER: "TRUE"
       REDIS_HOST: sessiondb
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
@@ -113,7 +127,7 @@ services:
       context: .
       dockerfile: UserManagement_service/Dockerfile
     environment:
-      DOCKER: TRUE
+      DOCKER: "TRUE"
       DB_HOST: userdb
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
@@ -132,7 +146,7 @@ services:
       context: ./Logs_service
       dockerfile: Dockerfile
     environment:
-      DOCKER: TRUE
+      DOCKER: "TRUE"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     container_name: logs_service
     volumes:
@@ -148,7 +162,7 @@ services:
       context: .
       dockerfile: API_service/Dockerfile
     environment:
-      DOCKER: TRUE
+      DOCKER: "TRUE"
       SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       USER_SERVICE_HOST: user_service
