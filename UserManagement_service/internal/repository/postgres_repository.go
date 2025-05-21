@@ -102,7 +102,7 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 		}
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
 		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT-DELETE").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: err, Type: erro.ServerErrorType}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(password))
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
@@ -116,7 +116,7 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
 		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT-DELETE").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: err, Type: erro.ServerErrorType}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType}
 	}
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful delete person")
 	return &DBRepositoryResponse{Success: true}

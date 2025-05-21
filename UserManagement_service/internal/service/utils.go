@@ -66,7 +66,7 @@ func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, trac
 			return
 		}
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		metrics.UserDBErrorsTotal.WithLabelValues("Rollback Transaction").Inc()
+		metrics.UserDBErrorsTotal.WithLabelValues("Rollback Transaction", "Transaction").Inc()
 		if errors.Is(err, sql.ErrTxDone) {
 			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceid, "Transaction is already completed, skipping rollback")
 			return
@@ -96,7 +96,7 @@ func commitTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, tracei
 			return nil
 		}
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		metrics.UserDBErrorsTotal.WithLabelValues("Commit Transaction").Inc()
+		metrics.UserDBErrorsTotal.WithLabelValues("Commit Transaction", "Transaction").Inc()
 		if errors.Is(err, sql.ErrTxDone) {
 			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceid, "Transaction is already completed, skipping commit")
 			return nil
@@ -145,7 +145,7 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
-				errorMap["ClientError"] = err
+				errorMap["ClientError"] = fmt.Errorf(st.Message())
 				metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
 				return response, &ServiceResponse{
 					Success: false,

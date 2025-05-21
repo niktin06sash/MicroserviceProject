@@ -46,7 +46,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		fmterr := fmt.Sprintf("Transaction Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		registrateMap["InternalServerError"] = erro.ErrorStartTransaction
-		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction").Inc()
+		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
@@ -153,7 +153,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		deletemap["InternalServerError"] = erro.ErrorMissingUserID
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError").Inc()
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	var tx *sql.Tx
@@ -163,7 +163,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 		fmterr := fmt.Sprintf("Transaction Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		deletemap["InternalServerError"] = erro.ErrorStartTransaction
-		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction").Inc()
+		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
@@ -187,8 +187,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	bdresponse := as.Dbrepo.DeleteUser(ctx, tx, userid, password)
 	if !bdresponse.Success && bdresponse.Errors != nil {
 		if bdresponse.Type == erro.ServerErrorType {
-			deletemap["InternalServerError"] = fmt.Errorf("DataBase Error")
-			as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, bdresponse.Errors.Error())
+			deletemap["InternalServerError"] = bdresponse.Errors
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			return &ServiceResponse{Success: bdresponse.Success, Errors: deletemap, Type: bdresponse.Type}
 		}

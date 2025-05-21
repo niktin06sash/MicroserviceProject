@@ -34,6 +34,8 @@ type KafkaProducer struct {
 	context context.Context
 	cancel  context.CancelFunc
 }
+
+//go:generate mockgen -source=kafka.go -destination=mocks/mock.go
 type KafkaProducerService interface {
 	NewUserLog(level, place, traceid, msg string)
 }
