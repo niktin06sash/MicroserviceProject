@@ -1,210 +1,209 @@
+services:
+    zookeeper:
+      networks:
+        - backend_net 
+      image: confluentinc/cp-zookeeper:7.0.0
+      container_name: zookeeper
+      environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+      volumes:
+        - zookeeper_data:/var/lib/zookeeper/data
+        - zookeeper_log:/var/lib/zookeeper/log
+      ports:
+        - "2181:2181"
+      healthcheck:
+        test:  ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok || exit 1"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+    
+    kafka:
+      networks:
+        - backend_net 
+      image: confluentinc/cp-kafka:7.0.0
+      container_name: kafka
+      depends_on:
+        zookeeper:
+          condition: service_healthy
+      volumes:
+        - kafka_data:/var/lib/kafka/data
+      environment:
+        KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+        KAFKA_CREATE_TOPICS: >
+          api-info-log-topic:1:1,
+          api-warn-log-topic:1:1,
+          api-error-log-topic:1:1,
+          user-info-log-topic:1:1,
+          user-warn-log-topic:1:1,
+          user-error-log-topic:1:1,
+          session-info-log-topic:1:1,
+          session-warn-log-topic:1:1,
+          session-error-log-topic:1:1
+        KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 3000
+        KAFKA_LOG_RETENTION_HOURS: 168 
+        KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      ports:
+        - "9092:9092"
+      healthcheck:
+        test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+    
+    sessiondb:
+      networks:
+        - data_net
+      image: redis:7
+      container_name: sessiondb
+      command: redis-server --save 60 1 
+      volumes:
+      - redis_data:/data
+      ports:
+        - "6379:6379"
+    
+    userdb:
+      image: postgres:15
+      container_name: userdb
+      environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: my_password
+        POSTGRES_DB: fc2
+      ports:
+        - "5432:5432"
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+      networks:
+        - data_net
+      restart: always
+
+    migrate:
+      image: migrate/migrate
+      container_name: migrate
+      depends_on:
+        userdb:
+          condition: service_healthy
+      environment:
+        DATABASE_URL: "postgres://postgres:my_password@userdb:5432/fc2?sslmode=disable"
+      volumes:
+        - ./UserManagement_service/schema:/schema
+      networks:
+        - data_net
+      command: ["migrate", "-path", "/schema", "-database", "$$DATABASE_URL", "up"]
+
+    prometheus:
+      networks:
+        - backend_net 
+      image: prom/prometheus:latest
+      container_name: prometheus
+      ports:
+        - "9090:9090"
+      volumes:
+        - ./prometheus.yml:/etc/prometheus/prometheus.yml
+        - prometheus_data:/prometheus
+      depends_on:
+        user_service:
+          condition: service_healthy
+        api_service:
+          condition: service_healthy
+    
+    session_service:
+      networks:
+        - backend_net 
+        - data_net
+      build:
+        context: ./SessionManagement_service
+        dockerfile: Dockerfile
+      container_name: session_service
+      environment:
+        DOCKER: "TRUE"
+        REDIS_HOST: sessiondb
+        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ports:
+        - "50052:50052"
+      depends_on:
+        sessiondb:
+          condition: service_healthy
+        kafka:
+          condition: service_healthy
+    
+    user_service:
+      networks:
+        - backend_net 
+        - data_net
+      build:
+        context: .
+        dockerfile: UserManagement_service/Dockerfile
+      environment:
+        DOCKER: "TRUE"
+        DB_HOST: userdb
+        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+        SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
+      container_name: user_service
+      ports:
+        - "8082:8082"
+      depends_on:
+        userdb:
+          condition: service_healthy
+        kafka:
+          condition: service_healthy
+        session_service:
+          condition: service_healthy
+    
+    logs_service:
+      networks:
+        - backend_net 
+      build:
+        context: ./Logs_service
+        dockerfile: Dockerfile
+      environment:
+        DOCKER: "TRUE"
+        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      container_name: logs_service
+      volumes:
+        - logs_data:/root/logs_service/internal/logs 
+      depends_on:
+        kafka:
+          condition: service_healthy
+    
+    api_service:
+      networks:
+        - frontend_net
+        - backend_net 
+      build:
+        context: .
+        dockerfile: API_service/Dockerfile
+      environment:
+        DOCKER: "TRUE"
+        SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
+        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+        USER_SERVICE_HOST: user_service
+      container_name: api_service
+      ports:
+        - "8083:8083"
+      depends_on:
+        user_service:
+          condition: service_healthy
+        kafka:
+          condition: service_healthy
+        session_service:
+          condition: service_healthy
 networks:
   frontend_net:
   backend_net:
   data_net:
-
-services:
-  zookeeper:
-    networks:
-      - backend_net 
-    image: confluentinc/cp-zookeeper:7.0.0
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-    volumes:
-      - zookeeper_data:/var/lib/zookeeper/data
-      - zookeeper_data:/var/lib/zookeeper/log
-    ports:
-      - "2181:2181"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 2181 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-  
-  kafka:
-    networks:
-      - backend_net 
-    image: confluentinc/cp-kafka:7.0.0
-    container_name: kafka
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    volumes:
-      - kafka_data:/var/lib/kafka/data
-    environment:
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-      KAFKA_CREATE_TOPICS: >
-        api-info-log-topic:1:1,
-        api-warn-log-topic:1:1,
-        api-error-log-topic:1:1,
-        user-info-log-topic:1:1,
-        user-warn-log-topic:1:1,
-        user-error-log-topic:1:1,
-        session-info-log-topic:1:1,
-        session-warn-log-topic:1:1,
-        session-error-log-topic:1:1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 3000
-      KAFKA_LOG_RETENTION_HOURS: 168 
-      KAFKA_LOG_SEGMENT_BYTES: 1073741824
-    ports:
-      - "9092:9092"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-  
-  sessiondb:
-    networks:
-      - data_net
-    image: redis:7
-    container_name: sessiondb
-    command: redis-server --save 60 1 
-    volumes:
-    - redis_data:/data
-    ports:
-      - "6379:6379"
-  
-  userdb:
-    image: postgres:15
-    container_name: userdb
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: my_password
-      POSTGRES_DB: fc2
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    networks:
-      - data_net
-    restart: always
-
-  migrate:
-    image: migrate/migrate
-    container_name: migrate
-    depends_on:
-      userdb:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: "postgres://postgres:my_password@userdb:5432/fc2?sslmode=disable"
-    volumes:
-      - ./UserManagement_service/schema:/schema
-    networks:
-      - data_net
-    command: ["migrate", "-path", "/schema", "-database", "$$DATABASE_URL", "up"]
-
-  prometheus:
-    networks:
-      - backend_net 
-    image: prom/prometheus:latest
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    depends_on:
-      user_service:
-        condition: service_healthy
-      api_service:
-        condition: service_healthy
-  
-  session_service:
-    networks:
-      - backend_net 
-      - data_net
-    build:
-      context: ./SessionManagement_service
-      dockerfile: Dockerfile
-    container_name: session_service
-    environment:
-      DOCKER: "TRUE"
-      REDIS_HOST: sessiondb
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-    ports:
-      - "50052:50052"
-    depends_on:
-      sessiondb:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-  
-  user_service:
-    networks:
-      - backend_net 
-      - data_net
-    build:
-      context: .
-      dockerfile: UserManagement_service/Dockerfile
-    environment:
-      DOCKER: "TRUE"
-      DB_HOST: userdb
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
-    container_name: user_service
-    ports:
-      - "8082:8082"
-    depends_on:
-      userdb:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      sesssion_service:
-        condition: service_healthy
-  
-  logs_service:
-    networks:
-      - backend_net 
-    build:
-      context: ./Logs_service
-      dockerfile: Dockerfile
-    environment:
-      DOCKER: "TRUE"
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-    container_name: logs_service
-    volumes:
-      - logs_data:/root/logs_service/internal/logs 
-    depends_on:
-      kafka:
-        condition: service_healthy
-  
-  api_service:
-    networks:
-      - frontend_net
-      - backend_net 
-    build:
-      context: .
-      dockerfile: API_service/Dockerfile
-    environment:
-      DOCKER: "TRUE"
-      SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      USER_SERVICE_HOST: user_service
-    container_name: api_service
-    ports:
-      - "8083:8083"
-    depends_on:
-      user_service:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      session_service:
-        condition: service_healthy
-
 volumes:
-  zookeeper_data:
-  kafka_data:
-  postgres_data:
-  prometheus_data:
-  redis_data:
-  logs_data:
+    zookeeper_log:
+    zookeeper_data:
+    kafka_data:
+    postgres_data:
+    prometheus_data:
+    redis_data:
+    logs_data:
