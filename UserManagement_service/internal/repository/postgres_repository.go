@@ -45,7 +45,7 @@ func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 		}
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
 		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "INSERT").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: err, Type: erro.ServerErrorType}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType}
 	}
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful create person")
 	return &DBRepositoryResponse{Success: true, UserId: createdUserID, Errors: nil}
@@ -71,7 +71,7 @@ func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 		}
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
 		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: err, Type: erro.ServerErrorType}
+		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(userpassword))
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
