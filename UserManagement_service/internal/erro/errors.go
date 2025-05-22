@@ -4,6 +4,8 @@ import "errors"
 
 type ErrorType string
 
+const SessionServiceUnavalaible = "Session-Service is unavailable"
+const UserServiceUnavalaible = "User-Service is unavailable"
 const (
 	ClientErrorType ErrorType = "ClientError"
 	ServerErrorType ErrorType = "ServerError"

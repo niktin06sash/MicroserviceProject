@@ -49,7 +49,7 @@ func getUserIdAndSession(r *http.Request, w http.ResponseWriter, traceID string,
 	sessionID, ok := r.Context().Value("sessionID").(string)
 	if !ok {
 		kafkaproducer.NewUserLog(kafka.LogLevelError, place, traceID, "Session ID not found in context")
-		mapa["InternalServerError"] = "User-Service is unavailable"
+		mapa["InternalServerError"] = erro.UserServiceUnavalaible
 		response.SendResponse(r.Context(), w, false, nil, mapa, http.StatusInternalServerError, traceID, place, kafkaproducer)
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return false, "", ""
@@ -57,7 +57,7 @@ func getUserIdAndSession(r *http.Request, w http.ResponseWriter, traceID string,
 	userID, ok := r.Context().Value("userID").(string)
 	if !ok {
 		kafkaproducer.NewUserLog(kafka.LogLevelError, place, traceID, "User ID not found in context")
-		mapa["InternalServerError"] = "User-Service is unavailable"
+		mapa["InternalServerError"] = erro.UserServiceUnavalaible
 		response.SendResponse(r.Context(), w, false, nil, mapa, http.StatusInternalServerError, traceID, place, kafkaproducer)
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return false, "", ""

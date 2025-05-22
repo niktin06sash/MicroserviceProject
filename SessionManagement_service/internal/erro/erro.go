@@ -2,6 +2,8 @@ package erro
 
 import "errors"
 
+const SessionServiceUnavalaible = "Session-Service is unavailable"
+
 const (
 	ErrorGetSessionConst               = "Error get session"
 	ErrorSetSessionConst               = "Error set session"

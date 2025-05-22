@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 	"google.golang.org/grpc/codes"
@@ -47,14 +48,14 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 	if err != nil {
 		fmterr := fmt.Sprintf("Hset session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session-Service is unavailable")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)}
 	}
 	expiration := time.Until(session.ExpirationTime)
 	err = redisrepo.Client.RedisClient.Expire(ctx, session.SessionID, expiration).Err()
 	if err != nil {
 		fmterr := fmt.Sprintf("Expire session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session-Service is unavailable")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)}
 	}
 	redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful session installation")
 	return &RepositoryResponse{Success: true, SessionId: session.SessionID, ExpirationTime: session.ExpirationTime}
@@ -83,7 +84,7 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 		}
 		fmterr := fmt.Sprintf("HGetAll session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session-Service is unavailable")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)}
 	}
 	if len(result) == 0 {
 		if flagvalidate {
@@ -111,13 +112,13 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 	if err != nil {
 		fmterr := fmt.Sprintf("Time-parse error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session-Service is unavailable")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)}
 	}
 	userID, err := uuid.Parse(userIDString)
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session-Service is unavailable")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)}
 	}
 	redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful session receiving")
 	return &RepositoryResponse{Success: true, UserID: userID.String(), ExpirationTime: expirationTime}
@@ -139,7 +140,7 @@ func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string)
 		}
 		fmterr := fmt.Sprintf("Del session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session-Service is unavailable")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)}
 	}
 	redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful session deleted")
 	return &RepositoryResponse{Success: true}

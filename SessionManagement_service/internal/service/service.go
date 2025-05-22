@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
@@ -43,7 +44,7 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	flag := s.getFlagValidate(ctx, place, traceID)
 	if flag == "" {
-		return &pb.ValidateSessionResponse{Success: false}, status.Errorf(codes.Internal, "Session-Service is unavailable")
+		return &pb.ValidateSessionResponse{Success: false}, status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)
 	}
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	ctx = context.WithValue(ctx, "flagvalidate", flag)

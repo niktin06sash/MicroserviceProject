@@ -28,7 +28,6 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		if errv != nil {
 			switch errv.GetTypeError() {
 			case erro.ClientErrorType:
-				m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Unauthorized-request for authorized users")
 				maparesponse["ClientError"] = errv.Error()
 				response.SendResponse(c, http.StatusUnauthorized, false, nil, maparesponse, traceID, place, m.KafkaProducer)
 				c.Abort()
@@ -63,7 +62,6 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		if errv != nil {
 			switch errv.GetTypeError() {
 			case erro.ClientErrorType:
-				m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Authorized-request for unauthorized users")
 				maparesponse["ClientError"] = errv.Error()
 				response.SendResponse(c, http.StatusForbidden, false, nil, maparesponse, traceID, place, m.KafkaProducer)
 				c.Abort()

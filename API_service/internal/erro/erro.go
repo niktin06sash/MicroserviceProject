@@ -2,6 +2,9 @@ package erro
 
 type ErrorType string
 
+const SessionServiceUnavalaible = "Session-Service is unavailable"
+const APIServiceUnavalaible = "API-Service is unavailable"
+
 const (
 	ClientErrorType ErrorType = "ClientError"
 	ServerErrorType ErrorType = "ServerError"
