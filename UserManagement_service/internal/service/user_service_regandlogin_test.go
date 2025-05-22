@@ -27,6 +27,7 @@ import (
 )
 
 func TestRegistrateAndLogin_Success(t *testing.T) {
+	var place = "UseCase-RegistrateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
@@ -51,38 +52,37 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 		Validator:     validator.New(),
 	}
 	tx := &sql.Tx{}
-	gomock.InOrder(
-		mockTxManager.EXPECT().BeginTx(mock.MatchedBy(func(ctx context.Context) bool {
+	mockTxManager.EXPECT().BeginTx(mock.MatchedBy(func(ctx context.Context) bool {
+		traceID := ctx.Value("traceID")
+		return traceID != nil && traceID.(string) == fixedTraceID
+	})).Return(tx, nil)
+	mockRepo.EXPECT().CreateUser(
+		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
-		})).Return(tx, nil),
-		mockRepo.EXPECT().CreateUser(
+		}),
+		tx, user,
+	).
+		Return(&repository.DBRepositoryResponse{
+			Success: true,
+			UserId:  fixedUUID,
+		})
+	mockGrpc.EXPECT().
+		CreateSession(
 			mock.MatchedBy(func(ctx context.Context) bool {
 				traceID := ctx.Value("traceID")
 				return traceID != nil && traceID.(string) == fixedTraceID
 			}),
-			tx, user,
+			fixedSessId,
 		).
-			Return(&repository.DBRepositoryResponse{
-				Success: true,
-				UserId:  fixedUUID,
-			}),
-		mockGrpc.EXPECT().
-			CreateSession(
-				mock.MatchedBy(func(ctx context.Context) bool {
-					traceID := ctx.Value("traceID")
-					return traceID != nil && traceID.(string) == fixedTraceID
-				}),
-				fixedSessId,
-			).
-			Return(&proto.CreateSessionResponse{
-				SessionID:  fixedSessId,
-				ExpiryTime: time.Now().Add(1 * time.Hour).Unix(),
-				Success:    true,
-			}, nil),
-		mockTxManager.EXPECT().CommitTx(tx).Return(nil),
-		mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
-	)
+		Return(&proto.CreateSessionResponse{
+			SessionID:  fixedSessId,
+			ExpiryTime: time.Now().Add(1 * time.Hour).Unix(),
+			Success:    true,
+		}, nil)
+	mockTxManager.EXPECT().CommitTx(tx).Return(nil)
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful commit on attempt 1")
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Transaction was successfully committed and session received")
 	response := as.RegistrateAndLogin(ctx, user)
 	require.True(t, response.Success)
 	require.Equal(t, fixedUUID, response.UserId)
@@ -90,6 +90,7 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 	require.NotNil(t, response.ExpireSession)
 }
 func TestRegistrateAndLogin_ValidationErrors(t *testing.T) {
+	var place = "UseCase-RegistrateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -105,14 +106,12 @@ func TestRegistrateAndLogin_ValidationErrors(t *testing.T) {
 		KafkaProducer: mockKafka,
 		Validator:     validator.New(),
 	}
-	mockKafka.EXPECT().
-		NewUserLog(kafka.LogLevelWarn, gomock.Any(), fixedTraceID, gomock.Any()).
-		AnyTimes()
 	tests := []struct {
-		name          string
-		user          *model.Person
-		expectedError map[string]error
-		responseType  erro.ErrorType
+		name           string
+		user           *model.Person
+		expectedError  map[string]error
+		exprectedKafka *gomock.Call
+		responseType   erro.ErrorType
 	}{
 		{
 			name: "Invalid Email",
@@ -124,7 +123,8 @@ func TestRegistrateAndLogin_ValidationErrors(t *testing.T) {
 			expectedError: map[string]error{
 				"Email": erro.ErrorNotEmail,
 			},
-			responseType: erro.ClientErrorType,
+			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			responseType:   erro.ClientErrorType,
 		},
 		{
 			name: "Too Short Password",
@@ -136,7 +136,8 @@ func TestRegistrateAndLogin_ValidationErrors(t *testing.T) {
 			expectedError: map[string]error{
 				"Password": fmt.Errorf("Password is too short"),
 			},
-			responseType: erro.ClientErrorType,
+			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			responseType:   erro.ClientErrorType,
 		},
 		{
 			name: "Too Short Name",
@@ -148,7 +149,8 @@ func TestRegistrateAndLogin_ValidationErrors(t *testing.T) {
 			expectedError: map[string]error{
 				"Name": fmt.Errorf("Name is too short"),
 			},
-			responseType: erro.ClientErrorType,
+			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			responseType:   erro.ClientErrorType,
 		},
 		{
 			name: "Too Short Name and Password",
@@ -161,7 +163,8 @@ func TestRegistrateAndLogin_ValidationErrors(t *testing.T) {
 				"Name":     fmt.Errorf("Name is too short"),
 				"Password": fmt.Errorf("Password is too short"),
 			},
-			responseType: erro.ClientErrorType,
+			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			responseType:   erro.ClientErrorType,
 		},
 		{
 			name: "Missing Required Fields",
@@ -175,7 +178,8 @@ func TestRegistrateAndLogin_ValidationErrors(t *testing.T) {
 				"Password": fmt.Errorf("Password is Null"),
 				"Name":     fmt.Errorf("Name is Null"),
 			},
-			responseType: erro.ClientErrorType,
+			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()).AnyTimes(),
+			responseType:   erro.ClientErrorType,
 		},
 	}
 	for _, tt := range tests {
@@ -193,8 +197,9 @@ func TestRegistrateAndLogin_ValidationErrors(t *testing.T) {
 	}
 }
 func TestRegistrateAndLogin_BeginTxError(t *testing.T) {
-	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+	var place = "UseCase-RegistrateAndLogin"
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	user := &model.Person{
@@ -211,16 +216,17 @@ func TestRegistrateAndLogin_BeginTxError(t *testing.T) {
 		KafkaProducer: mockKafka,
 	}
 	mockTxManager.EXPECT().BeginTx(gomock.Any()).Return(nil, fmt.Errorf("database connection error"))
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelError, gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelError, place, fixedTraceUuid, gomock.Any())
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], "Transaction creation error")
+	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorStartTransaction.Error())
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestRegistrateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
-	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+	var place = "UseCase-RegistrateAndLogin"
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	user := &model.Person{
@@ -242,7 +248,7 @@ func TestRegistrateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
 	mockTxManager.EXPECT().BeginTx(ctx).Return(tx, nil)
 	mockRepo.EXPECT().CreateUser(ctx, tx, user).Return(&repository.DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType})
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), gomock.Any(), gomock.Any())
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceUuid, "Successful rollback on attempt 1")
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
@@ -250,8 +256,9 @@ func TestRegistrateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestRegistrateAndLogin_DataBaseError_ClientError(t *testing.T) {
-	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+	var place = "UseCase-RegistrateAndLogin"
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	user := &model.Person{
@@ -273,7 +280,7 @@ func TestRegistrateAndLogin_DataBaseError_ClientError(t *testing.T) {
 	mockTxManager.EXPECT().BeginTx(ctx).Return(tx, nil)
 	mockRepo.EXPECT().CreateUser(ctx, tx, user).Return(&repository.DBRepositoryResponse{Success: false, Errors: erro.ErrorUniqueEmail, Type: erro.ClientErrorType})
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), gomock.Any(), gomock.Any())
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceUuid, "Successful rollback on attempt 1")
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "ClientError")
@@ -281,6 +288,7 @@ func TestRegistrateAndLogin_DataBaseError_ClientError(t *testing.T) {
 	require.Equal(t, erro.ClientErrorType, response.Type)
 }
 func TestRegistrateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
+	var place = "UseCase-RegistrateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
@@ -315,7 +323,24 @@ func TestRegistrateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
 		Return(&pb.CreateSessionResponse{
 			Success: false}, status.Error(codes.Internal, "Hset session Error")).
 		Times(3)
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 2 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 3 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "All retry attempts failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful rollback on attempt 1"),
+	)
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
@@ -324,6 +349,7 @@ func TestRegistrateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestRegistrateAndLogin_RetryGrpc_ContextCanceled(t *testing.T) {
+	var place = "UseCase-RegistrateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
@@ -350,7 +376,12 @@ func TestRegistrateAndLogin_RetryGrpc_ContextCanceled(t *testing.T) {
 	tx := &sql.Tx{}
 	mockTxManager.EXPECT().BeginTx(ctx).Return(tx, nil)
 	mockRepo.EXPECT().CreateUser(ctx, tx, user).Return(&repository.DBRepositoryResponse{Success: true, UserId: fixedUUID})
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), fixedTraceID, gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelError, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful rollback on attempt 1"),
+	)
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
@@ -359,6 +390,7 @@ func TestRegistrateAndLogin_RetryGrpc_ContextCanceled(t *testing.T) {
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestRegistrateAndLogin_RetryGrpc_ClientError(t *testing.T) {
+	var place = "UseCase-RegistrateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
@@ -393,7 +425,14 @@ func TestRegistrateAndLogin_RetryGrpc_ClientError(t *testing.T) {
 		Return(&pb.CreateSessionResponse{
 			Success: false}, status.Error(codes.InvalidArgument, "UserID is required")).
 		Times(1)
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful rollback on attempt 1"),
+	)
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
@@ -402,6 +441,7 @@ func TestRegistrateAndLogin_RetryGrpc_ClientError(t *testing.T) {
 	require.Equal(t, erro.ClientErrorType, response.Type)
 }
 func TestRegistrateAndLogin_CommitError(t *testing.T) {
+	var place = "UseCase-RegistrateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
@@ -447,7 +487,18 @@ func TestRegistrateAndLogin_CommitError(t *testing.T) {
 		Success: true,
 	}, nil)
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "Failed to commit transaction after all attempts"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful rollback on attempt 1"),
+	)
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")

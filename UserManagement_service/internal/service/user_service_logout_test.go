@@ -21,6 +21,7 @@ import (
 )
 
 func TestLogout_Success(t *testing.T) {
+	var place = "UseCase-Logout"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
@@ -39,21 +40,21 @@ func TestLogout_Success(t *testing.T) {
 		KafkaProducer: mockKafka,
 		Validator:     validator.New(),
 	}
-	gomock.InOrder(
-		mockGrpc.EXPECT().DeleteSession(mock.MatchedBy(func(ctx context.Context) bool {
-			traceID := ctx.Value("traceID")
-			return traceID != nil && traceID.(string) == fixedTraceID
-		}), mock.MatchedBy(func(sessionID string) bool {
-			return sessionID == fixedSessId
-		})).Return(&pb.DeleteSessionResponse{
-			Success: true,
-		}, nil),
-		mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
-	)
+
+	mockGrpc.EXPECT().DeleteSession(mock.MatchedBy(func(ctx context.Context) bool {
+		traceID := ctx.Value("traceID")
+		return traceID != nil && traceID.(string) == fixedTraceID
+	}), mock.MatchedBy(func(sessionID string) bool {
+		return sessionID == fixedSessId
+	})).Return(&pb.DeleteSessionResponse{
+		Success: true,
+	}, nil)
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "The session was deleted successfully")
 	response := as.Logout(ctx, fixedSessId)
 	require.True(t, response.Success)
 }
 func TestLogout_RetryGrpc_ContextCanceled(t *testing.T) {
+	var place = "UseCase-Logout"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
@@ -73,7 +74,7 @@ func TestLogout_RetryGrpc_ContextCanceled(t *testing.T) {
 		KafkaProducer: mockKafka,
 		Validator:     validator.New(),
 	}
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelError, place, fixedTraceID, gomock.Any())
 	response := as.Logout(ctx, fixedSessId)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
@@ -81,6 +82,7 @@ func TestLogout_RetryGrpc_ContextCanceled(t *testing.T) {
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestLogout_RetryGrpc_ClientError(t *testing.T) {
+	var place = "UseCase-Logout"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
@@ -108,7 +110,12 @@ func TestLogout_RetryGrpc_ClientError(t *testing.T) {
 		Return(&pb.DeleteSessionResponse{
 			Success: false}, status.Error(codes.InvalidArgument, "Session not found")).
 		Times(1)
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+	)
 	response := as.Logout(ctx, fixedSessId)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "ClientError")
@@ -116,6 +123,7 @@ func TestLogout_RetryGrpc_ClientError(t *testing.T) {
 	require.Equal(t, erro.ClientErrorType, response.Type)
 }
 func TestLogout_RetryGrpc_InternalServerError(t *testing.T) {
+	var place = "UseCase-Logout"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
@@ -143,7 +151,22 @@ func TestLogout_RetryGrpc_InternalServerError(t *testing.T) {
 		Return(&pb.DeleteSessionResponse{
 			Success: false}, status.Error(codes.Internal, "Del session Error")).
 		Times(3)
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 2 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 3 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "All retry attempts failed"),
+	)
 	response := as.Logout(ctx, fixedSessId)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
