@@ -25,6 +25,7 @@ import (
 )
 
 func TestDeleteAccount_Success(t *testing.T) {
+	var place = "UseCase-DeleteAccount"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
@@ -46,45 +47,45 @@ func TestDeleteAccount_Success(t *testing.T) {
 		Validator:     validator.New(),
 	}
 	tx := &sql.Tx{}
-	gomock.InOrder(
-		mockTxManager.EXPECT().BeginTx(mock.MatchedBy(func(ctx context.Context) bool {
+	mockTxManager.EXPECT().BeginTx(mock.MatchedBy(func(ctx context.Context) bool {
+		traceID := ctx.Value("traceID")
+		return traceID != nil && traceID.(string) == fixedTraceID
+	})).Return(tx, nil)
+	mockRepo.EXPECT().DeleteUser(
+		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
-		})).Return(tx, nil),
-		mockRepo.EXPECT().DeleteUser(
-			mock.MatchedBy(func(ctx context.Context) bool {
-				traceID := ctx.Value("traceID")
-				return traceID != nil && traceID.(string) == fixedTraceID
-			}),
-			tx,
-			mock.MatchedBy(func(userid uuid.UUID) bool {
-				return userid == fixedUUID
-			}),
-			mock.MatchedBy(func(password string) bool {
-				return password == "password123"
-			}),
-		).Return(&repository.DBRepositoryResponse{
-			Success: true,
 		}),
-		mockGrpc.EXPECT().DeleteSession(mock.MatchedBy(func(ctx context.Context) bool {
-			traceID := ctx.Value("traceID")
-			return traceID != nil && traceID.(string) == fixedTraceID
-		}), mock.MatchedBy(func(sessionID string) bool {
-			return sessionID == fixedSessId
-		})).Return(&pb.DeleteSessionResponse{
-			Success: true,
-		}, nil),
-		mockTxManager.EXPECT().CommitTx(tx).Return(nil),
-		mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
-	)
+		tx,
+		mock.MatchedBy(func(userid uuid.UUID) bool {
+			return userid == fixedUUID
+		}),
+		mock.MatchedBy(func(password string) bool {
+			return password == "password123"
+		}),
+	).Return(&repository.DBRepositoryResponse{
+		Success: true,
+	})
+	mockGrpc.EXPECT().DeleteSession(mock.MatchedBy(func(ctx context.Context) bool {
+		traceID := ctx.Value("traceID")
+		return traceID != nil && traceID.(string) == fixedTraceID
+	}), mock.MatchedBy(func(sessionID string) bool {
+		return sessionID == fixedSessId
+	})).Return(&pb.DeleteSessionResponse{
+		Success: true,
+	}, nil)
+	mockTxManager.EXPECT().CommitTx(tx).Return(nil)
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful commit on attempt 1")
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Transaction was successfully committed and user has successfully deleted his account with all data")
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID.String(), password)
 	require.True(t, response.Success)
 }
 func TestDeleteAccount_InvalidUserID(t *testing.T) {
-	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
+	var place = "UseCase-DeleteAccount"
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
 	invalidUserID := "invalid-uuid"
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	password := "password123"
@@ -95,7 +96,7 @@ func TestDeleteAccount_InvalidUserID(t *testing.T) {
 		KafkaProducer: mockKafka,
 		Validator:     validator.New(),
 	}
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelError, gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelError, place, fixedTraceUuid, gomock.Any())
 	response := as.DeleteAccount(ctx, fixedSessId, invalidUserID, password)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
@@ -103,10 +104,11 @@ func TestDeleteAccount_InvalidUserID(t *testing.T) {
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestDeleteAccount_BeginTxError(t *testing.T) {
+	var place = "UseCase-DeleteAccount"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000").String()
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
-	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	password := "password123"
@@ -120,18 +122,19 @@ func TestDeleteAccount_BeginTxError(t *testing.T) {
 		KafkaProducer: mockKafka,
 	}
 	mockTxManager.EXPECT().BeginTx(gomock.Any()).Return(nil, fmt.Errorf("database connection error"))
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelError, gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelError, place, fixedTraceUuid, gomock.Any())
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID, password)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], "Transaction creation error")
+	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorStartTransaction.Error())
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestDeleteAccount_DataBaseError_InternalServerError(t *testing.T) {
+	var place = "UseCase-DeleteAccount"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
-	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	password := "password123"
@@ -150,7 +153,7 @@ func TestDeleteAccount_DataBaseError_InternalServerError(t *testing.T) {
 	mockTxManager.EXPECT().BeginTx(ctx).Return(tx, nil)
 	mockRepo.EXPECT().DeleteUser(ctx, tx, fixedUUID, password).Return(&repository.DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType})
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), gomock.Any(), gomock.Any())
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceUuid, "Successful rollback on attempt 1")
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID.String(), password)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
@@ -158,10 +161,11 @@ func TestDeleteAccount_DataBaseError_InternalServerError(t *testing.T) {
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestDeleteAccount_DataBaseError_ClientError(t *testing.T) {
+	var place = "UseCase-DeleteAccount"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
-	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	password := "password123"
@@ -180,7 +184,7 @@ func TestDeleteAccount_DataBaseError_ClientError(t *testing.T) {
 	mockTxManager.EXPECT().BeginTx(ctx).Return(tx, nil)
 	mockRepo.EXPECT().DeleteUser(ctx, tx, fixedUUID, password).Return(&repository.DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword, Type: erro.ClientErrorType})
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), gomock.Any(), gomock.Any())
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceUuid, "Successful rollback on attempt 1")
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID.String(), password)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "ClientError")
@@ -188,6 +192,7 @@ func TestDeleteAccount_DataBaseError_ClientError(t *testing.T) {
 	require.Equal(t, erro.ClientErrorType, response.Type)
 }
 func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
+	var place = "UseCase-DeleteAccount"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
@@ -220,7 +225,24 @@ func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
 		Return(&pb.DeleteSessionResponse{
 			Success: false}, status.Error(codes.Internal, "Del session Error")).
 		Times(3)
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 2 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 3 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "All retry attempts failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful rollback on attempt 1"),
+	)
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID.String(), password)
 	require.False(t, response.Success)
@@ -229,6 +251,7 @@ func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestDeleteAccount_RetryGrpc_ContextCanceled(t *testing.T) {
+	var place = "UseCase-DeleteAccount"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
@@ -254,9 +277,12 @@ func TestDeleteAccount_RetryGrpc_ContextCanceled(t *testing.T) {
 	tx := &sql.Tx{}
 	mockTxManager.EXPECT().BeginTx(ctx).Return(tx, nil)
 	mockRepo.EXPECT().DeleteUser(ctx, tx, fixedUUID, password).Return(&repository.DBRepositoryResponse{Success: true})
-	mockKafka.EXPECT().
-		NewUserLog(gomock.Any(), gomock.Any(), fixedTraceID, gomock.Any()).
-		AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelError, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful rollback on attempt 1"),
+	)
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID.String(), password)
 	require.False(t, response.Success)
@@ -265,6 +291,7 @@ func TestDeleteAccount_RetryGrpc_ContextCanceled(t *testing.T) {
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestDeleteAccount_RetryGrpc_ClientError(t *testing.T) {
+	var place = "UseCase-DeleteAccount"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
@@ -297,7 +324,14 @@ func TestDeleteAccount_RetryGrpc_ClientError(t *testing.T) {
 		Return(&pb.DeleteSessionResponse{
 			Success: false}, status.Error(codes.InvalidArgument, "Session not found")).
 		Times(1)
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful rollback on attempt 1"),
+	)
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID.String(), password)
 	require.False(t, response.Success)
@@ -306,6 +340,7 @@ func TestDeleteAccount_RetryGrpc_ClientError(t *testing.T) {
 	require.Equal(t, erro.ClientErrorType, response.Type)
 }
 func TestDeleteAccount_CommitError(t *testing.T) {
+	var place = "UseCase-DeleteAccount"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessId := "123e4567-e89b-12d3-a456-426614174000"
@@ -340,7 +375,18 @@ func TestDeleteAccount_CommitError(t *testing.T) {
 	}, nil)
 	mockTxManager.EXPECT().CommitTx(tx).Return(fmt.Errorf("Failed to commit transaction after all attempts")).Times(3)
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "Failed to commit transaction after all attempts"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful rollback on attempt 1"),
+	)
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID.String(), password)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")

@@ -26,6 +26,7 @@ import (
 )
 
 func TestAuthenticateAndLogin_Success(t *testing.T) {
+	var place = "UseCase-AuthenticateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
 	fixedUserId := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
@@ -72,7 +73,7 @@ func TestAuthenticateAndLogin_Success(t *testing.T) {
 			ExpiryTime: time.Now().Add(1 * time.Hour).Unix(),
 			Success:    true,
 		}, nil)
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), fixedTraceID, gomock.Any()).AnyTimes()
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "The session was created successfully and received")
 	response := as.AuthenticateAndLogin(ctx, user)
 	require.True(t, response.Success)
 	require.Equal(t, fixedUserId, response.UserId)
@@ -80,6 +81,7 @@ func TestAuthenticateAndLogin_Success(t *testing.T) {
 	require.NotNil(t, response.ExpireSession)
 }
 func TestAuthenticateAndLogin_ValidationErrors(t *testing.T) {
+	var place = "UseCase-AuthenticateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -95,14 +97,12 @@ func TestAuthenticateAndLogin_ValidationErrors(t *testing.T) {
 		KafkaProducer: mockKafka,
 		Validator:     validator.New(),
 	}
-	mockKafka.EXPECT().
-		NewUserLog(kafka.LogLevelWarn, gomock.Any(), fixedTraceID, gomock.Any()).
-		AnyTimes()
 	tests := []struct {
-		name          string
-		user          *model.Person
-		expectedError map[string]error
-		responseType  erro.ErrorType
+		name           string
+		user           *model.Person
+		expectedError  map[string]error
+		exprectedKafka *gomock.Call
+		responseType   erro.ErrorType
 	}{
 		{
 			name: "Invalid Email",
@@ -113,7 +113,8 @@ func TestAuthenticateAndLogin_ValidationErrors(t *testing.T) {
 			expectedError: map[string]error{
 				"Email": erro.ErrorNotEmail,
 			},
-			responseType: erro.ClientErrorType,
+			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			responseType:   erro.ClientErrorType,
 		},
 		{
 			name: "Too Short Password",
@@ -124,7 +125,8 @@ func TestAuthenticateAndLogin_ValidationErrors(t *testing.T) {
 			expectedError: map[string]error{
 				"Password": fmt.Errorf("Password is too short"),
 			},
-			responseType: erro.ClientErrorType,
+			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			responseType:   erro.ClientErrorType,
 		},
 		{
 			name: "Missing Required Fields",
@@ -136,7 +138,8 @@ func TestAuthenticateAndLogin_ValidationErrors(t *testing.T) {
 				"Email":    fmt.Errorf("Email is Null"),
 				"Password": fmt.Errorf("Password is Null"),
 			},
-			responseType: erro.ClientErrorType,
+			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()).AnyTimes(),
+			responseType:   erro.ClientErrorType,
 		},
 	}
 
@@ -162,13 +165,11 @@ func TestAuthenticateAndLogin_DataBaseError_ClientError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockTxManager := mock_repository.NewMockDBTransactionManager(ctrl)
-	mockKafka := mock_kafka.NewMockKafkaProducerService(ctrl)
 	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
 	as := &service.AuthService{
-		Dbtxmanager:   mockTxManager,
-		Validator:     validator.New(),
-		KafkaProducer: mockKafka,
-		Dbrepo:        mockRepo,
+		Dbtxmanager: mockTxManager,
+		Validator:   validator.New(),
+		Dbrepo:      mockRepo,
 	}
 	user := &model.Person{
 		Email:    "test@example.com",
@@ -189,13 +190,11 @@ func TestAuthenticateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockTxManager := mock_repository.NewMockDBTransactionManager(ctrl)
-	mockKafka := mock_kafka.NewMockKafkaProducerService(ctrl)
 	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
 	as := &service.AuthService{
-		Dbtxmanager:   mockTxManager,
-		Validator:     validator.New(),
-		KafkaProducer: mockKafka,
-		Dbrepo:        mockRepo,
+		Dbtxmanager: mockTxManager,
+		Validator:   validator.New(),
+		Dbrepo:      mockRepo,
 	}
 	user := &model.Person{
 		Email:    "test@example.com",
@@ -209,6 +208,7 @@ func TestAuthenticateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestAuthenticateAndLogin_RetryGrpc_ContextCanceled(t *testing.T) {
+	var place = "UseCase-AuthenticateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
@@ -233,7 +233,7 @@ func TestAuthenticateAndLogin_RetryGrpc_ContextCanceled(t *testing.T) {
 		Password: "wrongpassword",
 	}
 	mockRepo.EXPECT().GetUser(ctx, user.Email, user.Password).Return(&repository.DBRepositoryResponse{Success: true, UserId: fixedUUID})
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelError, gomock.Any(), fixedTraceID, gomock.Any()).AnyTimes()
+	mockKafka.EXPECT().NewUserLog(kafka.LogLevelError, place, fixedTraceID, gomock.Any())
 	response := as.AuthenticateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
@@ -241,6 +241,7 @@ func TestAuthenticateAndLogin_RetryGrpc_ContextCanceled(t *testing.T) {
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestAuthenticateAndLogin_RetryGrpc_ClientError(t *testing.T) {
+	var place = "UseCase-AuthenticateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
@@ -273,7 +274,12 @@ func TestAuthenticateAndLogin_RetryGrpc_ClientError(t *testing.T) {
 		Return(&pb.CreateSessionResponse{
 			Success: false}, status.Error(codes.InvalidArgument, "Session not found")).
 		Times(1)
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session not found"),
+	)
 	response := as.AuthenticateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "ClientError")
@@ -281,6 +287,7 @@ func TestAuthenticateAndLogin_RetryGrpc_ClientError(t *testing.T) {
 	require.Equal(t, erro.ClientErrorType, response.Type)
 }
 func TestAuthenticateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
+	var place = "UseCase-AuthenticateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
@@ -311,9 +318,24 @@ func TestAuthenticateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
 		}),
 			fixedUUID.String()).
 		Return(&pb.CreateSessionResponse{
-			Success: false}, status.Error(codes.Internal, "Del session Error")).
+			Success: false}, status.Error(codes.Internal, "Hset session Error")).
 		Times(3)
-	mockKafka.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	gomock.InOrder(
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 2 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 3 failed"),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+		mockKafka.EXPECT().
+			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "All retry attempts failed"),
+	)
 	response := as.AuthenticateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
