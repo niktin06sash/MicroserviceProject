@@ -49,14 +49,11 @@ clean:
 	@echo "Cleaning up..."
 	powershell -Command "Remove-Item -Recurse -Force $(Swagger_DIR)" || true
 	@echo "Cleanup complete."
-
-run: kafka swagger prometheus redis start
+tests:
+	@echo "Starting tests in User-Service...."
+	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(User_Service_DIR)/internal/service/; go test -v ./...'"
+run: tests kafka swagger prometheus redis start
 shutdown: stop clean
-
-
-
-
-
 
 dockerstart: 
 	@echo "Starting all services..."
@@ -69,5 +66,5 @@ dockerstop:
 	docker-compose stop logs_service
 	docker-compose stop
 	@echo "All services stopped."
-dockerrun: swagger dockerstart
+dockerrun: tests swagger dockerstart
 dockershutdown: dockerstop clean
