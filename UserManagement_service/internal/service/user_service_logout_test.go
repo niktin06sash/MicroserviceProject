@@ -78,7 +78,7 @@ func TestLogout_RetryGrpc_ContextCanceled(t *testing.T) {
 	response := as.Logout(ctx, fixedSessId)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorContextTimeout.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "Request timed out")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestLogout_RetryGrpc_ClientError(t *testing.T) {
@@ -155,21 +155,21 @@ func TestLogout_RetryGrpc_InternalServerError(t *testing.T) {
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 2 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 3 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "All retry attempts failed"),
 	)
 	response := as.Logout(ctx, fixedSessId)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorAllRetryFailed.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "Session-Service is unavailable")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }

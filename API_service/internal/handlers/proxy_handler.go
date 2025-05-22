@@ -30,7 +30,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	if err != nil {
 		strerr := fmt.Sprintf("URL-Parse Error: %s", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		maparesponse["InternalServerError"] = "Url-Parse Error"
+		maparesponse["InternalServerError"] = "API-Service is unavailable"
 		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return
@@ -39,7 +39,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	if err != nil {
 		fmterr := fmt.Sprintf("Context error: %v", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
-		maparesponse["InternalServerError"] = "Context canceled or deadline exceeded"
+		maparesponse["InternalServerError"] = "Request timed out"
 		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return
@@ -69,7 +69,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		traceID := c.MustGet("traceID").(string)
 		strerr := fmt.Sprintf("Proxy error: %s", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		maparesponse := map[string]string{"InternalServerError": "Proxy Error"}
+		maparesponse := map[string]string{"InternalServerError": "API-Service is unavailable"}
 		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return

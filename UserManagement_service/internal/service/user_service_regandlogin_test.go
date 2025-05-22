@@ -220,7 +220,7 @@ func TestRegistrateAndLogin_BeginTxError(t *testing.T) {
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorStartTransaction.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "User-Service is unavailable")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestRegistrateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
@@ -246,13 +246,13 @@ func TestRegistrateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
 	}
 	tx := &sql.Tx{}
 	mockTxManager.EXPECT().BeginTx(ctx).Return(tx, nil)
-	mockRepo.EXPECT().CreateUser(ctx, tx, user).Return(&repository.DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType})
+	mockRepo.EXPECT().CreateUser(ctx, tx, user).Return(&repository.DBRepositoryResponse{Success: false, Errors: fmt.Errorf("User-Service is unavailable"), Type: erro.ServerErrorType})
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
 	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceUuid, "Successful rollback on attempt 1")
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorDbRepositoryError.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "User-Service is unavailable")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestRegistrateAndLogin_DataBaseError_ClientError(t *testing.T) {
@@ -321,21 +321,21 @@ func TestRegistrateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
 		}),
 			fixedUUID.String()).
 		Return(&pb.CreateSessionResponse{
-			Success: false}, status.Error(codes.Internal, "Hset session Error")).
+			Success: false}, status.Error(codes.Internal, "Session-Service is unavailable")).
 		Times(3)
 	gomock.InOrder(
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 2 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 3 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "All retry attempts failed"),
 		mockKafka.EXPECT().
@@ -345,7 +345,7 @@ func TestRegistrateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorAllRetryFailed.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "Session-Service is unavailable")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestRegistrateAndLogin_RetryGrpc_ContextCanceled(t *testing.T) {
@@ -386,7 +386,7 @@ func TestRegistrateAndLogin_RetryGrpc_ContextCanceled(t *testing.T) {
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorContextTimeout.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "Request timed out")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestRegistrateAndLogin_RetryGrpc_ClientError(t *testing.T) {
@@ -429,7 +429,7 @@ func TestRegistrateAndLogin_RetryGrpc_ClientError(t *testing.T) {
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "UserID is required"),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "Successful rollback on attempt 1"),
 	)
@@ -502,6 +502,6 @@ func TestRegistrateAndLogin_CommitError(t *testing.T) {
 	response := as.RegistrateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorCommitTransaction.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "User-Service is unavailable")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }

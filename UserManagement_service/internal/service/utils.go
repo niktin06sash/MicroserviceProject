@@ -116,7 +116,7 @@ func checkContext(ctx context.Context, mapa map[string]error, place string, trac
 	case <-ctx.Done():
 		fmterr := fmt.Sprintf("Context cancelled before operation: %v", ctx.Err())
 		kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
-		mapa["InternalServerError"] = erro.ErrorContextTimeout
+		mapa["InternalServerError"] = fmt.Errorf("Request timed out")
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: mapa, Type: erro.ServerErrorType}, true
 	default:
@@ -139,8 +139,7 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", fmt.Errorf(st.Message()))
-				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
+				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, "Session-Service unavailable, retrying...")
 				metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
@@ -159,7 +158,7 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 		}
 	}
 	kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	errorMap["InternalServerError"] = erro.ErrorAllRetryFailed
+	errorMap["InternalServerError"] = fmt.Errorf("Session-Service is unavailable")
 	return response, &ServiceResponse{
 		Success: false,
 		Errors:  errorMap,

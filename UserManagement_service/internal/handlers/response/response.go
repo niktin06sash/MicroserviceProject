@@ -27,7 +27,7 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data
 		w.WriteHeader(http.StatusInternalServerError)
 		badreq := HTTPResponse{
 			Success: false,
-			Errors:  map[string]string{"InternalServerError": "Context request error"},
+			Errors:  map[string]string{"InternalServerError": "Request timed out"},
 			Status:  http.StatusInternalServerError,
 		}
 		json.NewEncoder(w).Encode(badreq)
@@ -49,7 +49,7 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, success bool, data
 		w.WriteHeader(http.StatusInternalServerError)
 		badreq := HTTPResponse{
 			Success: false,
-			Errors:  map[string]string{"InternalServerError": "EncoderResponse Error"},
+			Errors:  map[string]string{"InternalServerError": "User-Service is unavailable"},
 			Status:  http.StatusInternalServerError,
 		}
 		json.NewEncoder(w).Encode(badreq)
