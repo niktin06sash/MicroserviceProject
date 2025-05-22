@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
@@ -30,7 +31,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	if err != nil {
 		strerr := fmt.Sprintf("URL-Parse Error: %s", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		maparesponse["InternalServerError"] = "API-Service is unavailable"
+		maparesponse["InternalServerError"] = erro.APIServiceUnavalaible
 		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return
@@ -69,7 +70,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		traceID := c.MustGet("traceID").(string)
 		strerr := fmt.Sprintf("Proxy error: %s", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		maparesponse := map[string]string{"InternalServerError": "API-Service is unavailable"}
+		maparesponse := map[string]string{"InternalServerError": erro.APIServiceUnavalaible}
 		response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return

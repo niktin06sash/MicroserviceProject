@@ -139,7 +139,7 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 			kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, "Session-Service unavailable, retrying...")
+				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, "Session-Service is unavailable, retrying...")
 				metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
@@ -158,7 +158,7 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 		}
 	}
 	kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	errorMap["InternalServerError"] = fmt.Errorf("Session-Service is unavailable")
+	errorMap["InternalServerError"] = fmt.Errorf(erro.SessionServiceUnavalaible)
 	return response, &ServiceResponse{
 		Success: false,
 		Errors:  errorMap,

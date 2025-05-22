@@ -39,7 +39,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Session-Service unavailable, retrying...")
+				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Session-Service is unavailable, retrying...")
 				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
@@ -51,7 +51,7 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 		}
 	}
 	middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	return nil, &erro.CustomError{ErrorName: "Session-Service is unavailable", ErrorType: erro.ServerErrorType}
+	return nil, &erro.CustomError{ErrorName: erro.SessionServiceUnavalaible, ErrorType: erro.ServerErrorType}
 }
 func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, *erro.CustomError) {
 	var err error
@@ -76,7 +76,7 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Session-Service unavailable, retrying...")
+				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Session-Service is unavailable, retrying...")
 				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
@@ -88,5 +88,5 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 		}
 	}
 	middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	return nil, &erro.CustomError{ErrorName: "Session-Service is unavailable", ErrorType: erro.ServerErrorType}
+	return nil, &erro.CustomError{ErrorName: erro.SessionServiceUnavalaible, ErrorType: erro.ServerErrorType}
 }

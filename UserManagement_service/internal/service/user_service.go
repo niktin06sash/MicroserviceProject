@@ -72,7 +72,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	if err != nil {
 		fmterr := fmt.Sprintf("HashPass Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		registrateMap["InternalServerError"] = fmt.Errorf("User-Service is unavailable")
+		registrateMap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
@@ -105,7 +105,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		if serviceresponse != nil {
 			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Failed to delete session after transaction failure")
 		}
-		registrateMap["InternalServerError"] = fmt.Errorf("User-Service is unavailable")
+		registrateMap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
 		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive = false
@@ -150,7 +150,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		deletemap["InternalServerError"] = fmt.Errorf("User-Service is unavailable")
+		deletemap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
@@ -160,7 +160,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	if err != nil {
 		fmterr := fmt.Sprintf("Transaction Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		deletemap["InternalServerError"] = fmt.Errorf("User-Service is unavailable")
+		deletemap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
 		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
@@ -201,7 +201,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	}
 	err = commitTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 	if err != nil {
-		deletemap["InternalServerError"] = fmt.Errorf("User-Service is unavailable")
+		deletemap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
 		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
 	}
 	isTransactionActive = false

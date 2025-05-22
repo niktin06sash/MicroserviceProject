@@ -200,11 +200,11 @@ func TestAuthenticateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
 		Email:    "test@example.com",
 		Password: "wrongpassword",
 	}
-	mockRepo.EXPECT().GetUser(ctx, user.Email, user.Password).Return(&repository.DBRepositoryResponse{Success: false, Errors: fmt.Errorf("User-Service is unavailable"), Type: erro.ServerErrorType})
+	mockRepo.EXPECT().GetUser(ctx, user.Email, user.Password).Return(&repository.DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType})
 	response := as.AuthenticateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorDbRepositoryError.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], erro.UserServiceUnavalaible)
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestAuthenticateAndLogin_RetryGrpc_ContextCanceled(t *testing.T) {
@@ -318,27 +318,27 @@ func TestAuthenticateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
 		}),
 			fixedUUID.String()).
 		Return(&pb.CreateSessionResponse{
-			Success: false}, status.Error(codes.Internal, "Session-Service is unavailable")).
+			Success: false}, status.Error(codes.Internal, erro.SessionServiceUnavalaible)).
 		Times(3)
 	gomock.InOrder(
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service is unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 2 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service is unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 3 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service is unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "All retry attempts failed"),
 	)
 	response := as.AuthenticateAndLogin(ctx, user)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], "Session-Service is unavailable")
+	require.EqualError(t, response.Errors["InternalServerError"], erro.SessionServiceUnavalaible)
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
