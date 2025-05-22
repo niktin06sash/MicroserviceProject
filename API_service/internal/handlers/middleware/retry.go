@@ -27,31 +27,31 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 			fmterr := fmt.Sprintf("Context error: %v", err)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
 			metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			return nil, &erro.CustomError{ErrorName: "Context Error", ErrorType: erro.ServerErrorType}
+			return nil, &erro.CustomError{ErrorName: "Request timed out", ErrorType: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
 		if err == nil && protoresponse.Success {
 			return protoresponse, nil
 		}
-		if err != nil {
+		if err != nil && !protoresponse.Success {
 			st, _ := status.FromError(err)
 			fmterr := fmt.Sprintf("Operation attempt %d failed", i)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
-				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
+				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Session-Service unavailable, retrying...")
 				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
+				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, st.Message())
 				metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
-				return nil, &erro.CustomError{ErrorName: "Invalid Session Data", ErrorType: erro.ClientErrorType}
+				return nil, &erro.CustomError{ErrorName: st.Message(), ErrorType: erro.ClientErrorType}
 			}
 		}
 	}
 	middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	return nil, &erro.CustomError{ErrorName: "All retry attempts failed", ErrorType: erro.ServerErrorType}
+	return nil, &erro.CustomError{ErrorName: "Session-Service is unavailable", ErrorType: erro.ServerErrorType}
 }
 func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, *erro.CustomError) {
 	var err error
@@ -64,29 +64,29 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			fmterr := fmt.Sprintf("Context error: %v", err)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
 			metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			return nil, &erro.CustomError{ErrorName: "Context Error", ErrorType: erro.ServerErrorType}
+			return nil, &erro.CustomError{ErrorName: "Request timed out", ErrorType: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
 		if err == nil && protoresponse.Success {
 			return protoresponse, nil
 		}
-		if err != nil {
+		if err != nil && !protoresponse.Success {
 			st, _ := status.FromError(err)
 			fmterr := fmt.Sprintf("Operation attempt %d failed", i)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
-				fmterr := fmt.Sprintf("Server unavailable:(%s), retrying...", err)
-				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
+				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Session-Service unavailable, retrying...")
 				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
+				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, st.Message())
 				metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
-				return nil, &erro.CustomError{ErrorName: "Already authorized", ErrorType: erro.ClientErrorType}
+				return nil, &erro.CustomError{ErrorName: st.Message(), ErrorType: erro.ClientErrorType}
 			}
 		}
 	}
 	middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	return nil, &erro.CustomError{ErrorName: "All retry attempts failed", ErrorType: erro.ServerErrorType}
+	return nil, &erro.CustomError{ErrorName: "Session-Service is unavailable", ErrorType: erro.ServerErrorType}
 }

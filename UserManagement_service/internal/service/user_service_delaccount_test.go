@@ -100,7 +100,7 @@ func TestDeleteAccount_InvalidUserID(t *testing.T) {
 	response := as.DeleteAccount(ctx, fixedSessId, invalidUserID, password)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorMissingUserID.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "User-Service is unavailable")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestDeleteAccount_BeginTxError(t *testing.T) {
@@ -126,7 +126,7 @@ func TestDeleteAccount_BeginTxError(t *testing.T) {
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID, password)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorStartTransaction.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "User-Service is unavailable")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestDeleteAccount_DataBaseError_InternalServerError(t *testing.T) {
@@ -151,13 +151,13 @@ func TestDeleteAccount_DataBaseError_InternalServerError(t *testing.T) {
 	}
 	tx := &sql.Tx{}
 	mockTxManager.EXPECT().BeginTx(ctx).Return(tx, nil)
-	mockRepo.EXPECT().DeleteUser(ctx, tx, fixedUUID, password).Return(&repository.DBRepositoryResponse{Success: false, Errors: erro.ErrorDbRepositoryError, Type: erro.ServerErrorType})
+	mockRepo.EXPECT().DeleteUser(ctx, tx, fixedUUID, password).Return(&repository.DBRepositoryResponse{Success: false, Errors: fmt.Errorf("User-Service is unavailable"), Type: erro.ServerErrorType})
 	mockTxManager.EXPECT().RollbackTx(tx).Return(nil)
 	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceUuid, "Successful rollback on attempt 1")
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID.String(), password)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorDbRepositoryError.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "User-Service is unavailable")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestDeleteAccount_DataBaseError_ClientError(t *testing.T) {
@@ -229,15 +229,15 @@ func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 2 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 3 failed"),
 		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
+			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service unavailable, retrying..."),
 		mockKafka.EXPECT().
 			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "All retry attempts failed"),
 		mockKafka.EXPECT().
@@ -247,7 +247,7 @@ func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID.String(), password)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorAllRetryFailed.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "User-Service is unavailable")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestDeleteAccount_RetryGrpc_ContextCanceled(t *testing.T) {
@@ -287,7 +287,7 @@ func TestDeleteAccount_RetryGrpc_ContextCanceled(t *testing.T) {
 	response := as.DeleteAccount(ctx, fixedSessId, fixedUUID.String(), password)
 	require.False(t, response.Success)
 	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.ErrorContextTimeout.Error())
+	require.EqualError(t, response.Errors["InternalServerError"], "Request timed out")
 	require.Equal(t, erro.ServerErrorType, response.Type)
 }
 func TestDeleteAccount_RetryGrpc_ClientError(t *testing.T) {

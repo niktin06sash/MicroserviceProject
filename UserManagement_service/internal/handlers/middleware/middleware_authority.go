@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
@@ -18,7 +17,7 @@ func (m *Middleware) Authorized(next http.Handler) http.Handler {
 		userID := r.Header.Get("X-User-ID")
 		if userID == "" {
 			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Required User-ID")
-			maparesponse["InternalServerError"] = erro.ErrorRequiredUserID.Error()
+			maparesponse["InternalServerError"] = "User-Service is unavailable"
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			return
@@ -26,7 +25,7 @@ func (m *Middleware) Authorized(next http.Handler) http.Handler {
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID == "" {
 			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Required Session-ID")
-			maparesponse["InternalServerError"] = erro.ErrorRequiredSessionID.Error()
+			maparesponse["InternalServerError"] = "User-Service is unavailable"
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			return
@@ -46,7 +45,7 @@ func (m *Middleware) AuthorizedNot(next http.Handler) http.Handler {
 		userID := r.Header.Get("X-User-ID")
 		if userID != "" {
 			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Not-Required User-ID")
-			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
+			maparesponse["InternalServerError"] = "User-Service is unavailable"
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			return
@@ -54,7 +53,7 @@ func (m *Middleware) AuthorizedNot(next http.Handler) http.Handler {
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID != "" {
 			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Not-Required Session-ID")
-			maparesponse["InternalServerError"] = erro.ErrorNotRequiredUserID.Error()
+			maparesponse["InternalServerError"] = "User-Service is unavailable"
 			response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			return

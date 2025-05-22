@@ -88,7 +88,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 			return &pb.ValidateSessionResponse{Success: true}, nil
 		}
 		if _, err := uuid.Parse(req.SessionID); err != nil {
-			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Request for an unauthorized page with invalid sessionID format")
+			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Request for an unauthorized users with invalid sessionID format")
 			return &pb.ValidateSessionResponse{Success: true}, nil
 		}
 	}
