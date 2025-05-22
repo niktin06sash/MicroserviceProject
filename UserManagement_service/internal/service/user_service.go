@@ -82,8 +82,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	bdresponse := as.Dbrepo.CreateUser(ctx, tx, user)
 	if !bdresponse.Success && bdresponse.Errors != nil {
 		if bdresponse.Type == erro.ServerErrorType {
-			registrateMap["InternalServerError"] = fmt.Errorf("DataBase Error")
-			as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, bdresponse.Errors.Error())
+			registrateMap["InternalServerError"] = bdresponse.Errors
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			return &ServiceResponse{Success: bdresponse.Success, Errors: registrateMap, Type: bdresponse.Type}
 		}
@@ -124,8 +123,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	bdresponse := as.Dbrepo.GetUser(ctx, user.Email, user.Password)
 	if !bdresponse.Success && bdresponse.Errors != nil {
 		if bdresponse.Type == erro.ServerErrorType {
-			authenticateMap["InternalServerError"] = fmt.Errorf("DataBase Error")
-			as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, bdresponse.Errors.Error())
+			authenticateMap["InternalServerError"] = bdresponse.Errors
 			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			return &ServiceResponse{Success: bdresponse.Success, Errors: authenticateMap, Type: bdresponse.Type}
 		}
