@@ -38,16 +38,16 @@ func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessio
 	var place = "UseCase-CreateSession"
 	traceID, err := s.validateContext(ctx, place)
 	if err != nil {
-		return nil, err
+		return &pb.CreateSessionResponse{Success: false}, err
 	}
 	if req.UserID == "" {
 		s.kafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Required userID")
-		return nil, status.Errorf(codes.InvalidArgument, "UserID is required")
+		return &pb.CreateSessionResponse{Success: false}, status.Errorf(codes.InvalidArgument, "UserID is required")
 	}
 	if _, err := uuid.Parse(req.UserID); err != nil {
 		fmterr := fmt.Sprintf("UUID-Parse userID error: %v", err)
 		s.kafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid userID format: %v", err)
+		return &pb.CreateSessionResponse{Success: false}, status.Error(codes.InvalidArgument, "Invalid userID format")
 	}
 	sessionID := uuid.New()
 	expiryTime := time.Now().Add(24 * time.Hour)
@@ -70,30 +70,26 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 	var place = "UseCase-ValidateSession"
 	traceID, err := s.validateContext(ctx, place)
 	if err != nil {
-		return nil, err
+		return &pb.ValidateSessionResponse{Success: false}, err
 	}
 	flag := ctx.Value("flagvalidate").(string)
 	switch flag {
 	case "true":
 		if req.SessionID == "" {
 			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Required sessionID")
-			return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
+			return &pb.ValidateSessionResponse{Success: false}, status.Errorf(codes.InvalidArgument, "SessionID is required")
 		}
 		if _, err := uuid.Parse(req.SessionID); err != nil {
-			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "UUID-Parse sessionID error")
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid sessionID format: %v", err)
+			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Invalid sessionID format")
+			return &pb.ValidateSessionResponse{Success: false}, status.Error(codes.InvalidArgument, "Invalid sessionID format")
 		}
 	case "false":
 		if req.SessionID == "" {
-			return &pb.ValidateSessionResponse{
-				Success: true,
-			}, nil
+			return &pb.ValidateSessionResponse{Success: true}, nil
 		}
 		if _, err := uuid.Parse(req.SessionID); err != nil {
-			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "UUID-Parse sessionID error")
-			return &pb.ValidateSessionResponse{
-				Success: true,
-			}, nil
+			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Request for an unauthorized page with invalid sessionID format")
+			return &pb.ValidateSessionResponse{Success: true}, nil
 		}
 	}
 	response := s.repo.GetSession(ctx, req.SessionID)
@@ -109,15 +105,15 @@ func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessio
 	var place = "UseCase-DeleteSession"
 	traceID, err := s.validateContext(ctx, place)
 	if err != nil {
-		return nil, err
+		return &pb.DeleteSessionResponse{Success: false}, err
 	}
 	if req.SessionID == "" {
 		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Required sessionID")
-		return nil, status.Errorf(codes.InvalidArgument, "SessionID is required")
+		return &pb.DeleteSessionResponse{Success: false}, status.Errorf(codes.InvalidArgument, "SessionID is required")
 	}
 	if _, err := uuid.Parse(req.SessionID); err != nil {
 		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "UUID-Parse sessionID error")
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid sessionID format: %v", err)
+		return &pb.DeleteSessionResponse{Success: false}, status.Error(codes.InvalidArgument, "Invalid sessionID format")
 	}
 	response := s.repo.DeleteSession(ctx, req.SessionID)
 	if !response.Success {
