@@ -29,7 +29,7 @@ func (redisrepo *AuthRedis) validateContext(ctx context.Context, place string) (
 	case <-ctx.Done():
 		fmterr := fmt.Sprintf("Context error: %v", ctx.Err())
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return "", status.Errorf(codes.Internal, "request timed out")
+		return "", status.Errorf(codes.Internal, "Request timed out")
 	default:
 		return traceID, nil
 	}
@@ -47,14 +47,14 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 	if err != nil {
 		fmterr := fmt.Sprintf("Hset session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Hset session Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session's receiver error")}
 	}
 	expiration := time.Until(session.ExpirationTime)
 	err = redisrepo.Client.RedisClient.Expire(ctx, session.SessionID, expiration).Err()
 	if err != nil {
 		fmterr := fmt.Sprintf("Expire session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Expire session Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session's receiver error")}
 	}
 	redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful session installation")
 	return &RepositoryResponse{Success: true, SessionId: session.SessionID, ExpirationTime: session.ExpirationTime}
@@ -83,7 +83,7 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 		}
 		fmterr := fmt.Sprintf("HGetAll session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "HGetAll session Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session's receiver error")}
 	}
 	if len(result) == 0 {
 		if flagvalidate {
@@ -100,24 +100,24 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 	userIDString, ok := result["UserID"]
 	if !ok {
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Get UserID from session error")
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Get UserID from session Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session not found")}
 	}
 	expirationTimeString, ok := result["ExpirationTime"]
 	if !ok {
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Get ExpirationTime from session error")
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Get Expiration Time from session Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session not found")}
 	}
 	expirationTime, err := time.Parse(time.RFC3339, expirationTimeString)
 	if err != nil {
 		fmterr := fmt.Sprintf("Time-parse error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Time-parse Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session not found")}
 	}
 	userID, err := uuid.Parse(userIDString)
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "UUID-parse Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session not found")}
 	}
 	redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful session receiving")
 	return &RepositoryResponse{Success: true, UserID: userID.String(), ExpirationTime: expirationTime}
@@ -139,7 +139,7 @@ func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string)
 		}
 		fmterr := fmt.Sprintf("Del session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Del session Error")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, "Session's receiver error")}
 	}
 	redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful session deleted")
 	return &RepositoryResponse{Success: true}

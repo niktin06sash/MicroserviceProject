@@ -43,7 +43,7 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	flag := s.getFlagValidate(ctx, place, traceID)
 	if flag == "" {
-		return nil, status.Errorf(codes.Internal, "Missing flagvalidate")
+		return &pb.ValidateSessionResponse{Success: false}, status.Errorf(codes.Internal, "Missing flagvalidate")
 	}
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	ctx = context.WithValue(ctx, "flagvalidate", flag)
