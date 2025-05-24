@@ -19,7 +19,15 @@ type UserAuthentication interface {
 	AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
 	DeleteAccount(ctx context.Context, sessionID string, userid string, password string) *ServiceResponse
 	Logout(ctx context.Context, sessionID string) *ServiceResponse
+	UpdateAccount(ctx context.Context, data map[string]string, updateType string) *ServiceResponse
 }
+
+const RegistrateAndLogin = "UseCase-RegistrateAndLogin"
+const AuthenticateAndLogin = "UseCase-AuthenticateAndLogin"
+const DeleteAccount = "UseCase-DeleteAccount"
+const Logout = "UseCase-Logout"
+const UpdateAccount = "UseCase-UpdateAccount"
+
 type Service struct {
 	UserAuthentication
 }

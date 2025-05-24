@@ -22,6 +22,14 @@ type DBTransactionManager interface {
 	RollbackTx(tx *sql.Tx) error
 	CommitTx(tx *sql.Tx) error
 }
+
+const CreateUser = "Repository-CreateUser"
+const GetUser = "Repository-GetUser"
+const DeleteUser = "Repository-DeleteUser"
+const UpdateName = "Repository-UpdateName"
+const UpdatePassword = "Repository-UpdatePassword"
+const UpdateEmail = "Repository-UpdateEmail"
+
 type Repository struct {
 	DBAuthenticateRepos
 	DBTransactionManager

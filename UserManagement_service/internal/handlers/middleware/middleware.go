@@ -10,6 +10,10 @@ type Middleware struct {
 	KafkaProducer kafka.KafkaProducerService
 }
 
+const Authority = "Middleware-Authority"
+const Not_Authority = "Middleware-Not-Authority"
+const Logging = "Middleware-Logging"
+
 func NewMiddleware(kafka kafka.KafkaProducerService) *Middleware {
 	return &Middleware{KafkaProducer: kafka}
 }
