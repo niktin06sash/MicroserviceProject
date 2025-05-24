@@ -34,6 +34,14 @@ type PersonDelete struct {
 	Password string `json:"password"`
 }
 
+// swagger:model PersonUpdate
+type PersonUpdate struct {
+	Name         string `json:"name,omitempty"`
+	Email        string `json:"email,omitempty"`
+	LastPassword string `json:"last_password,omitempty"`
+	NewPassword  string `json:"new_password,omitempty"`
+}
+
 func SendResponse(c *gin.Context, status int, response HTTPResponse, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
 	start := c.MustGet("starttime").(time.Time)
 	c.JSON(status, response)

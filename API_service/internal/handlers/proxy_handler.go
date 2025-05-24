@@ -57,6 +57,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
 		req.URL.Path = target.Path
+		req.URL.RawQuery = c.Request.URL.RawQuery
 		if userID, exists := c.Get("userID"); exists {
 			req.Header.Set("X-User-ID", userID.(string))
 		}
