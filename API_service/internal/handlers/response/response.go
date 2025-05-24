@@ -12,9 +12,8 @@ import (
 // swagger:model HTTPResponse
 type HTTPResponse struct {
 	Success bool              `json:"success"`
-	Errors  map[string]string `json:"errors"`
+	Errors  map[string]string `json:"errors,omitempty"`
 	Data    map[string]any    `json:"data,omitempty"`
-	Status  int               `json:"status"`
 }
 
 // swagger:model PersonReg
@@ -35,14 +34,8 @@ type PersonDelete struct {
 	Password string `json:"password"`
 }
 
-func SendResponse(c *gin.Context, status int, success bool, data map[string]any, errors map[string]string, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
+func SendResponse(c *gin.Context, status int, response HTTPResponse, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
 	start := c.MustGet("starttime").(time.Time)
-	response := HTTPResponse{
-		Success: success,
-		Data:    data,
-		Errors:  errors,
-		Status:  status,
-	}
 	c.JSON(status, response)
 	kafkaprod.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
 	duration := time.Since(start).Seconds()

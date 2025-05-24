@@ -26,8 +26,8 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 		if err = response.CheckContext(ctx, traceID, place); err != nil {
 			fmterr := fmt.Sprintf("Context error: %v", err)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
-			metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			return nil, &erro.CustomError{ErrorName: "Request timed out", ErrorType: erro.ServerErrorType}
+			metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+			return nil, &erro.CustomError{Message: erro.RequestTimedOut, Type: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
 		if err == nil && protoresponse.Success {
@@ -40,18 +40,18 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
 				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Session-Service is unavailable, retrying...")
-				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
+				metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
 				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, st.Message())
-				metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
-				return nil, &erro.CustomError{ErrorName: st.Message(), ErrorType: erro.ClientErrorType}
+				metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+				return nil, &erro.CustomError{Message: st.Message(), Type: erro.ClientErrorType}
 			}
 		}
 	}
 	middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	return nil, &erro.CustomError{ErrorName: erro.SessionServiceUnavalaible, ErrorType: erro.ServerErrorType}
+	return nil, &erro.CustomError{Message: erro.SessionServiceUnavalaible, Type: erro.ServerErrorType}
 }
 func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, *erro.CustomError) {
 	var err error
@@ -63,8 +63,8 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 		if err = response.CheckContext(ctx, traceID, place); err != nil {
 			fmterr := fmt.Sprintf("Context error: %v", err)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
-			metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			return nil, &erro.CustomError{ErrorName: "Request timed out", ErrorType: erro.ServerErrorType}
+			metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+			return nil, &erro.CustomError{Message: "Request timed out", Type: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
 		if err == nil && protoresponse.Success {
@@ -77,16 +77,16 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			switch st.Code() {
 			case codes.Internal, codes.Unavailable, codes.Canceled:
 				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Session-Service is unavailable, retrying...")
-				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
+				metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
 				middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, st.Message())
 				metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
-				return nil, &erro.CustomError{ErrorName: st.Message(), ErrorType: erro.ClientErrorType}
+				return nil, &erro.CustomError{Message: st.Message(), Type: erro.ClientErrorType}
 			}
 		}
 	}
 	middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	return nil, &erro.CustomError{ErrorName: erro.SessionServiceUnavalaible, ErrorType: erro.ServerErrorType}
+	return nil, &erro.CustomError{Message: erro.SessionServiceUnavalaible, Type: erro.ServerErrorType}
 }

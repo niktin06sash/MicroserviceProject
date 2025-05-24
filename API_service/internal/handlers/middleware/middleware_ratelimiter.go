@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
@@ -20,9 +21,9 @@ func (m *Middleware) RateLimiter() gin.HandlerFunc {
 		limiter := getLimit(m, ip)
 		if !limiter.Allow() {
 			m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Too many requests")
-			response.SendResponse(c, http.StatusTooManyRequests, false, nil, map[string]string{"ClientError": "Too Many Requests"}, traceID, place, m.KafkaProducer)
+			response.SendResponse(c, http.StatusTooManyRequests, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ClientErrorType: erro.TooManyRequests}}, traceID, place, m.KafkaProducer)
 			c.Abort()
-			metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
+			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			metrics.APIRateLimitExceededTotal.WithLabelValues(c.Request.URL.Path).Inc()
 			return
 		}
