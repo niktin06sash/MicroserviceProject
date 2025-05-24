@@ -12,7 +12,7 @@ import (
 
 func (m *Middleware) Authorized() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var place = "Middleware-Authority"
+		var place = Authority
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
 		sessionID, err := c.Cookie("session")
@@ -49,7 +49,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 
 func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var place = "Middleware-Not-Authority"
+		var place = Not_Authority
 		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
 		sessionID, err := c.Cookie("session")

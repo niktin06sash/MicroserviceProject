@@ -24,6 +24,14 @@ type SessionAuthentication interface {
 	DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error)
 }
 
+const API_CreateSession = "API-CreateSession"
+const API_ValidateSession = "API-ValidateSession"
+const API_DeleteSession = "API-DeleteSession"
+
+const UseCase_CreateSession = "UseCase-CreateSession"
+const UseCase_ValidateSession = "UseCase-ValidateSession"
+const UseCase_DeleteSession = "UseCase-DeleteSession"
+
 func NewSessionAPI(repos *repository.Repository, kafka kafka.KafkaProducerService) *SessionAPI {
 	return &SessionAPI{
 		sessionService: NewSessionService(repos.RedisSessionRepos, kafka),
@@ -31,7 +39,7 @@ func NewSessionAPI(repos *repository.Repository, kafka kafka.KafkaProducerServic
 	}
 }
 func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
-	var place = "API-CreateSession"
+	var place = API_CreateSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	resp, err := s.sessionService.CreateSession(ctx, req)
@@ -40,7 +48,7 @@ func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionReq
 }
 
 func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
-	var place = "API-ValidateSession"
+	var place = API_ValidateSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	flag := s.getFlagValidate(ctx, place, traceID)
 	if flag == "" {
@@ -54,7 +62,7 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 }
 
 func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
-	var place = "API-DeleteSession"
+	var place = API_DeleteSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	resp, err := s.sessionService.DeleteSession(ctx, req)

@@ -27,6 +27,10 @@ type MiddlewareService interface {
 	AuthorizedNot() gin.HandlerFunc
 }
 
+const RateLimiter = "Middleware-RateLimiter"
+const Not_Authority = "Middleware-Not-Authority"
+const Authority = "Middleware-Authority"
+
 func NewMiddleware(grpcClient client.GrpcClientService, kafkaProducer kafka.KafkaProducerService) *Middleware {
 	m := &Middleware{
 		grpcClient:    grpcClient,

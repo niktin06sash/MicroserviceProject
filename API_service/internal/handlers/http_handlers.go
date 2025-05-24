@@ -16,6 +16,8 @@ type Handler struct {
 	KafkaProducer kafka.KafkaProducerService
 }
 
+const ProxyHTTP = "API-ProxyHTTP"
+
 func NewHandler(middleware middleware.MiddlewareService, kafkaproducer kafka.KafkaProducerService, routes map[string]string) *Handler {
 	return &Handler{
 		Middleware:    middleware,
