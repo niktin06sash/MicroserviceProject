@@ -26,12 +26,12 @@ func NewAuthPostgresRepo(db *DBObject, kafkaprod kafka.KafkaProducerService) *Au
 }
 
 func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.Person) *DBRepositoryResponse {
+	const place = CreateUser
 	start := time.Now()
 	defer func() {
 		duration := time.Since(start).Seconds()
 		metrics.UserDBQueryDuration.WithLabelValues("INSERT").Observe(duration)
 	}()
-	var place = "Repository-CreateUser"
 	traceid := ctx.Value("traceID").(string)
 	var createdUserID uuid.UUID
 	err := tx.QueryRowContext(ctx,
@@ -53,12 +53,12 @@ func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 }
 
 func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpassword string) *DBRepositoryResponse {
+	const place = GetUser
 	start := time.Now()
 	defer func() {
 		duration := time.Since(start).Seconds()
 		metrics.UserDBQueryDuration.WithLabelValues("SELECT").Observe(duration)
 	}()
-	var place = "Repository-GetUser"
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	var userId uuid.UUID
@@ -85,12 +85,12 @@ func (repoap *AuthPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 	return &DBRepositoryResponse{Success: true, UserId: userId, Errors: nil}
 }
 func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *DBRepositoryResponse {
+	const place = DeleteUser
 	start := time.Now()
 	defer func() {
 		duration := time.Since(start).Seconds()
 		metrics.UserDBQueryDuration.WithLabelValues("SELECT-DELETE").Observe(duration)
 	}()
-	var place = "Repository-DeleteUser"
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := tx.QueryRowContext(ctx, "SELECT userpassword FROM users WHERE userid = $1", userId).Scan(&hashpass)

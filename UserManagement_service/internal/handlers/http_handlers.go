@@ -17,6 +17,12 @@ type Handler struct {
 	KafkaProducer kafka.KafkaProducerService
 }
 
+const Registration = "API-Registration"
+const Authentication = "API-Authentication"
+const DeleteAccount = "API-DeleteAccount"
+const Logout = "API-Logout"
+const Update = "API-Update"
+
 func NewHandler(services *service.Service, middleware middleware.MiddlewareService, kafka kafka.KafkaProducerService) *Handler {
 	return &Handler{Services: services, Middlewares: middleware, KafkaProducer: kafka}
 }
