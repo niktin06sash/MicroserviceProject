@@ -27,7 +27,7 @@ type DBTransactionManager interface {
 }
 
 const CreateUser = "Repository-CreateUser"
-const GetUser = "Repository-GetUser"
+const AuthenticateUser = "Repository-AuthenticateUser"
 const DeleteUser = "Repository-DeleteUser"
 const UpdateName = "Repository-UpdateName"
 const UpdatePassword = "Repository-UpdatePassword"
@@ -39,9 +39,12 @@ type Repository struct {
 }
 type DBRepositoryResponse struct {
 	Success bool
-	UserId  uuid.UUID
-	Errors  error
-	Type    erro.ErrorType
+	Data    map[string]any
+	Errors  *erro.ErrorResponse
+}
+type ErrorResponse struct {
+	Message string
+	Type    string
 }
 
 func NewRepository(db *DBObject, kafka kafka.KafkaProducerService) *Repository {

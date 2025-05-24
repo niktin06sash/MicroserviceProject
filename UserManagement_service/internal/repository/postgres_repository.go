@@ -29,8 +29,9 @@ func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 	const place = CreateUser
 	start := time.Now()
 	defer func() {
+		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
 		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues("INSERT").Observe(duration)
+		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
 	}()
 	traceid := ctx.Value("traceID").(string)
 	var createdUserID uuid.UUID
@@ -41,22 +42,23 @@ func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			repoap.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Already registered email has been entered")
-			metrics.UserDBErrorsTotal.WithLabelValues("ClientError", "INSERT").Inc()
-			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorUniqueEmail, Type: erro.ClientErrorType}
+			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "INSERT").Inc()
+			return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ClientErrorType, Message: erro.ErrorUniqueEmailConst}}
 		}
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "INSERT").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "INSERT").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful create person")
-	return &DBRepositoryResponse{Success: true, UserId: createdUserID, Errors: nil}
+	return &DBRepositoryResponse{Success: true, Data: map[string]any{"userID": createdUserID}, Errors: nil}
 }
 func (repoap *AuthPostgresRepo) AuthenticateUser(ctx context.Context, useremail, userpassword string) *DBRepositoryResponse {
-	const place = GetUser
+	const place = AuthenticateUser
 	start := time.Now()
 	defer func() {
+		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
 		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues("SELECT").Observe(duration)
+		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
 	}()
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
@@ -66,52 +68,54 @@ func (repoap *AuthPostgresRepo) AuthenticateUser(ctx context.Context, useremail,
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			repoap.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Unregistered email has been entered")
-			metrics.UserDBErrorsTotal.WithLabelValues("ClientError", "SELECT").Inc()
-			return &DBRepositoryResponse{Success: false, Errors: erro.ErrorEmailNotRegister, Type: erro.ClientErrorType}
+			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
+			return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ClientErrorType, Message: erro.ErrorEmailNotRegisterConst}}
 		}
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(userpassword))
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Incorrect password has been entered")
-		metrics.UserDBErrorsTotal.WithLabelValues("ClientError", "CompareHashAndPassword").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword, Type: erro.ClientErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ClientErrorType, Message: erro.ErrorInvalidPasswordConst}}
 	}
+
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful get person")
-	return &DBRepositoryResponse{Success: true, UserId: userId, Errors: nil}
+	return &DBRepositoryResponse{Success: true, Data: map[string]any{"userID": userId}, Errors: nil}
 }
 func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *DBRepositoryResponse {
 	const place = DeleteUser
 	start := time.Now()
 	defer func() {
+		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
 		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues("SELECT-DELETE").Observe(duration)
+		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
 	}()
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := tx.QueryRowContext(ctx, "SELECT userpassword FROM users WHERE userid = $1", userId).Scan(&hashpass)
-	metrics.UserDBQueriesTotal.WithLabelValues("SELECT-DELETE").Inc()
+	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT-DELETE").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(password))
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Incorrect password has been entered")
-		metrics.UserDBErrorsTotal.WithLabelValues("ClientError", "CompareHashAndPassword").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword, Type: erro.ClientErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ClientErrorType, Message: erro.ErrorInvalidPasswordConst}}
 	}
 	_, err = tx.ExecContext(ctx, "DELETE FROM users where userid = $1", userId)
-	metrics.UserDBQueriesTotal.WithLabelValues("SELECT-DELETE").Inc()
+	metrics.UserDBQueriesTotal.WithLabelValues("DELETE").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT-DELETE").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "DELETE").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful delete person")
 	return &DBRepositoryResponse{Success: true}
@@ -120,22 +124,23 @@ func (repoap *AuthPostgresRepo) UpdateUserName(ctx context.Context, userId uuid.
 	const place = UpdateName
 	start := time.Now()
 	defer func() {
+		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
 		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues("SELECT-DELETE").Observe(duration)
+		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
 	}()
 	traceid := ctx.Value("traceID").(string)
 	var count int
 	err := repoap.Db.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM users WHERE userid = $1", userId).Scan(&count)
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT-UPDATE").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	_, err = repoap.Db.DB.ExecContext(ctx, "UPDATE users SET username = $1 where userid = $2", name, userId)
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT-UPDATE").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	return &DBRepositoryResponse{Success: true}
 }
@@ -143,67 +148,73 @@ func (repoap *AuthPostgresRepo) UpdateUserEmail(ctx context.Context, userId uuid
 	const place = UpdateEmail
 	start := time.Now()
 	defer func() {
+		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
 		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues("SELECT-DELETE").Observe(duration)
+		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
 	}()
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := repoap.Db.DB.QueryRowContext(ctx, "SELECT userpassword FROM users WHERE userid = $1", userId).Scan(&hashpass)
-	metrics.UserDBQueriesTotal.WithLabelValues("SELECT-DELETE").Inc()
+	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT-DELETE").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(password))
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Incorrect password has been entered")
-		metrics.UserDBErrorsTotal.WithLabelValues("ClientError", "CompareHashAndPassword").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword, Type: erro.ClientErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ClientErrorType, Message: erro.ErrorInvalidPasswordConst}}
 	}
 	_, err = repoap.Db.DB.ExecContext(ctx, "UPDATE users SET useremail = $1 where userid = $2", email, userId)
+	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT-UPDATE").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	return &DBRepositoryResponse{Success: true}
 }
 func (repoap *AuthPostgresRepo) UpdateUserPassword(ctx context.Context, userId uuid.UUID, lastpassword string, newpassword string) *DBRepositoryResponse {
-	const place = UpdateEmail
+	const place = UpdatePassword
 	start := time.Now()
 	defer func() {
+		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
 		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues("SELECT-DELETE").Observe(duration)
+		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
 	}()
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := repoap.Db.DB.QueryRowContext(ctx, "SELECT userpassword FROM users WHERE userid = $1", userId).Scan(&hashpass)
-	metrics.UserDBQueriesTotal.WithLabelValues("SELECT-DELETE").Inc()
+	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT-DELETE").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ErrorInternalServerConst, "SELECT").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(lastpassword))
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Incorrect password has been entered")
-		metrics.UserDBErrorsTotal.WithLabelValues("ClientError", "CompareHashAndPassword").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword, Type: erro.ClientErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ClientErrorType, Message: erro.ErrorInvalidPasswordConst}}
 	}
 	hashnewpass, err := bcrypt.GenerateFromPassword([]byte(newpassword), bcrypt.DefaultCost)
+	metrics.UserDBQueriesTotal.WithLabelValues("GenerateHashPassword").Inc()
 	if err != nil {
-		fmterr := fmt.Sprintf("HashPass Error: %v", err)
+		fmterr := fmt.Sprintf("Generate Hash Error: %v", err)
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserErrorsTotal.WithLabelValues(erro.ErrorInternalServerConst, "GenerateHashPassword").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	_, err = repoap.Db.DB.ExecContext(ctx, "UPDATE users SET userpassword = $1 where userid = $2", hashnewpass, userId)
+	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
 		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
-		metrics.UserDBErrorsTotal.WithLabelValues("InternalServerError", "SELECT-UPDATE").Inc()
-		return &DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType}
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	return &DBRepositoryResponse{Success: true}
 }
