@@ -126,7 +126,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	if !getAllData(r, w, traceID, maparesponse, place, &data, h.KafkaProducer) {
 		return
 	}
-	updateresponse := h.Services.UpdateAccount(r.Context(), persondata, data["update_type"])
+	updateresponse := h.Services.UpdateAccount(r.Context(), persondata, persondata["userID"], data["update_type"])
 	if !serviceResponse(updateresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}

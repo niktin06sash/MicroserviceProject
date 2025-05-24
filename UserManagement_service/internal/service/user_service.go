@@ -111,7 +111,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Per
 	if errorvalidate != nil {
 		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
 	}
-	bdresponse := as.Dbrepo.GetUser(ctx, user.Email, user.Password)
+	bdresponse := as.Dbrepo.AuthenticateUser(ctx, user.Email, user.Password)
 	if !bdresponse.Success && bdresponse.Errors != nil {
 		if bdresponse.Type == erro.ServerErrorType {
 			authenticateMap["InternalServerError"] = bdresponse.Errors
@@ -205,23 +205,35 @@ func (as *AuthService) Logout(ctx context.Context, sessionID string) *ServiceRes
 	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "The session was deleted successfully")
 	return &ServiceResponse{Success: grpcresponse.Success}
 }
-func (as *AuthService) UpdateAccount(ctx context.Context, data map[string]string, updateType string) *ServiceResponse {
+func (as *AuthService) UpdateAccount(ctx context.Context, data map[string]string, useridstr string, updateType string) *ServiceResponse {
+	const place = UpdateAccount
 	traceid := ctx.Value("traceID").(string)
 	updatemap := make(map[string]error)
+	userid, err := uuid.Parse(useridstr)
+	if err != nil {
+		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+		updatemap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
+		return &ServiceResponse{Success: false, Errors: updatemap, Type: erro.ServerErrorType}
+	}
 	name, name_ok := data["name"]
 	email, email_ok := data["email"]
 	last_password, last_password_ok := data["last_password"]
 	new_password, new_password_ok := data["new_password"]
 	if name_ok && !last_password_ok && !new_password_ok && !email_ok && updateType == "name" {
-
+		response := as.Dbrepo.UpdateUserName(ctx, userid, name)
+		return &ServiceResponse{Success: response.Success}
 	}
 	if !name_ok && last_password_ok && new_password_ok && !email_ok && updateType == "password" {
-
+		response := as.Dbrepo.UpdateUserPassword(ctx, userid, last_password, new_password)
+		return &ServiceResponse{Success: response.Success}
 	}
 	if !name_ok && last_password_ok && !new_password_ok && email_ok && updateType == "email" {
-
+		response := as.Dbrepo.UpdateUserEmail(ctx, userid, email, last_password)
+		return &ServiceResponse{Success: response.Success}
 	}
-	fmterr := fmt.Sprintf("Invalid data in request")
+	fmterr := "Invalid data in request"
 	updatemap["ClientError"] = fmt.Errorf(fmterr)
 	as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, UpdateAccount, traceid, fmterr)
 	metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()

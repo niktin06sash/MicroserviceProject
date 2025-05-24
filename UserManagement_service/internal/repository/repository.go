@@ -14,8 +14,11 @@ import (
 //go:generate mockgen -source=repository.go -destination=mocks/mock.go
 type DBAuthenticateRepos interface {
 	CreateUser(ctx context.Context, tx *sql.Tx, user *model.Person) *DBRepositoryResponse
-	GetUser(ctx context.Context, useremail, password string) *DBRepositoryResponse
+	AuthenticateUser(ctx context.Context, useremail, password string) *DBRepositoryResponse
 	DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *DBRepositoryResponse
+	UpdateUserName(ctx context.Context, userId uuid.UUID, name string) *DBRepositoryResponse
+	UpdateUserEmail(ctx context.Context, userId uuid.UUID, email string, password string) *DBRepositoryResponse
+	UpdateUserPassword(ctx context.Context, userId uuid.UUID, lastpassword string, newpassword string) *DBRepositoryResponse
 }
 type DBTransactionManager interface {
 	BeginTx(ctx context.Context) (*sql.Tx, error)
