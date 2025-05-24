@@ -35,7 +35,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 
 			case erro.ServerErrorType:
 				maparesponse["InternalServerError"] = errv.Error()
-				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, "Authority", m.KafkaProducer)
+				response.SendResponse(c, http.StatusInternalServerError, false, nil, maparesponse, traceID, place, m.KafkaProducer)
 				c.Abort()
 				return
 			}
