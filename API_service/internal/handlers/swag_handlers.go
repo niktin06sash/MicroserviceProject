@@ -10,7 +10,7 @@ import (
 // @Tags User Management
 // @Accept json
 // @Produce json
-// @Param request body response.PersonReg true "User registration data"
+// @Param input body response.PersonReg true "User registration data"
 // @Success 200 {object} response.HTTPResponse "User successfully registered"
 // @Failure 400 {object} response.HTTPResponse "Invalid input data"
 // @Failure 403 {object} response.HTTPResponse "Forbidden"
@@ -27,7 +27,7 @@ func (h *Handler) Registration(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param input body response.PersonAuth true "User credentials"
-// @Success 200 {object} response.HTTPResponse "Authentication successful"
+// @Success 200 {object} response.HTTPResponse "User successfully authenticated"
 // @Failure 400 {object} response.HTTPResponse "Invalid input data"
 // @Failure 403 {object} response.HTTPResponse "Forbidden"
 // @Failure 429 {object} response.HTTPResponse "Too many requests"
@@ -64,5 +64,20 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/logout [delete]
 func (h *Handler) Logout(c *gin.Context) {
+	h.ProxyHTTP(c)
+}
+
+// @Summary Update a user's profile
+// @Description Update a user's profile by sending a request with session.
+// @Accept json
+// @Produce json
+// @Param input body response.PersonUpdate true "User update data"
+// @Success 200 {object} response.HTTPResponse "User successfully updated his profile"
+// @Failure 400 {object} response.HTTPResponse "Invalid input data"
+// @Failure 401 {object} response.HTTPResponse "Unauthorized"
+// @Failure 429 {object} response.HTTPResponse "Too many requests"
+// @Failure 500 {object} response.HTTPResponse "Internal server error"
+// @Router /api/update [patch]
+func (h *Handler) Update(c *gin.Context) {
 	h.ProxyHTTP(c)
 }
