@@ -39,35 +39,6 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	if errorvalidate != nil {
 		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
 	}
-	var tx *sql.Tx
-	tx, err := as.Dbtxmanager.BeginTx(ctx)
-	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
-	if err != nil {
-		fmterr := fmt.Sprintf("Transaction Error: %v", err)
-		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		registrateMap["InternalServerError"] = fmt.Errorf("User-Service is unavailable")
-		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
-		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
-	}
-	isTransactionActive := true
-	defer func() {
-		if r := recover(); r != nil {
-			fmterr := fmt.Sprintf("Panic occurred: %v", r)
-			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-			if isTransactionActive {
-				rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
-				isTransactionActive = false
-			}
-		}
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
-			isTransactionActive = false
-		} else {
-			as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
-		}
-	}()
-
 	hashpass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		fmterr := fmt.Sprintf("HashPass Error: %v", err)
@@ -79,6 +50,26 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	user.Password = string(hashpass)
 	userID := uuid.New()
 	user.Id = userID
+	var tx *sql.Tx
+	tx, err = as.Dbtxmanager.BeginTx(ctx)
+	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
+	if err != nil {
+		fmterr := fmt.Sprintf("Transaction Error: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+		registrateMap["InternalServerError"] = fmt.Errorf("User-Service is unavailable")
+		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
+		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
+		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
+	}
+	isTransactionActive := true
+	defer func() {
+		if isTransactionActive {
+			rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
+			isTransactionActive = false
+		} else {
+			as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
+		}
+	}()
 	bdresponse := as.Dbrepo.CreateUser(ctx, tx, user)
 	if !bdresponse.Success && bdresponse.Errors != nil {
 		if bdresponse.Type == erro.ServerErrorType {
@@ -167,14 +158,6 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	}
 	isTransactionActive := true
 	defer func() {
-		if r := recover(); r != nil {
-			fmterr := fmt.Sprintf("Panic occurred: %v", r)
-			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-			if isTransactionActive {
-				rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
-				isTransactionActive = false
-			}
-		}
 		if isTransactionActive {
 			rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 			isTransactionActive = false
