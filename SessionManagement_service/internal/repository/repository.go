@@ -25,6 +25,10 @@ type RepositoryResponse struct {
 	Errors         error
 }
 
+const SetSession = "Repository-SetSession"
+const GetSession = "Repository-GetSession"
+const DeleteSession = "Repository-DeleteSession"
+
 func NewRepository(client *RedisObject, kafkaprod kafka.KafkaProducerService) *Repository {
 	return &Repository{
 		RedisSessionRepos: NewAuthRedis(client, kafkaprod),
