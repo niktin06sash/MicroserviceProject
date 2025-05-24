@@ -2,15 +2,11 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
-
-	"github.com/google/uuid"
 )
 
 //go:generate mockgen -source=service.go -destination=mocks/mock.go
@@ -32,12 +28,10 @@ type Service struct {
 	UserAuthentication
 }
 type ServiceResponse struct {
-	Success       bool
-	UserId        uuid.UUID
-	SessionId     string
-	ExpireSession time.Time
-	Errors        map[string]error
-	Type          erro.ErrorType
+	Success   bool
+	Data      map[string]any
+	Errors    map[string]string
+	ErrorType string
 }
 
 func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducerService, clientgrpc *client.GrpcClient) *Service {

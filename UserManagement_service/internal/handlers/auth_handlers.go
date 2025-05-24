@@ -3,7 +3,9 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
@@ -26,11 +28,13 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if !serviceResponse(regresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
-	respdata := map[string]any{"UserID": regresponse.UserId}
-	response.AddSessionCookie(w, regresponse.SessionId, regresponse.ExpireSession)
-	msg := fmt.Sprintf("Person with id %v has successfully registered", regresponse.UserId)
+	userID := regresponse.Data["sessionID"].(uuid.UUID)
+	sessionID := regresponse.Data["sessionID"].(string)
+	expiresession := regresponse.Data["expiresession"].(time.Time)
+	response.AddSessionCookie(w, sessionID, expiresession)
+	msg := fmt.Sprintf("Person with id %v has successfully registered", userID)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place, h.KafkaProducer)
+	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true, Data: regresponse.Data}, http.StatusOK, traceID, place, h.KafkaProducer)
 }
 
 func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
@@ -49,11 +53,13 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	if !serviceResponse(auresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
-	respdata := map[string]any{"UserID": auresponse.UserId}
-	response.AddSessionCookie(w, auresponse.SessionId, auresponse.ExpireSession)
-	msg := fmt.Sprintf("Person with id %v has successfully authenticated", auresponse.UserId)
+	userID := auresponse.Data["sessionID"].(uuid.UUID)
+	sessionID := auresponse.Data["sessionID"].(string)
+	expiresession := auresponse.Data["expiresession"].(time.Time)
+	response.AddSessionCookie(w, sessionID, expiresession)
+	msg := fmt.Sprintf("Person with id %v has successfully authenticated", userID)
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r.Context(), w, true, respdata, nil, http.StatusOK, traceID, place, h.KafkaProducer)
+	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true, Data: auresponse.Data}, http.StatusOK, traceID, place, h.KafkaProducer)
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
@@ -75,8 +81,8 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	password, ok := data["password"]
 	if !ok || password == "" {
 		h.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Password is missing or empty")
-		maparesponse["ClientError"] = erro.ErrorUnmarshal.Error()
-		response.SendResponse(r.Context(), w, false, nil, maparesponse, http.StatusBadRequest, traceID, place, h.KafkaProducer)
+		maparesponse[erro.ClientErrorType] = erro.ErrorPasswordEmpty
+		response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Errors: maparesponse}, http.StatusBadRequest, traceID, place, h.KafkaProducer)
 		return
 	}
 	defer r.Body.Close()
@@ -87,7 +93,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	response.DeleteSessionCookie(w)
 	msg := fmt.Sprintf("Person with id %v has successfully deleted account", persondata["userID"])
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
+	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true}, http.StatusOK, traceID, place, h.KafkaProducer)
 }
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	const place = Logout
@@ -108,7 +114,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	response.DeleteSessionCookie(w)
 	msg := fmt.Sprintf("Person with id %v has successfully logout", persondata["userID"])
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
+	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true}, http.StatusOK, traceID, place, h.KafkaProducer)
 }
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	const place = Update
@@ -132,5 +138,5 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	msg := fmt.Sprintf("Person with id %v has successfully update his %s", persondata["userID"], data["update_type"])
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r.Context(), w, true, nil, nil, http.StatusOK, traceID, place, h.KafkaProducer)
+	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true}, http.StatusOK, traceID, place, h.KafkaProducer)
 }

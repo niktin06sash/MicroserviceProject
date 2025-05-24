@@ -1,17 +1,18 @@
 package erro
 
-import "errors"
-
-type ErrorType string
-
 const SessionServiceUnavalaible = "Session-Service is unavailable"
 const UserServiceUnavalaible = "User-Service is unavailable"
-const (
-	ClientErrorType ErrorType = "ClientError"
-	ServerErrorType ErrorType = "ServerError"
-)
+const RequestTimedOut = "Request timed out"
+const ClientErrorType = "ClientError"
+const ServerErrorType = "ServerError"
+
+type ErrorResponse struct {
+	Message string
+	Type    string
+}
 
 const (
+	ErrorPasswordEmpty             = "Password is missing or empty"
 	ErrorGetEnvDBConst             = "DB get environment error"
 	ErrorNotPostConst              = "Method is not POST"
 	ErrorNotGetConst               = "Method is not GET"
@@ -47,42 +48,4 @@ const (
 	ErrorMissingSessionIDConst     = "Error missing session ID"
 	ErrorMissingRequestIDConst     = "Error missing request ID"
 	ErrorAllRetryFailedConst       = "All retry attempts failed"
-)
-
-var (
-	ErrorGetEnvDB             = errors.New(ErrorGetEnvDBConst)
-	ErrorNotPost              = errors.New(ErrorNotPostConst)
-	ErrorNotGet               = errors.New(ErrorNotGetConst)
-	ErrorNotDelete            = errors.New(ErrorNotDeleteConst)
-	ErrorReadAll              = errors.New(ErrorReadAllConst)
-	ErrorUnmarshal            = errors.New(ErrorUnmarshalConst)
-	ErrorMarshal              = errors.New(ErrorMarshalConst)
-	ErrorNotEmail             = errors.New(ErrorNotEmailConst)
-	ErrorUniqueEmail          = errors.New(ErrorUniqueEmailConst)
-	ErrorHashPass             = errors.New(ErrorHashPassConst)
-	ErrorInternalServer       = errors.New(ErrorInternalServerConst)
-	ErrorRequiredUserID       = errors.New(ErrorRequiredUserIDConst)
-	ErrorNotRequiredUserID    = errors.New(ErrorNotRequiredUserIDConst)
-	ErrorRequiredSessionID    = errors.New(ErrorRequiredSessionIDConst)
-	ErrorNotRequiredSessionID = errors.New(ErrorNotRequiredSessionIDConst)
-	ErrorEmailNotRegister     = errors.New(ErrorEmailNotRegisterConst)
-	ErrorFoundUser            = errors.New(ErrorFoundUserConst)
-	ErrorInvalidPassword      = errors.New(ErrorInvalidPasswordConst)
-	ErrorUnexpectedData       = errors.New(ErrorUnexpectedDataConst)
-	ErrorStartTransaction     = errors.New(ErrorStartTransactionConst)
-	ErrorCommitTransaction    = errors.New(ErrorCommitTransactionConst)
-	ErrorGetUserId            = errors.New(ErrorGetUserIdConst)
-	ErrorContextTimeout       = errors.New(ErrorContextTimeoutConst)
-	ErrorSendKafkaMessage     = errors.New(ErrorSendKafkaMessageConst)
-	ErrorPanic                = errors.New(ErrorPanicConst)
-	ErrorRolbackTx            = errors.New(ErrorRolbackTransactionConst)
-	ErrorDbRepositoryError    = errors.New(ErrorDbRepositoryErrorConst)
-	ErrorDbOpen               = errors.New(ErrorDBOpenConst)
-	ErrorDbPing               = errors.New(ErrorDBPingConst)
-	ErrorGrpcResponse         = errors.New(ErrorGrpcResponseConst)
-	ErrorGrpcRollback         = errors.New(ErrorGrpcRollbackConst)
-	ErrorMissingRequestID     = errors.New(ErrorMissingRequestIDConst)
-	ErrorMissingUserID        = errors.New(ErrorMissingUserIDConst)
-	ErrorMissingSessionID     = errors.New(ErrorMissingSessionIDConst)
-	ErrorAllRetryFailed       = errors.New(ErrorAllRetryFailedConst)
 )

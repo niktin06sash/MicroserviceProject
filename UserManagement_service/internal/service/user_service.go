@@ -33,19 +33,19 @@ func NewAuthService(dbrepo repository.DBAuthenticateRepos, dbtxmanager repositor
 }
 func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	const place = RegistrateAndLogin
-	registrateMap := make(map[string]error)
+	registrateMap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
 	errorvalidate := validatePerson(as.Validator, user, true, traceid, place, as.KafkaProducer)
 	if errorvalidate != nil {
-		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
+		return &ServiceResponse{Success: false, Errors: errorvalidate, ErrorType: erro.ClientErrorType}
 	}
 	hashpass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		fmterr := fmt.Sprintf("HashPass Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		registrateMap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
-		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
+		registrateMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
 	}
 	user.Password = string(hashpass)
 	userID := uuid.New()
@@ -56,10 +56,10 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	if err != nil {
 		fmterr := fmt.Sprintf("Transaction Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		registrateMap["InternalServerError"] = fmt.Errorf("User-Service is unavailable")
+		registrateMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
 		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
-		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
 	}
 	isTransactionActive := true
 	defer func() {
@@ -72,16 +72,16 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 	}()
 	bdresponse := as.Dbrepo.CreateUser(ctx, tx, user)
 	if !bdresponse.Success && bdresponse.Errors != nil {
-		if bdresponse.Type == erro.ServerErrorType {
-			registrateMap["InternalServerError"] = bdresponse.Errors
-			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			return &ServiceResponse{Success: bdresponse.Success, Errors: registrateMap, Type: bdresponse.Type}
+		if bdresponse.Errors.Type == erro.ServerErrorType {
+			registrateMap[erro.ServerErrorType] = bdresponse.Errors.Message
+			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+			return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
 		}
-		registrateMap["ClientError"] = bdresponse.Errors
-		metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
-		return &ServiceResponse{Success: bdresponse.Success, Errors: registrateMap, Type: bdresponse.Type}
+		registrateMap[erro.ClientErrorType] = bdresponse.Errors.Message
+		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ClientErrorType}
 	}
-	userID = bdresponse.UserId
+	userID = bdresponse.Data["userID"].(uuid.UUID)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
 		return as.GrpcClient.CreateSession(ctx, userID.String())
 	}, traceid, registrateMap, place, as.KafkaProducer)
@@ -96,54 +96,52 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, user *model.Perso
 		if serviceresponse != nil {
 			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Failed to delete session after transaction failure")
 		}
-		registrateMap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
-		return &ServiceResponse{Success: false, Errors: registrateMap, Type: erro.ServerErrorType}
+		registrateMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
 	}
 	isTransactionActive = false
-	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
-	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
+	return &ServiceResponse{Success: true, Data: map[string]any{"userID": userID, "sessionID": grpcresponse.SessionID, "expiresession": time.Unix(grpcresponse.ExpiryTime, 0)}}
 }
 func (as *AuthService) AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse {
 	const place = AuthenticateAndLogin
-	authenticateMap := make(map[string]error)
+	authenticateMap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
 	errorvalidate := validatePerson(as.Validator, user, false, traceid, place, as.KafkaProducer)
 	if errorvalidate != nil {
-		return &ServiceResponse{Success: false, Errors: errorvalidate, Type: erro.ClientErrorType}
+		return &ServiceResponse{Success: false, Errors: errorvalidate, ErrorType: erro.ClientErrorType}
 	}
 	bdresponse := as.Dbrepo.AuthenticateUser(ctx, user.Email, user.Password)
 	if !bdresponse.Success && bdresponse.Errors != nil {
-		if bdresponse.Type == erro.ServerErrorType {
-			authenticateMap["InternalServerError"] = bdresponse.Errors
-			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			return &ServiceResponse{Success: bdresponse.Success, Errors: authenticateMap, Type: bdresponse.Type}
+		if bdresponse.Errors.Type == erro.ServerErrorType {
+			authenticateMap[erro.ServerErrorType] = bdresponse.Errors.Message
+			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+			return &ServiceResponse{Success: false, Errors: authenticateMap, ErrorType: erro.ServerErrorType}
 		}
-		authenticateMap["ClientError"] = bdresponse.Errors
-		metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
-		return &ServiceResponse{Success: bdresponse.Success, Errors: authenticateMap, Type: bdresponse.Type}
+		authenticateMap[erro.ClientErrorType] = bdresponse.Errors.Message
+		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: authenticateMap, ErrorType: erro.ClientErrorType}
 	}
-	userID := bdresponse.UserId
+	userID := bdresponse.Data["userID"].(uuid.UUID)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
 		return as.GrpcClient.CreateSession(ctx, userID.String())
 	}, traceid, authenticateMap, place, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	timeExpire := time.Unix(grpcresponse.ExpiryTime, 0)
 	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "The session was created successfully and received")
-	return &ServiceResponse{Success: true, UserId: bdresponse.UserId, SessionId: grpcresponse.SessionID, ExpireSession: timeExpire}
+	return &ServiceResponse{Success: true, Data: map[string]any{"userID": userID, "sessionID": grpcresponse.SessionID, "expiresession": time.Unix(grpcresponse.ExpiryTime, 0)}}
 }
 func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, useridstr string, password string) *ServiceResponse {
 	const place = DeleteAccount
-	deletemap := make(map[string]error)
+	deletemap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
 	userid, err := uuid.Parse(useridstr)
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		deletemap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
-		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
+		deletemap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
 	}
 	var tx *sql.Tx
 	tx, err = as.Dbtxmanager.BeginTx(ctx)
@@ -151,10 +149,10 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	if err != nil {
 		fmterr := fmt.Sprintf("Transaction Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		deletemap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
+		deletemap[erro.ServerErrorType] = erro.UserServiceUnavalaible
 		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
-		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
 	}
 	isTransactionActive := true
 	defer func() {
@@ -167,14 +165,14 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	}()
 	bdresponse := as.Dbrepo.DeleteUser(ctx, tx, userid, password)
 	if !bdresponse.Success && bdresponse.Errors != nil {
-		if bdresponse.Type == erro.ServerErrorType {
-			deletemap["InternalServerError"] = bdresponse.Errors
-			metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-			return &ServiceResponse{Success: bdresponse.Success, Errors: deletemap, Type: bdresponse.Type}
+		if bdresponse.Errors.Type == erro.ServerErrorType {
+			deletemap[erro.ServerErrorType] = bdresponse.Errors.Message
+			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+			return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
 		}
-		deletemap["ClientError"] = bdresponse.Errors
-		metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
-		return &ServiceResponse{Success: bdresponse.Success, Errors: deletemap, Type: bdresponse.Type}
+		deletemap[erro.ClientErrorType] = bdresponse.Errors.Message
+		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ClientErrorType}
 	}
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 		return as.GrpcClient.DeleteSession(ctx, sessionID)
@@ -184,17 +182,15 @@ func (as *AuthService) DeleteAccount(ctx context.Context, sessionID string, user
 	}
 	err = commitTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 	if err != nil {
-		deletemap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
-		return &ServiceResponse{Success: false, Errors: deletemap, Type: erro.ServerErrorType}
+		deletemap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
 	}
 	isTransactionActive = false
-	return &ServiceResponse{
-		Success: grpcresponse.Success,
-	}
+	return &ServiceResponse{Success: grpcresponse.Success}
 }
 func (as *AuthService) Logout(ctx context.Context, sessionID string) *ServiceResponse {
 	const place = Logout
-	logMap := make(map[string]error)
+	logMap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 		return as.GrpcClient.DeleteSession(ctx, sessionID)
@@ -208,14 +204,14 @@ func (as *AuthService) Logout(ctx context.Context, sessionID string) *ServiceRes
 func (as *AuthService) UpdateAccount(ctx context.Context, data map[string]string, useridstr string, updateType string) *ServiceResponse {
 	const place = UpdateAccount
 	traceid := ctx.Value("traceID").(string)
-	updatemap := make(map[string]error)
+	updatemap := make(map[string]string)
 	userid, err := uuid.Parse(useridstr)
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		updatemap["InternalServerError"] = fmt.Errorf(erro.UserServiceUnavalaible)
-		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		return &ServiceResponse{Success: false, Errors: updatemap, Type: erro.ServerErrorType}
+		updatemap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ServerErrorType}
 	}
 	name, name_ok := data["name"]
 	email, email_ok := data["email"]
@@ -234,8 +230,8 @@ func (as *AuthService) UpdateAccount(ctx context.Context, data map[string]string
 		return &ServiceResponse{Success: response.Success}
 	}
 	fmterr := "Invalid data in request"
-	updatemap["ClientError"] = fmt.Errorf(fmterr)
+	updatemap[erro.ClientErrorType] = fmterr
 	as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, UpdateAccount, traceid, fmterr)
 	metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
-	return &ServiceResponse{Success: false, Errors: updatemap, Type: erro.ClientErrorType}
+	return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ClientErrorType}
 }
