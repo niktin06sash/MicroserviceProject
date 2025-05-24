@@ -45,24 +45,27 @@ func getAllData[T any](r *http.Request, w http.ResponseWriter, traceID string, m
 	}
 	return true
 }
-func getUserIdAndSession(r *http.Request, w http.ResponseWriter, traceID string, mapa map[string]string, place string, kafkaproducer kafka.KafkaProducerService) (bool, string, string) {
+func getPersonality(r *http.Request, w http.ResponseWriter, traceID string, mapa map[string]string, place string, kafkaproducer kafka.KafkaProducerService) (bool, map[string]string) {
+	personmapa := make(map[string]string)
 	sessionID, ok := r.Context().Value("sessionID").(string)
 	if !ok {
 		kafkaproducer.NewUserLog(kafka.LogLevelError, place, traceID, "Session ID not found in context")
 		mapa["InternalServerError"] = erro.UserServiceUnavalaible
 		response.SendResponse(r.Context(), w, false, nil, mapa, http.StatusInternalServerError, traceID, place, kafkaproducer)
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		return false, "", ""
+		return false, nil
 	}
+	personmapa["sessionID"] = sessionID
 	userID, ok := r.Context().Value("userID").(string)
 	if !ok {
 		kafkaproducer.NewUserLog(kafka.LogLevelError, place, traceID, "User ID not found in context")
 		mapa["InternalServerError"] = erro.UserServiceUnavalaible
 		response.SendResponse(r.Context(), w, false, nil, mapa, http.StatusInternalServerError, traceID, place, kafkaproducer)
 		metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
-		return false, "", ""
+		return false, nil
 	}
-	return true, sessionID, userID
+	personmapa["userID"] = userID
+	return true, personmapa
 }
 func serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.ResponseWriter, traceID string, place string, kafkaproducer kafka.KafkaProducerService) bool {
 	if !resp.Success {
@@ -76,4 +79,39 @@ func serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.Resp
 		return false
 	}
 	return true
+}
+func getQueryParameters(r *http.Request, w http.ResponseWriter, traceId string, mapa map[string]string, place string, kafkaproducer kafka.KafkaProducerService) (bool, map[string]string) {
+	personmapa := make(map[string]string)
+	switch place {
+	case Update:
+		query := r.URL.Query()
+		updateName := query.Get("name")
+		updatePassword := query.Get("password")
+		updateEmail := query.Get("email")
+		if (updateName != "" && updatePassword != "") || (updateName != "" && updateEmail != "") || (updatePassword != "" && updateEmail != "") {
+			kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceId, "More than one parameter in a query-request")
+			mapa["ClientError"] = "More than one parameter in a query-request"
+			response.SendResponse(r.Context(), w, false, nil, mapa, http.StatusBadRequest, traceId, place, kafkaproducer)
+			metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
+			return false, nil
+		}
+		var updateType string
+		switch {
+		case updateName == "1":
+			updateType = "name"
+		case updatePassword == "1":
+			updateType = "password"
+		case updateEmail == "1":
+			updateType = "email"
+		default:
+			kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceId, "Invalid query parameter")
+			mapa["ClientError"] = "Invalid query parameter"
+			response.SendResponse(r.Context(), w, false, nil, mapa, http.StatusBadRequest, traceId, place, kafkaproducer)
+			metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
+			return false, nil
+		}
+		personmapa["update_type"] = updateType
+		return true, personmapa
+	}
+	return false, nil
 }
