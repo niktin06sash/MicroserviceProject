@@ -212,7 +212,7 @@ func (as *AuthService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 		}
 		return &ServiceResponse{Success: bdresponse.Success}
 	}
-	if req.Name == "" && req.Email != "" && req.LastPassword != "" && req.NewPassword != "" && updateType == "email" {
+	if req.Name == "" && req.Email != "" && req.LastPassword != "" && req.NewPassword == "" && updateType == "email" {
 		bdresponse, serviceresponse := requestToDB(as.Dbrepo.UpdateUserEmail(ctx, userid, req.Email, req.LastPassword), updatemap)
 		if serviceresponse != nil {
 			return serviceresponse
