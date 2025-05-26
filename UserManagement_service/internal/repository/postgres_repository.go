@@ -247,3 +247,29 @@ func (repoap *AuthPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UU
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful get my profile")
 	return &DBRepositoryResponse{Success: true, Data: map[string]any{"userID": userid.String(), "userEmail": email, "userName": name}, Errors: nil}
 }
+func (repoap *AuthPostgresRepo) GetProfileById(ctx context.Context, getid uuid.UUID) *DBRepositoryResponse {
+	const place = GetProfileById
+	start := time.Now()
+	defer func() {
+		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
+		duration := time.Since(start).Seconds()
+		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
+	}()
+	traceid := ctx.Value("traceID").(string)
+	var email string
+	var name string
+	err := repoap.Db.DB.QueryRowContext(ctx, "SELECT useremail, username FROM users WHERE userid = $1", getid).Scan(&email, &name)
+	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			repoap.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Unregistered id has been entered")
+			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
+			return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ClientErrorType, Message: "Unregistered id has been entered"}}
+		}
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
+	}
+	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful get profile by id")
+	return &DBRepositoryResponse{Success: true, Data: map[string]any{"getID": getid.String(), "getEmail": email, "getName": name}, Errors: nil}
+}

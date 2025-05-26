@@ -23,6 +23,7 @@ const DeleteAccount = "API-DeleteAccount"
 const Logout = "API-Logout"
 const Update = "API-Update"
 const MyProfile = "API-MyProfile"
+const GetUserById = "API-GetUserById"
 
 func NewHandler(services *service.Service, middleware middleware.MiddlewareService, kafka kafka.KafkaProducerService) *Handler {
 	return &Handler{Services: services, Middlewares: middleware, KafkaProducer: kafka}
@@ -44,5 +45,6 @@ func (h *Handler) InitRoutes() *mux.Router {
 	authGroup.HandleFunc("/logout", h.Logout).Methods("DELETE")
 	authGroup.HandleFunc("/me/update", h.Update).Methods("PATCH")
 	authGroup.HandleFunc("/me", h.MyProfile).Methods("GET")
+	authGroup.HandleFunc("/users/id/:id", h.GetUserById).Methods("GET")
 	return m
 }

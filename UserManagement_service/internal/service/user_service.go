@@ -243,3 +243,35 @@ func (as *AuthService) GetMyProfile(ctx context.Context, useridstr string) *Serv
 	}
 	return &ServiceResponse{Success: bdresponse.Success, Data: bdresponse.Data}
 }
+func (as *AuthService) GetProfileById(ctx context.Context, useridstr string, getidstr string) *ServiceResponse {
+	const place = GetProfileById
+	getProfilebyIdMap := make(map[string]string)
+	traceid := ctx.Value("traceID").(string)
+	userid, err := uuid.Parse(useridstr)
+	if err != nil {
+		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+		getProfilebyIdMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ServerErrorType}
+	}
+	getid, err := uuid.Parse(getidstr)
+	if err != nil {
+		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+		getProfilebyIdMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ServerErrorType}
+	}
+	if userid == getid {
+		as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Person attempted to search for their own profile by ID")
+		getProfilebyIdMap[erro.ClientErrorType] = "You cannot search for your own profile by ID"
+		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ClientErrorType}
+	}
+	bdresponse, serviceresponse := requestToDB(as.Dbrepo.GetProfileById(ctx, getid), getProfilebyIdMap)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	return &ServiceResponse{Success: bdresponse.Success, Data: bdresponse.Data}
+}
