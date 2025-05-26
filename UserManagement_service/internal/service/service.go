@@ -11,11 +11,11 @@ import (
 
 //go:generate mockgen -source=service.go -destination=mocks/mock.go
 type UserAuthentication interface {
-	RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
-	AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
-	DeleteAccount(ctx context.Context, sessionID string, userid string, password string) *ServiceResponse
+	RegistrateAndLogin(ctx context.Context, req *model.RegistrationRequest) *ServiceResponse
+	AuthenticateAndLogin(ctx context.Context, req *model.AuthenticationRequest) *ServiceResponse
+	DeleteAccount(ctx context.Context, req *model.DeletionRequest, sessionID string, useridstr string) *ServiceResponse
 	Logout(ctx context.Context, sessionID string) *ServiceResponse
-	UpdateAccount(ctx context.Context, data map[string]string, useridstr string, updateType string) *ServiceResponse
+	UpdateAccount(ctx context.Context, req *model.UpdateRequest, useridstr string, updateType string) *ServiceResponse
 }
 
 const RegistrateAndLogin = "UseCase-RegistrateAndLogin"

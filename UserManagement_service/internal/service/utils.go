@@ -11,19 +11,14 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
-func validatePerson(val *validator.Validate, user *model.Person, flag bool, traceid string, place string, kafkaProd kafka.KafkaProducerService) map[string]string {
-	personToValidate := *user
-	if !flag {
-		personToValidate.Name = "qwertyuiopasdfghjklzxcvbn"
-	}
-	err := val.Struct(&personToValidate)
+func validateData[T any](val *validator.Validate, data T, traceid string, place string, kafkaProd kafka.KafkaProducerService) map[string]string {
+	err := val.Struct(data)
 	if err != nil {
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if ok {
@@ -31,14 +26,13 @@ func validatePerson(val *validator.Validate, user *model.Person, flag bool, trac
 			for _, err := range validationErrors {
 				switch err.Tag() {
 				case "email":
-					fmterr := fmt.Sprintf("Email format error: %v", err.Error())
-					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
+					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, "Invalid email format")
 					erors[err.Field()] = erro.ErrorNotEmailConst
 				case "min":
 					fmterr := fmt.Sprintf("%s is too short", err.Field())
 					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
 					erors[err.Field()] = fmterr
-				default:
+				case "required":
 					fmterr := fmt.Sprintf("%s is Null", err.Field())
 					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
 					erors[err.Field()] = fmterr
@@ -164,4 +158,29 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 		Errors:    errorMap,
 		ErrorType: erro.ServerErrorType,
 	}
+}
+
+func requestToDB(response *repository.DBRepositoryResponse, mapa map[string]string) (*repository.DBRepositoryResponse, *ServiceResponse) {
+	if !response.Success && response.Errors != nil {
+		switch response.Errors.Type {
+		case erro.ServerErrorType:
+			mapa[erro.ServerErrorType] = response.Errors.Message
+			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+			return response, &ServiceResponse{
+				Success:   false,
+				Errors:    mapa,
+				ErrorType: erro.ServerErrorType,
+			}
+
+		case erro.ClientErrorType:
+			mapa[erro.ClientErrorType] = response.Errors.Message
+			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+			return response, &ServiceResponse{
+				Success:   false,
+				Errors:    mapa,
+				ErrorType: erro.ClientErrorType,
+			}
+		}
+	}
+	return response, nil
 }

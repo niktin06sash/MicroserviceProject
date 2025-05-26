@@ -25,7 +25,7 @@ func NewAuthPostgresRepo(db *DBObject, kafkaprod kafka.KafkaProducerService) *Au
 	return &AuthPostgresRepo{Db: db, KafkaProducer: kafkaprod}
 }
 
-func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.Person) *DBRepositoryResponse {
+func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *DBRepositoryResponse {
 	const place = CreateUser
 	start := time.Now()
 	defer func() {
