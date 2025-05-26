@@ -22,7 +22,8 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	reqpath := c.Request.URL.Path
 	targetURL, ok := h.Routes[reqpath]
 	if !ok {
-		maparesponse[erro.ClientErrorType] = "Page not found"
+		maparesponse[erro.ErrorType] = erro.ClientErrorType
+		maparesponse[erro.ErrorMessage] = erro.PageNotFound
 		response.SendResponse(c, http.StatusBadRequest, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return
@@ -31,7 +32,8 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	if err != nil {
 		strerr := fmt.Sprintf("URL-Parse Error: %s", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		maparesponse[erro.ServerErrorType] = erro.APIServiceUnavalaible
+		maparesponse[erro.ErrorType] = erro.ServerErrorType
+		maparesponse[erro.ErrorMessage] = erro.APIServiceUnavalaible
 		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
@@ -40,7 +42,8 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	if err != nil {
 		fmterr := fmt.Sprintf("Context error: %v", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
-		maparesponse[erro.ServerErrorType] = erro.RequestTimedOut
+		maparesponse[erro.ErrorType] = erro.ServerErrorType
+		maparesponse[erro.ErrorMessage] = erro.RequestTimedOut
 		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
@@ -75,7 +78,8 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		traceID := c.MustGet("traceID").(string)
 		strerr := fmt.Sprintf("Proxy error: %s", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		maparesponse := map[string]string{erro.ServerErrorType: erro.APIServiceUnavalaible}
+		maparesponse[erro.ErrorType] = erro.ServerErrorType
+		maparesponse[erro.ErrorMessage] = erro.APIServiceUnavalaible
 		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
