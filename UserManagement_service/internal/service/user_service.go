@@ -20,14 +20,14 @@ import (
 )
 
 type AuthService struct {
-	Dbrepo        repository.DBAuthenticateRepos
+	Dbrepo        repository.DBUserRepos
 	Dbtxmanager   repository.DBTransactionManager
 	KafkaProducer kafka.KafkaProducerService
 	Validator     *validator.Validate
 	GrpcClient    client.GrpcClientService
 }
 
-func NewAuthService(dbrepo repository.DBAuthenticateRepos, dbtxmanager repository.DBTransactionManager, kafkaProd kafka.KafkaProducerService, grpc *client.GrpcClient) *AuthService {
+func NewAuthService(dbrepo repository.DBUserRepos, dbtxmanager repository.DBTransactionManager, kafkaProd kafka.KafkaProducerService, grpc *client.GrpcClient) *AuthService {
 	validator := validator.New()
 	return &AuthService{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
 }
@@ -224,4 +224,22 @@ func (as *AuthService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 	as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, UpdateAccount, traceid, fmterr)
 	metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
 	return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ClientErrorType}
+}
+func (as *AuthService) GetMyProfile(ctx context.Context, useridstr string) *ServiceResponse {
+	const place = GetMyProfile
+	getMyProfileMap := make(map[string]string)
+	traceid := ctx.Value("traceID").(string)
+	userid, err := uuid.Parse(useridstr)
+	if err != nil {
+		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
+		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+		getMyProfileMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: getMyProfileMap, ErrorType: erro.ServerErrorType}
+	}
+	bdresponse, serviceresponse := requestToDB(as.Dbrepo.GetMyProfile(ctx, userid), getMyProfileMap)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	return &ServiceResponse{Success: bdresponse.Success, Data: bdresponse.Data}
 }

@@ -10,12 +10,13 @@ import (
 )
 
 //go:generate mockgen -source=service.go -destination=mocks/mock.go
-type UserAuthentication interface {
+type UserService interface {
 	RegistrateAndLogin(ctx context.Context, req *model.RegistrationRequest) *ServiceResponse
 	AuthenticateAndLogin(ctx context.Context, req *model.AuthenticationRequest) *ServiceResponse
 	DeleteAccount(ctx context.Context, req *model.DeletionRequest, sessionID string, useridstr string) *ServiceResponse
 	Logout(ctx context.Context, sessionID string) *ServiceResponse
 	UpdateAccount(ctx context.Context, req *model.UpdateRequest, useridstr string, updateType string) *ServiceResponse
+	GetMyProfile(ctx context.Context, useridstr string) *ServiceResponse
 }
 
 const RegistrateAndLogin = "UseCase-RegistrateAndLogin"
@@ -23,9 +24,10 @@ const AuthenticateAndLogin = "UseCase-AuthenticateAndLogin"
 const DeleteAccount = "UseCase-DeleteAccount"
 const Logout = "UseCase-Logout"
 const UpdateAccount = "UseCase-UpdateAccount"
+const GetMyProfile = "UseCase-GetMyProfile"
 
 type Service struct {
-	UserAuthentication
+	UserService
 }
 type ServiceResponse struct {
 	Success   bool
@@ -38,6 +40,6 @@ func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducerServi
 
 	return &Service{
 
-		UserAuthentication: NewAuthService(repos.DBAuthenticateRepos, repos.DBTransactionManager, kafkaProd, clientgrpc),
+		UserService: NewAuthService(repos.DBUserRepos, repos.DBTransactionManager, kafkaProd, clientgrpc),
 	}
 }
