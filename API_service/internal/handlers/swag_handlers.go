@@ -58,7 +58,6 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 // @Tags User Management
 // @Produce json
 // @Success 200 {object} response.HTTPResponse "User successfully logout"
-// @Failure 400 {object} response.HTTPResponse "Invalid input data"
 // @Failure 401 {object} response.HTTPResponse "Unauthorized"
 // @Failure 429 {object} response.HTTPResponse "Too many requests"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
@@ -69,6 +68,7 @@ func (h *Handler) Logout(c *gin.Context) {
 
 // @Summary Update a user's profile
 // @Description Update a user's profile by sending a request with session.
+// @Tags User Management
 // @Accept json
 // @Produce json
 // @Param name query string false "Flag to update name"
@@ -82,5 +82,18 @@ func (h *Handler) Logout(c *gin.Context) {
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/me/update [patch]
 func (h *Handler) Update(c *gin.Context) {
+	h.ProxyHTTP(c)
+}
+
+// @Summary Received a user's profile data
+// @Description Received a user's profile data by sending a request with session.
+// @Tags User Management
+// @Produce json
+// @Success 200 {object} response.HTTPResponse "User successfully received his profile data"
+// @Failure 401 {object} response.HTTPResponse "Unauthorized"
+// @Failure 429 {object} response.HTTPResponse "Too many requests"
+// @Failure 500 {object} response.HTTPResponse "Internal server error"
+// @Router /api/me [get]
+func (h *Handler) MyProfile(c *gin.Context) {
 	h.ProxyHTTP(c)
 }

@@ -36,5 +36,6 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	r.DELETE("/api/del", h.Middleware.Authorized(), h.DeleteUser)
 	r.DELETE("/api/logout", h.Middleware.Authorized(), h.Logout)
 	r.PATCH("/api/me/update", h.Middleware.Authorized(), h.Update)
+	r.GET("/api/me", h.Middleware.Authorized(), h.MyProfile)
 	return r
 }
