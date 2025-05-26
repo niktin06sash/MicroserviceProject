@@ -97,3 +97,18 @@ func (h *Handler) Update(c *gin.Context) {
 func (h *Handler) MyProfile(c *gin.Context) {
 	h.ProxyHTTP(c)
 }
+
+// @Summary Find user by ID in path parameters
+// @Description Retrieves a user's profile data by sending a request with the user's ID as a path parameter.
+// @Tags User Management
+// @Produce json
+// @Param id path string true "User ID in UUID format"
+// @Success 200 {object} response.HTTPResponse "User profile data successfully retrieved"
+// @Failure 400 {object} response.HTTPResponse "Invalid input data"
+// @Failure 401 {object} response.HTTPResponse "Unauthorized"
+// @Failure 429 {object} response.HTTPResponse "Too many requests"
+// @Failure 500 {object} response.HTTPResponse "Internal server error"
+// @Router /api/users/id/{id} [get]
+func (h *Handler) GetUserById(c *gin.Context) {
+	h.ProxyHTTP(c)
+}
