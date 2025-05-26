@@ -19,6 +19,7 @@ type HTTPResponse struct {
 }
 
 func SendResponse(ctx context.Context, w http.ResponseWriter, resp HTTPResponse, status int, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
+	metrics.UserTotalSuccessfulRequests.WithLabelValues(place).Inc()
 	start := ctx.Value("starttime").(time.Time)
 	w.Header().Set("Content-Type", "application/json")
 	if ctx.Err() != nil {
@@ -30,7 +31,7 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, resp HTTPResponse,
 			Errors:  map[string]string{erro.ServerErrorType: erro.RequestTimedOut},
 		}
 		json.NewEncoder(w).Encode(badresp)
-		metrics.UserErrorsTotal.WithLabelValues(string(erro.ServerErrorType)).Inc()
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		duration := time.Since(start).Seconds()
 		metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
 		return
