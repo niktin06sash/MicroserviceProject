@@ -18,7 +18,8 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		sessionID, err := c.Cookie("session")
 		if err != nil {
 			m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Required session in cookie")
-			maparesponse[erro.ClientErrorType] = erro.RequiredSession
+			maparesponse[erro.ErrorType] = erro.ClientErrorType
+			maparesponse[erro.ErrorMessage] = erro.RequiredSession
 			response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, m.KafkaProducer)
 			c.Abort()
 			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
@@ -28,13 +29,15 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		if errv != nil {
 			switch errv.Type {
 			case erro.ClientErrorType:
-				maparesponse[erro.ClientErrorType] = errv.Message
+				maparesponse[erro.ErrorType] = erro.ClientErrorType
+				maparesponse[erro.ErrorMessage] = errv.Message
 				response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, m.KafkaProducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				maparesponse[erro.ServerErrorType] = errv.Message
+				maparesponse[erro.ErrorType] = erro.ServerErrorType
+				maparesponse[erro.ErrorMessage] = errv.Message
 				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, m.KafkaProducer)
 				c.Abort()
 				return
@@ -62,13 +65,15 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		if errv != nil {
 			switch errv.Type {
 			case erro.ClientErrorType:
-				maparesponse[erro.ClientErrorType] = errv.Message
+				maparesponse[erro.ErrorType] = erro.ClientErrorType
+				maparesponse[erro.ErrorMessage] = errv.Message
 				response.SendResponse(c, http.StatusForbidden, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, m.KafkaProducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				maparesponse[erro.ServerErrorType] = errv.Message
+				maparesponse[erro.ErrorType] = erro.ServerErrorType
+				maparesponse[erro.ErrorMessage] = errv.Message
 				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, m.KafkaProducer)
 				c.Abort()
 				return
