@@ -12,13 +12,14 @@ import (
 )
 
 //go:generate mockgen -source=repository.go -destination=mocks/mock.go
-type DBAuthenticateRepos interface {
+type DBUserRepos interface {
 	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *DBRepositoryResponse
 	AuthenticateUser(ctx context.Context, useremail, password string) *DBRepositoryResponse
 	DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *DBRepositoryResponse
 	UpdateUserName(ctx context.Context, userId uuid.UUID, name string) *DBRepositoryResponse
 	UpdateUserEmail(ctx context.Context, userId uuid.UUID, email string, password string) *DBRepositoryResponse
 	UpdateUserPassword(ctx context.Context, userId uuid.UUID, lastpassword string, newpassword string) *DBRepositoryResponse
+	GetMyProfile(ctx context.Context, userid uuid.UUID) *DBRepositoryResponse
 }
 type DBTransactionManager interface {
 	BeginTx(ctx context.Context) (*sql.Tx, error)
@@ -32,9 +33,10 @@ const DeleteUser = "Repository-DeleteUser"
 const UpdateName = "Repository-UpdateName"
 const UpdatePassword = "Repository-UpdatePassword"
 const UpdateEmail = "Repository-UpdateEmail"
+const GetMyProfile = "Repository-GetMyProfile"
 
 type Repository struct {
-	DBAuthenticateRepos
+	DBUserRepos
 	DBTransactionManager
 }
 type DBRepositoryResponse struct {
@@ -49,7 +51,7 @@ type ErrorResponse struct {
 
 func NewRepository(db *DBObject, kafka kafka.KafkaProducerService) *Repository {
 	return &Repository{
-		DBAuthenticateRepos:  NewAuthPostgresRepo(db, kafka),
+		DBUserRepos:          NewAuthPostgresRepo(db, kafka),
 		DBTransactionManager: NewTxManagerRepo(db),
 	}
 }

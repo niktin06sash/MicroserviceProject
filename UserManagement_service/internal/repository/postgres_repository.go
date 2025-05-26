@@ -135,6 +135,7 @@ func (repoap *AuthPostgresRepo) UpdateUserName(ctx context.Context, userId uuid.
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
 		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
+	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful update username")
 	return &DBRepositoryResponse{Success: true}
 }
 func (repoap *AuthPostgresRepo) UpdateUserEmail(ctx context.Context, userId uuid.UUID, email string, password string) *DBRepositoryResponse {
@@ -180,6 +181,7 @@ func (repoap *AuthPostgresRepo) UpdateUserEmail(ctx context.Context, userId uuid
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
 		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
+	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful update useremail")
 	return &DBRepositoryResponse{Success: true}
 }
 func (repoap *AuthPostgresRepo) UpdateUserPassword(ctx context.Context, userId uuid.UUID, lastpassword string, newpassword string) *DBRepositoryResponse {
@@ -221,5 +223,27 @@ func (repoap *AuthPostgresRepo) UpdateUserPassword(ctx context.Context, userId u
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
 		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
+	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful update userpassword")
 	return &DBRepositoryResponse{Success: true}
+}
+func (repoap *AuthPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UUID) *DBRepositoryResponse {
+	const place = GetMyProfile
+	start := time.Now()
+	defer func() {
+		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
+		duration := time.Since(start).Seconds()
+		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
+	}()
+	traceid := ctx.Value("traceID").(string)
+	var email string
+	var name string
+	err := repoap.Db.DB.QueryRowContext(ctx, "SELECT useremail, username FROM users WHERE userid = $1", userid).Scan(&email, &name)
+	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
+	if err != nil {
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
+		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
+	}
+	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful get my profile")
+	return &DBRepositoryResponse{Success: true, Data: map[string]any{"userEmail": email, "userName": name}, Errors: nil}
 }

@@ -138,3 +138,23 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true}, http.StatusOK, traceID, place, h.KafkaProducer)
 }
+func (h *Handler) MyProfile(w http.ResponseWriter, r *http.Request) {
+	const place = MyProfile
+	defer r.Body.Close()
+	maparesponse := make(map[string]string)
+	traceID := r.Context().Value("traceID").(string)
+	if !checkMethod(r, w, http.MethodGet, traceID, place, maparesponse, h.KafkaProducer) {
+		return
+	}
+	persondata := make(map[string]string)
+	if !getPersonality(r, w, traceID, place, maparesponse, persondata, h.KafkaProducer) {
+		return
+	}
+	myprofileresponse := h.Services.GetMyProfile(r.Context(), persondata["userID"])
+	if !serviceResponse(myprofileresponse, r, w, traceID, place, h.KafkaProducer) {
+		return
+	}
+	msg := fmt.Sprintf("Person with id %v has successfully received his account data", persondata["userID"])
+	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
+	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true, Data: myprofileresponse.Data}, http.StatusOK, traceID, place, h.KafkaProducer)
+}
