@@ -12,7 +12,7 @@ import (
 
 func (m *Middleware) Authorized(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var place = Authority
+		const place = Authority
 		traceID := r.Context().Value("traceID").(string)
 		maparesponse := make(map[string]string)
 		userID := r.Header.Get("X-User-ID")
@@ -40,7 +40,7 @@ func (m *Middleware) Authorized(next http.Handler) http.Handler {
 }
 func (m *Middleware) AuthorizedNot(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var place = Not_Authority
+		const place = Not_Authority
 		traceID := r.Context().Value("traceID").(string)
 		maparesponse := make(map[string]string)
 		userID := r.Header.Get("X-User-ID")
