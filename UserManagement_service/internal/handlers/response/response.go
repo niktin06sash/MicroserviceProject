@@ -48,7 +48,6 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, resp HTTPResponse,
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 	}
 	kafkaprod.NewUserLog(kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
-	metrics.UserTotalSuccessfulRequests.WithLabelValues(place).Inc()
 	duration := time.Since(start).Seconds()
 	metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
 }

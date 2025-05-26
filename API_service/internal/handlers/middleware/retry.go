@@ -30,10 +30,10 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 			return nil, &erro.CustomError{Message: erro.RequestTimedOut, Type: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
-		if err == nil && protoresponse.Success {
+		if err == nil && protoresponse != nil && protoresponse.Success {
 			return protoresponse, nil
 		}
-		if err != nil && !protoresponse.Success {
+		if err != nil {
 			st, _ := status.FromError(err)
 			fmterr := fmt.Sprintf("Operation attempt %d failed", i)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)
@@ -67,10 +67,10 @@ func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID strin
 			return nil, &erro.CustomError{Message: "Request timed out", Type: erro.ServerErrorType}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
-		if err == nil && protoresponse.Success {
+		if err == nil && protoresponse != nil && protoresponse.Success {
 			return protoresponse, nil
 		}
-		if err != nil && !protoresponse.Success {
+		if err != nil {
 			st, _ := status.FromError(err)
 			fmterr := fmt.Sprintf("Operation attempt %d failed", i)
 			middleware.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmterr)

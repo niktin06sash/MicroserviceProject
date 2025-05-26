@@ -15,7 +15,7 @@ import (
 )
 
 func (h *Handler) ProxyHTTP(c *gin.Context) {
-	var place = ProxyHTTP
+	const place = ProxyHTTP
 	traceID := c.MustGet("traceID").(string)
 	start := c.MustGet("starttime").(time.Time)
 	maparesponse := make(map[string]string)
