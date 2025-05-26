@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
@@ -21,11 +20,11 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if !checkMethod(r, w, http.MethodPost, traceID, place, maparesponse, h.KafkaProducer) {
 		return
 	}
-	var newperk model.Person
-	if !getAllData(r, w, traceID, place, maparesponse, &newperk, h.KafkaProducer) {
+	var regreq model.RegistrationRequest
+	if !getAllData(r, w, traceID, place, maparesponse, &regreq, h.KafkaProducer) {
 		return
 	}
-	regresponse := h.Services.RegistrateAndLogin(r.Context(), &newperk)
+	regresponse := h.Services.RegistrateAndLogin(r.Context(), &regreq)
 	if !serviceResponse(regresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
@@ -47,11 +46,11 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	if !checkMethod(r, w, http.MethodPost, traceID, place, maparesponse, h.KafkaProducer) {
 		return
 	}
-	var newperk model.Person
-	if !getAllData(r, w, traceID, place, maparesponse, &newperk, h.KafkaProducer) {
+	var aureq model.AuthenticationRequest
+	if !getAllData(r, w, traceID, place, maparesponse, &aureq, h.KafkaProducer) {
 		return
 	}
-	auresponse := h.Services.AuthenticateAndLogin(r.Context(), &newperk)
+	auresponse := h.Services.AuthenticateAndLogin(r.Context(), &aureq)
 	if !serviceResponse(auresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
@@ -76,19 +75,12 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	if !getPersonality(r, w, traceID, place, maparesponse, persondata, h.KafkaProducer) {
 		return
 	}
-	reqdata := make(map[string]string)
-	if !getAllData(r, w, traceID, place, maparesponse, &reqdata, h.KafkaProducer) {
-		return
-	}
-	password, ok := reqdata["password"]
-	if !ok || password == "" {
-		h.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Password is missing or empty")
-		maparesponse[erro.ClientErrorType] = erro.ErrorPasswordEmpty
-		response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Errors: maparesponse}, http.StatusBadRequest, traceID, place, h.KafkaProducer)
+	var delreq model.DeletionRequest
+	if !getAllData(r, w, traceID, place, maparesponse, &delreq, h.KafkaProducer) {
 		return
 	}
 	defer r.Body.Close()
-	delresponse := h.Services.DeleteAccount(r.Context(), persondata["sessionID"], persondata["userID"], string(password))
+	delresponse := h.Services.DeleteAccount(r.Context(), &delreq, persondata["sessionID"], persondata["userID"])
 	if !serviceResponse(delresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
@@ -130,19 +122,19 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	if !getPersonality(r, w, traceID, place, maparesponse, persondata, h.KafkaProducer) {
 		return
 	}
-	reqdata := make(map[string]string)
-	if !getAllData(r, w, traceID, place, maparesponse, &reqdata, h.KafkaProducer) {
+	var updatereq model.UpdateRequest
+	if !getAllData(r, w, traceID, place, maparesponse, &updatereq, h.KafkaProducer) {
 		return
 	}
 	query := make(map[string]string)
 	if !getQueryParameters(r, w, traceID, place, maparesponse, query, h.KafkaProducer) {
 		return
 	}
-	updateresponse := h.Services.UpdateAccount(r.Context(), reqdata, persondata["userID"], query["update_type"])
+	updateresponse := h.Services.UpdateAccount(r.Context(), &updatereq, persondata["userID"], query["update_type"])
 	if !serviceResponse(updateresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
-	msg := fmt.Sprintf("Person with id %v has successfully update his %s", persondata["userID"], reqdata["update_type"])
+	msg := fmt.Sprintf("Person with id %v has successfully update his %s", persondata["userID"], query["update_type"])
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true}, http.StatusOK, traceID, place, h.KafkaProducer)
 }
