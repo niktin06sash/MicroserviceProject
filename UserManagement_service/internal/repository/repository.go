@@ -20,6 +20,7 @@ type DBUserRepos interface {
 	UpdateUserEmail(ctx context.Context, userId uuid.UUID, email string, password string) *DBRepositoryResponse
 	UpdateUserPassword(ctx context.Context, userId uuid.UUID, lastpassword string, newpassword string) *DBRepositoryResponse
 	GetMyProfile(ctx context.Context, userid uuid.UUID) *DBRepositoryResponse
+	GetProfileById(ctx context.Context, getid uuid.UUID) *DBRepositoryResponse
 }
 type DBTransactionManager interface {
 	BeginTx(ctx context.Context) (*sql.Tx, error)
@@ -34,6 +35,7 @@ const UpdateName = "Repository-UpdateName"
 const UpdatePassword = "Repository-UpdatePassword"
 const UpdateEmail = "Repository-UpdateEmail"
 const GetMyProfile = "Repository-GetMyProfile"
+const GetProfileById = "Repository-GetProfileById"
 
 type Repository struct {
 	DBUserRepos

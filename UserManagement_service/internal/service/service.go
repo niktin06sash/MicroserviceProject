@@ -17,6 +17,7 @@ type UserService interface {
 	Logout(ctx context.Context, sessionID string) *ServiceResponse
 	UpdateAccount(ctx context.Context, req *model.UpdateRequest, useridstr string, updateType string) *ServiceResponse
 	GetMyProfile(ctx context.Context, useridstr string) *ServiceResponse
+	GetProfileById(ctx context.Context, useridstr string, findidstr string) *ServiceResponse
 }
 
 const RegistrateAndLogin = "UseCase-RegistrateAndLogin"
@@ -25,6 +26,7 @@ const DeleteAccount = "UseCase-DeleteAccount"
 const Logout = "UseCase-Logout"
 const UpdateAccount = "UseCase-UpdateAccount"
 const GetMyProfile = "UseCase-GetMyProfile"
+const GetProfileById = "UseCase-GetProfileById"
 
 type Service struct {
 	UserService

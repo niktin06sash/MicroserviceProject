@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
@@ -79,9 +80,9 @@ func serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.Resp
 	return true
 }
 func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, personmapa map[string]string, kafkaproducer kafka.KafkaProducerService) bool {
+	query := r.URL.Query()
 	switch place {
 	case Update:
-		query := r.URL.Query()
 		updateName := query.Get("name")
 		updatePassword := query.Get("password")
 		updateEmail := query.Get("email")
@@ -108,6 +109,23 @@ func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, 
 			return false
 		}
 		personmapa["update_type"] = updateType
+		return true
+	}
+	return false
+}
+func getDinamicParameters(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, keys map[string]string, kafkaproducer kafka.KafkaProducerService) bool {
+	vars := mux.Vars(r)
+	switch place {
+	case GetUserById:
+		userID, ok := vars["id"]
+		if !ok {
+			kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "Invalid dinamic parameter")
+			maparesponse[erro.ClientErrorType] = "Invalid dinamic parameter"
+			response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+			return false
+		}
+		keys["getID"] = userID
 		return true
 	}
 	return false

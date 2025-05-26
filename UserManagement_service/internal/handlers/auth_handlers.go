@@ -126,15 +126,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	if !getAllData(r, w, traceID, place, maparesponse, &updatereq, h.KafkaProducer) {
 		return
 	}
-	query := make(map[string]string)
-	if !getQueryParameters(r, w, traceID, place, maparesponse, query, h.KafkaProducer) {
+	if !getQueryParameters(r, w, traceID, place, maparesponse, persondata, h.KafkaProducer) {
 		return
 	}
-	updateresponse := h.Services.UpdateAccount(r.Context(), &updatereq, persondata["userID"], query["update_type"])
+	updateresponse := h.Services.UpdateAccount(r.Context(), &updatereq, persondata["userID"], persondata["update_type"])
 	if !serviceResponse(updateresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
-	msg := fmt.Sprintf("Person with id %v has successfully update his %s", persondata["userID"], query["update_type"])
+	msg := fmt.Sprintf("Person with id %v has successfully update his %s", persondata["userID"], persondata["update_type"])
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true}, http.StatusOK, traceID, place, h.KafkaProducer)
 }
@@ -157,4 +156,24 @@ func (h *Handler) MyProfile(w http.ResponseWriter, r *http.Request) {
 	msg := fmt.Sprintf("Person with id %v has successfully received his account data", persondata["userID"])
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true, Data: myprofileresponse.Data}, http.StatusOK, traceID, place, h.KafkaProducer)
+}
+func (h *Handler) GetUserById(w http.ResponseWriter, r *http.Request) {
+	const place = GetUserById
+	defer r.Body.Close()
+	maparesponse := make(map[string]string)
+	traceID := r.Context().Value("traceID").(string)
+	if !checkMethod(r, w, http.MethodGet, traceID, place, maparesponse, h.KafkaProducer) {
+		return
+	}
+	persondata := make(map[string]string)
+	if !getPersonality(r, w, traceID, place, maparesponse, persondata, h.KafkaProducer) {
+		return
+	}
+	if !getDinamicParameters(r, w, traceID, place, maparesponse, persondata, h.KafkaProducer) {
+		return
+	}
+	getprofileresponse := h.Services.GetProfileById(r.Context(), persondata["userID"], persondata["getID"])
+	msg := fmt.Sprintf("Person with id %v has successfully received person with id %v data", persondata["userID"], persondata["getID"])
+	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
+	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true, Data: getprofileresponse.Data}, http.StatusOK, traceID, place, h.KafkaProducer)
 }
