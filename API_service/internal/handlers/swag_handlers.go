@@ -71,6 +71,9 @@ func (h *Handler) Logout(c *gin.Context) {
 // @Description Update a user's profile by sending a request with session.
 // @Accept json
 // @Produce json
+// @Param name query string false "New name of the user"
+// @Param email query string false "New email of the user"
+// @Param password query string false "Password for verification"
 // @Param input body response.PersonUpdate true "User update data"
 // @Success 200 {object} response.HTTPResponse "User successfully updated his profile"
 // @Failure 400 {object} response.HTTPResponse "Invalid input data"
