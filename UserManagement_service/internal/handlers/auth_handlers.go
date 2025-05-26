@@ -17,18 +17,18 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
-	if !checkMethod(r, w, http.MethodPost, traceID, maparesponse, place, h.KafkaProducer) {
+	if !checkMethod(r, w, http.MethodPost, traceID, place, maparesponse, h.KafkaProducer) {
 		return
 	}
 	var newperk model.Person
-	if !getAllData(r, w, traceID, maparesponse, place, &newperk, h.KafkaProducer) {
+	if !getAllData(r, w, traceID, place, maparesponse, &newperk, h.KafkaProducer) {
 		return
 	}
 	regresponse := h.Services.RegistrateAndLogin(r.Context(), &newperk)
 	if !serviceResponse(regresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
-	userID := regresponse.Data["sessionID"].(uuid.UUID)
+	userID := regresponse.Data["userID"].(uuid.UUID)
 	sessionID := regresponse.Data["sessionID"].(string)
 	expiresession := regresponse.Data["expiresession"].(time.Time)
 	response.AddSessionCookie(w, sessionID, expiresession)
@@ -42,18 +42,18 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
-	if !checkMethod(r, w, http.MethodPost, traceID, maparesponse, place, h.KafkaProducer) {
+	if !checkMethod(r, w, http.MethodPost, traceID, place, maparesponse, h.KafkaProducer) {
 		return
 	}
 	var newperk model.Person
-	if !getAllData(r, w, traceID, maparesponse, place, &newperk, h.KafkaProducer) {
+	if !getAllData(r, w, traceID, place, maparesponse, &newperk, h.KafkaProducer) {
 		return
 	}
 	auresponse := h.Services.AuthenticateAndLogin(r.Context(), &newperk)
 	if !serviceResponse(auresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
-	userID := auresponse.Data["sessionID"].(uuid.UUID)
+	userID := auresponse.Data["userID"].(uuid.UUID)
 	sessionID := auresponse.Data["sessionID"].(string)
 	expiresession := auresponse.Data["expiresession"].(time.Time)
 	response.AddSessionCookie(w, sessionID, expiresession)
@@ -67,18 +67,18 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
-	if !checkMethod(r, w, http.MethodDelete, traceID, maparesponse, place, h.KafkaProducer) {
+	if !checkMethod(r, w, http.MethodDelete, traceID, place, maparesponse, h.KafkaProducer) {
 		return
 	}
-	flag, persondata := getPersonality(r, w, traceID, maparesponse, place, h.KafkaProducer)
-	if !flag {
+	persondata := make(map[string]string)
+	if !getPersonality(r, w, traceID, place, maparesponse, persondata, h.KafkaProducer) {
 		return
 	}
-	data := make(map[string]string)
-	if !getAllData(r, w, traceID, maparesponse, place, &data, h.KafkaProducer) {
+	reqdata := make(map[string]string)
+	if !getAllData(r, w, traceID, place, maparesponse, &reqdata, h.KafkaProducer) {
 		return
 	}
-	password, ok := data["password"]
+	password, ok := reqdata["password"]
 	if !ok || password == "" {
 		h.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Password is missing or empty")
 		maparesponse[erro.ClientErrorType] = erro.ErrorPasswordEmpty
@@ -100,11 +100,11 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
-	if !checkMethod(r, w, http.MethodDelete, traceID, maparesponse, place, h.KafkaProducer) {
+	if !checkMethod(r, w, http.MethodDelete, traceID, place, maparesponse, h.KafkaProducer) {
 		return
 	}
-	flag, persondata := getPersonality(r, w, traceID, maparesponse, place, h.KafkaProducer)
-	if !flag {
+	persondata := make(map[string]string)
+	if !getPersonality(r, w, traceID, place, maparesponse, persondata, h.KafkaProducer) {
 		return
 	}
 	logresponse := h.Services.Logout(r.Context(), persondata["sessionID"])
@@ -121,22 +121,26 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	maparesponse := make(map[string]string)
 	traceID := r.Context().Value("traceID").(string)
-	if !checkMethod(r, w, http.MethodPatch, traceID, maparesponse, place, h.KafkaProducer) {
+	if !checkMethod(r, w, http.MethodPatch, traceID, place, maparesponse, h.KafkaProducer) {
 		return
 	}
-	flag, persondata := getPersonality(r, w, traceID, maparesponse, place, h.KafkaProducer)
-	if !flag {
+	persondata := make(map[string]string)
+	if !getPersonality(r, w, traceID, place, maparesponse, persondata, h.KafkaProducer) {
 		return
 	}
-	data := make(map[string]string)
-	if !getAllData(r, w, traceID, maparesponse, place, &data, h.KafkaProducer) {
+	reqdata := make(map[string]string)
+	if !getAllData(r, w, traceID, place, maparesponse, &reqdata, h.KafkaProducer) {
 		return
 	}
-	updateresponse := h.Services.UpdateAccount(r.Context(), persondata, persondata["userID"], data["update_type"])
+	query := make(map[string]string)
+	if !getQueryParameters(r, w, traceID, place, maparesponse, query, h.KafkaProducer) {
+		return
+	}
+	updateresponse := h.Services.UpdateAccount(r.Context(), reqdata, persondata["userID"], query["update_type"])
 	if !serviceResponse(updateresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
-	msg := fmt.Sprintf("Person with id %v has successfully update his %s", persondata["userID"], data["update_type"])
+	msg := fmt.Sprintf("Person with id %v has successfully update his %s", persondata["userID"], reqdata["update_type"])
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true}, http.StatusOK, traceID, place, h.KafkaProducer)
 }
