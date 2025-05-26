@@ -52,7 +52,7 @@ clean:
 tests:
 	@echo "Starting tests in User-Service...."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(User_Service_DIR)/internal/service/; go test -v ./...'"
-run: tests kafka swagger prometheus redis start
+run: kafka swagger prometheus redis start
 shutdown: stop clean
 
 dockerstart: 

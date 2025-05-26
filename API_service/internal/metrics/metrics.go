@@ -25,7 +25,7 @@ var APIErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 var APITotalSuccessfulRequests = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "api_service_successful_requests_total",
 	Help: "Total number of successful requests to API-Service",
-}, []string{"path"})
+}, []string{"handler", "path"})
 var APIBackendRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "api_service_backend_requests_total",
 	Help: "Total number of requests forwarded to backend services",
