@@ -3,7 +3,13 @@ package erro
 import "errors"
 
 const SessionServiceUnavalaible = "Session-Service is unavailable"
-
+const RequestTimedOut = "Request timed out"
+const UserIdRequired = "UserID is required"
+const UserIdInvalid = "Invalid userID format"
+const SessionIdRequired = "SessionID is required"
+const SessionIdInvalid = "Invalid sessionID format"
+const SessionNotFound = "Session not found"
+const AlreadyAuthorized = "AlreadyAuthorized"
 const (
 	ErrorGetSessionConst               = "Error get session"
 	ErrorSetSessionConst               = "Error set session"

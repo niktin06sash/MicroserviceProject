@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -20,22 +21,27 @@ import (
 func validateData[T any](val *validator.Validate, data T, traceid string, place string, kafkaProd kafka.KafkaProducerService) map[string]string {
 	err := val.Struct(data)
 	if err != nil {
+		var count = 0
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if ok {
 			erors := make(map[string]string)
 			for _, err := range validationErrors {
+				count++
 				switch err.Tag() {
 				case "email":
 					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, "Invalid email format")
-					erors[err.Field()] = erro.ErrorNotEmailConst
+					erors[erro.ErrorType] = erro.ClientErrorType + "_" + strconv.Itoa(count)
+					erors[erro.ErrorMessage] = erro.ErrorNotEmailConst
 				case "min":
 					fmterr := fmt.Sprintf("%s is too short", err.Field())
 					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
-					erors[err.Field()] = fmterr
+					erors[erro.ErrorType] = erro.ClientErrorType + "_" + strconv.Itoa(count)
+					erors[erro.ErrorMessage] = fmterr
 				case "required":
 					fmterr := fmt.Sprintf("%s is Null", err.Field())
 					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
-					erors[err.Field()] = fmterr
+					erors[erro.ErrorType] = erro.ClientErrorType + "_" + strconv.Itoa(count)
+					erors[erro.ErrorMessage] = fmterr
 				}
 				metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			}
@@ -110,7 +116,8 @@ func checkContext(ctx context.Context, mapa map[string]string, place string, tra
 	case <-ctx.Done():
 		fmterr := fmt.Sprintf("Context cancelled before operation: %v", ctx.Err())
 		kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
-		mapa[erro.ServerErrorType] = erro.RequestTimedOut
+		mapa[erro.ErrorType] = erro.ServerErrorType
+		mapa[erro.ErrorMessage] = erro.RequestTimedOut
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: mapa, ErrorType: erro.ServerErrorType}, true
 	default:
@@ -138,7 +145,8 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
-				errorMap[erro.ClientErrorType] = st.Message()
+				errorMap[erro.ErrorType] = erro.ClientErrorType
+				errorMap[erro.ErrorMessage] = st.Message()
 				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, st.Message())
 				metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 				return response, &ServiceResponse{
@@ -152,7 +160,8 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 		}
 	}
 	kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	errorMap[erro.ServerErrorType] = erro.SessionServiceUnavalaible
+	errorMap[erro.ErrorType] = erro.ServerErrorType
+	errorMap[erro.ErrorMessage] = erro.SessionServiceUnavalaible
 	return response, &ServiceResponse{
 		Success:   false,
 		Errors:    errorMap,
@@ -164,7 +173,8 @@ func requestToDB(response *repository.DBRepositoryResponse, mapa map[string]stri
 	if !response.Success && response.Errors != nil {
 		switch response.Errors.Type {
 		case erro.ServerErrorType:
-			mapa[erro.ServerErrorType] = response.Errors.Message
+			mapa[erro.ErrorType] = erro.ServerErrorType
+			mapa[erro.ErrorMessage] = response.Errors.Message
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			return response, &ServiceResponse{
 				Success:   false,
@@ -173,7 +183,8 @@ func requestToDB(response *repository.DBRepositoryResponse, mapa map[string]stri
 			}
 
 		case erro.ClientErrorType:
-			mapa[erro.ClientErrorType] = response.Errors.Message
+			mapa[erro.ErrorType] = erro.ClientErrorType
+			mapa[erro.ErrorMessage] = response.Errors.Message
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return response, &ServiceResponse{
 				Success:   false,
