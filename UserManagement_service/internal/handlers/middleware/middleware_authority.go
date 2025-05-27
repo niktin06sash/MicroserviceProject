@@ -20,7 +20,7 @@ func (m *Middleware) Authorized(next http.Handler) http.Handler {
 			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Required User-ID")
 			maparesponse[erro.ErrorType] = erro.ServerErrorType
 			maparesponse[erro.ErrorMessage] = erro.UserServiceUnavalaible
-			response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			return
 		}
@@ -29,7 +29,7 @@ func (m *Middleware) Authorized(next http.Handler) http.Handler {
 			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Required Session-ID")
 			maparesponse[erro.ErrorType] = erro.ServerErrorType
 			maparesponse[erro.ErrorMessage] = erro.UserServiceUnavalaible
-			response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			return
 		}
@@ -50,7 +50,7 @@ func (m *Middleware) AuthorizedNot(next http.Handler) http.Handler {
 			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Not-Required User-ID")
 			maparesponse[erro.ErrorType] = erro.ServerErrorType
 			maparesponse[erro.ErrorMessage] = erro.UserServiceUnavalaible
-			response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			return
 		}
@@ -59,7 +59,7 @@ func (m *Middleware) AuthorizedNot(next http.Handler) http.Handler {
 			m.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Not-Required Session-ID")
 			maparesponse[erro.ErrorType] = erro.ServerErrorType
 			maparesponse[erro.ErrorMessage] = erro.UserServiceUnavalaible
-			response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, m.KafkaProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			return
 		}

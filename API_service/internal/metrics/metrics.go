@@ -22,7 +22,7 @@ var APIBadRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 var APITotalBadRequests = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "api_service_bad_proxy_requests_total",
 	Help: "Total number of bad proxy-requests to API-Service",
-}, []string{"path"})
+}, []string{"handler", "path"})
 var APIErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "api_service_errors_total",
 	Help: "Total number of errors encountered by the API-Service",

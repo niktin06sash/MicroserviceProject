@@ -14,11 +14,15 @@ var UserTotalRequests = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "user_service_requests_total",
 	Help: "Total number of requests to User-Service",
 }, []string{"path"})
-var UserRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-	Name:    "user_service_duration_seconds",
-	Help:    "Histogram for the request duration in seconds in User-Service",
+var UserBadRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	Name:    "user_service_bad_requests_duration_seconds",
+	Help:    "Histogram for the bad requests duration in seconds in User-Service",
 	Buckets: []float64{0.1, 0.5, 1, 2, 5},
-}, []string{"handler"})
+}, []string{"handler", "path"})
+var UserTotalBadRequests = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "user_service_bad_requests_total",
+	Help: "Total number of bad requests to User-Service",
+}, []string{"handler", "path"})
 var UserErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "user_service_errors_total",
 	Help: "Total number of errors encountered by the User-Service",
@@ -26,7 +30,12 @@ var UserErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 var UserTotalSuccessfulRequests = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "user_service_successful_requests_total",
 	Help: "Total number of successful requests to User-Service",
-}, []string{"handler"})
+}, []string{"handler", "path"})
+var UserSuccessfulRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	Name:    "user_service_successful_requests_duration_seconds",
+	Help:    "Histogram for the successful requests duration in seconds in User-Service",
+	Buckets: []float64{0.1, 0.5, 1, 2, 5},
+}, []string{"handler", "path"})
 var UserBackendRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "user_service_backend_requests_total",
 	Help: "Total number of requests forwarded to backend services",

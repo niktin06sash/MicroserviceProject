@@ -1,7 +1,6 @@
 package response
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,8 +17,8 @@ type HTTPResponse struct {
 	Data    map[string]any    `json:"data,omitempty"`
 }
 
-func SendResponse(ctx context.Context, w http.ResponseWriter, resp HTTPResponse, status int, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
-	metrics.UserTotalSuccessfulRequests.WithLabelValues(place).Inc()
+func SendResponse(r *http.Request, w http.ResponseWriter, resp HTTPResponse, status int, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
+	ctx := r.Context()
 	start := ctx.Value("starttime").(time.Time)
 	w.Header().Set("Content-Type", "application/json")
 	if ctx.Err() != nil {
@@ -33,7 +32,8 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, resp HTTPResponse,
 		json.NewEncoder(w).Encode(badresp)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		duration := time.Since(start).Seconds()
-		metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
+		metrics.UserBadRequestDuration.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Observe(duration)
+		metrics.UserTotalBadRequests.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Inc()
 		return
 	}
 	w.WriteHeader(status)
@@ -47,10 +47,19 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, resp HTTPResponse,
 		}
 		json.NewEncoder(w).Encode(badreq)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		duration := time.Since(start).Seconds()
+		metrics.UserBadRequestDuration.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Observe(duration)
+		metrics.UserTotalBadRequests.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Inc()
 	}
 	kafkaprod.NewUserLog(kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
 	duration := time.Since(start).Seconds()
-	metrics.UserRequestDuration.WithLabelValues(place).Observe(duration)
+	if status == http.StatusOK {
+		metrics.UserSuccessfulRequestDuration.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Observe(duration)
+		metrics.UserTotalSuccessfulRequests.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Inc()
+	} else {
+		metrics.UserBadRequestDuration.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Observe(duration)
+		metrics.UserTotalBadRequests.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Inc()
+	}
 }
 func AddSessionCookie(w http.ResponseWriter, sessionID string, expireTime time.Time) {
 	maxAge := int(time.Until(expireTime).Seconds())

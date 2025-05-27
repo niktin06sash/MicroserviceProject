@@ -15,7 +15,7 @@ func (m *Middleware) Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		ctx := context.WithValue(r.Context(), "starttime", start)
-		metrics.UserTotalRequests.WithLabelValues(r.URL.Path).Inc()
+		metrics.UserTotalRequests.WithLabelValues(metrics.NormalizePath(r.URL.Path)).Inc()
 		const place = Logging
 		traceID := r.Header.Get("X-Trace-ID")
 		if traceID == "" {
