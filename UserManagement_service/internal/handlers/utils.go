@@ -20,7 +20,7 @@ func checkMethod(r *http.Request, w http.ResponseWriter, expectedMethod string, 
 		kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 		mapa[erro.ErrorType] = erro.ClientErrorType
 		mapa[erro.ErrorMessage] = erro.ErrorInvalidReqMethod
-		response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: mapa}, http.StatusBadRequest, traceID, place, kafkaproducer)
+		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: mapa}, http.StatusBadRequest, traceID, place, kafkaproducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return false
 	}
@@ -33,7 +33,7 @@ func getAllData[T any](r *http.Request, w http.ResponseWriter, traceID string, p
 		kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 		maparesponse[erro.ErrorType] = erro.ClientErrorType
 		maparesponse[erro.ErrorMessage] = erro.ErrorInvalidDataReq
-		response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return false
 	}
@@ -43,7 +43,7 @@ func getAllData[T any](r *http.Request, w http.ResponseWriter, traceID string, p
 		kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 		maparesponse[erro.ErrorType] = erro.ClientErrorType
 		maparesponse[erro.ErrorMessage] = erro.ErrorInvalidDataReq
-		response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return false
 	}
@@ -55,7 +55,7 @@ func getPersonality(r *http.Request, w http.ResponseWriter, traceID string, plac
 		kafkaproducer.NewUserLog(kafka.LogLevelError, place, traceID, "Session ID not found in context")
 		maparesponse[erro.ErrorType] = erro.ServerErrorType
 		maparesponse[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, kafkaproducer)
+		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, kafkaproducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return false
 	}
@@ -65,7 +65,7 @@ func getPersonality(r *http.Request, w http.ResponseWriter, traceID string, plac
 		kafkaproducer.NewUserLog(kafka.LogLevelError, place, traceID, "User ID not found in context")
 		maparesponse[erro.ErrorType] = erro.ServerErrorType
 		maparesponse[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, kafkaproducer)
+		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, kafkaproducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return false
 	}
@@ -76,9 +76,9 @@ func serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.Resp
 	if !resp.Success {
 		switch resp.ErrorType {
 		case erro.ClientErrorType:
-			response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: resp.Errors}, http.StatusBadRequest, traceID, place, kafkaproducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: resp.Errors}, http.StatusBadRequest, traceID, place, kafkaproducer)
 		case erro.ServerErrorType:
-			response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: resp.Errors}, http.StatusInternalServerError, traceID, place, kafkaproducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: resp.Errors}, http.StatusInternalServerError, traceID, place, kafkaproducer)
 		}
 		return false
 	}
@@ -95,7 +95,7 @@ func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, 
 			kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "More than one parameter in a query-request")
 			maparesponse[erro.ErrorType] = erro.ClientErrorType
 			maparesponse[erro.ErrorMessage] = erro.ErrorInvalidCountQueryParameters
-			response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return false
 		}
@@ -111,7 +111,7 @@ func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, 
 			kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "Invalid query parameter")
 			maparesponse[erro.ErrorType] = erro.ClientErrorType
 			maparesponse[erro.ErrorMessage] = erro.ErrorInvalidQueryParameter
-			response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return false
 		}
@@ -129,7 +129,7 @@ func getDinamicParameters(r *http.Request, w http.ResponseWriter, traceID string
 			kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "Invalid dinamic parameter")
 			maparesponse[erro.ErrorType] = erro.ClientErrorType
 			maparesponse[erro.ErrorMessage] = erro.ErrorInvalidDinamicParameter
-			response.SendResponse(r.Context(), w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return false
 		}
