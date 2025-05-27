@@ -20,7 +20,8 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	start := c.MustGet("starttime").(time.Time)
 	maparesponse := make(map[string]string)
 	reqpath := c.Request.URL.Path
-	targetURL, ok := h.Routes[reqpath]
+	normalizedPath := metrics.NormalizePath(reqpath)
+	targetURL, ok := h.Routes[normalizedPath]
 	if !ok {
 		maparesponse[erro.ErrorType] = erro.ClientErrorType
 		maparesponse[erro.ErrorMessage] = erro.PageNotFound
@@ -82,13 +83,12 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		maparesponse[erro.ErrorMessage] = erro.APIServiceUnavalaible
 		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-		return
 	}
 	resp := fmt.Sprintf("Successful HTTP-request to %s", targetURL)
 	h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, resp)
 	proxy.ServeHTTP(c.Writer, c.Request)
 	duration := time.Since(start).Seconds()
-	metrics.APIRequestDuration.WithLabelValues(place, c.Request.URL.Path).Observe(duration)
+	metrics.APIRequestDuration.WithLabelValues(place, normalizedPath).Observe(duration)
 	metrics.APIBackendRequestsTotal.WithLabelValues("User-Service").Inc()
-	metrics.APITotalSuccessfulRequests.WithLabelValues(place, c.Request.URL.Path).Inc()
+	metrics.APITotalSuccessfulRequests.WithLabelValues(place, normalizedPath).Inc()
 }

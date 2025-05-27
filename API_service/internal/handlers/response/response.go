@@ -47,8 +47,8 @@ func SendResponse(c *gin.Context, status int, response HTTPResponse, traceid str
 	c.JSON(status, response)
 	kafkaprod.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
 	duration := time.Since(start).Seconds()
-	metrics.APITotalSuccessfulRequests.WithLabelValues(place, c.Request.URL.Path).Inc()
-	metrics.APIRequestDuration.WithLabelValues(place, c.Request.URL.Path).Observe(duration)
+	metrics.APITotalSuccessfulRequests.WithLabelValues(place, metrics.NormalizePath((c.Request.URL.Path))).Inc()
+	metrics.APIRequestDuration.WithLabelValues(place, metrics.NormalizePath((c.Request.URL.Path))).Observe(duration)
 }
 func CheckContext(ctx context.Context, traceID string, place string) error {
 	select {

@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"log"
+	"regexp"
 	"runtime"
 	"time"
 
@@ -50,6 +51,13 @@ var APIKafkaProducerBufferSize = promauto.NewGauge(prometheus.GaugeOpts{
 	Name: "api_service_kafka_producer_queue_size",
 	Help: "Current size of the Kafka producer message queue in API-Service",
 })
+
+func NormalizePath(path string) string {
+	re := regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
+	normalizedPath := re.ReplaceAllString(path, "")
+	return normalizedPath
+}
+
 var stop = make(chan struct{})
 
 func Start() {
