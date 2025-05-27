@@ -271,5 +271,5 @@ func (repoap *AuthPostgresRepo) GetProfileById(ctx context.Context, getid uuid.U
 		return &DBRepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful get profile by id")
-	return &DBRepositoryResponse{Success: true, Data: map[string]any{"getID": getid.String(), "getEmail": email, "getName": name}, Errors: nil}
+	return &DBRepositoryResponse{Success: true, Data: map[string]any{"userID": getid.String(), "userEmail": email, "userName": name}, Errors: nil}
 }
