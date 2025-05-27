@@ -27,7 +27,7 @@ func (m *Middleware) RateLimiter() gin.HandlerFunc {
 			response.SendResponse(c, http.StatusTooManyRequests, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, traceID, place, m.KafkaProducer)
 			c.Abort()
 			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
-			metrics.APIRateLimitExceededTotal.WithLabelValues(c.Request.URL.Path).Inc()
+			metrics.APIRateLimitExceededTotal.WithLabelValues(metrics.NormalizePath(c.Request.URL.Path)).Inc()
 			return
 		}
 		c.Next()

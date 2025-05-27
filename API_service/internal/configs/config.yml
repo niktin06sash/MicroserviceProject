@@ -9,7 +9,7 @@ routes:
    /api/logout: "http://localhost:8082/logout"
    /api/me/update: "http://localhost:8082/me/update"
    /api/me: "http://localhost:8082/me"
-   /api/users/id/{id}: "http://localhost:8082/users/id/{id}"
+   /api/users/id/: "http://localhost:8082/users/id"
 kafka:
   bootstrap_servers: localhost:9092
   retry_backoff_ms: 500
