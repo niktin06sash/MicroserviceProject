@@ -14,18 +14,27 @@ var APITotalRequests = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "api_service_requests_total",
 	Help: "Total number of requests to API-Service",
 }, []string{"path"})
-var APIRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-	Name:    "api_service_duration_seconds",
-	Help:    "Histogram for the request duration in seconds in API-Service",
+var APIBadRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	Name:    "api_service_bad_proxy_requests_duration_seconds",
+	Help:    "Histogram for the bad proxy-requests duration in seconds in API-Service",
 	Buckets: []float64{0.1, 0.5, 1, 2, 5},
 }, []string{"handler", "path"})
+var APITotalBadRequests = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "api_service_bad_proxy_requests_total",
+	Help: "Total number of bad proxy-requests to API-Service",
+}, []string{"path"})
 var APIErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "api_service_errors_total",
 	Help: "Total number of errors encountered by the API-Service",
 }, []string{"error_type"})
 var APITotalSuccessfulRequests = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "api_service_successful_requests_total",
-	Help: "Total number of successful requests to API-Service",
+	Name: "api_service_successful_proxy_requests_total",
+	Help: "Total number of successful proxy-requests to API-Service",
+}, []string{"handler", "path"})
+var APISuccessfulRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	Name:    "api_service_successful_proxy_requests_duration_seconds",
+	Help:    "Histogram for the successful proxy-requests duration in seconds in API-Service",
+	Buckets: []float64{0.1, 0.5, 1, 2, 5},
 }, []string{"handler", "path"})
 var APIBackendRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "api_service_backend_requests_total",

@@ -45,6 +45,6 @@ func (h *Handler) InitRoutes() *mux.Router {
 	authGroup.HandleFunc("/logout", h.Logout).Methods("DELETE")
 	authGroup.HandleFunc("/me/update", h.Update).Methods("PATCH")
 	authGroup.HandleFunc("/me", h.MyProfile).Methods("GET")
-	authGroup.HandleFunc("/users/id/:id", h.GetUserById).Methods("GET")
+	authGroup.HandleFunc("/users/id/{id}", h.GetUserById).Methods("GET")
 	return m
 }
