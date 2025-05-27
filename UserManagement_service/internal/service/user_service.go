@@ -43,7 +43,8 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	if err != nil {
 		fmterr := fmt.Sprintf("HashPass Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		registrateMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		registrateMap[erro.ErrorType] = erro.ServerErrorType
+		registrateMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
 	}
@@ -54,7 +55,8 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	if err != nil {
 		fmterr := fmt.Sprintf("Transaction Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		registrateMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		registrateMap[erro.ErrorType] = erro.ServerErrorType
+		registrateMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
@@ -87,7 +89,8 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 		if serviceresponse != nil {
 			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Failed to delete session after transaction failure")
 		}
-		registrateMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		registrateMap[erro.ErrorType] = erro.ServerErrorType
+		registrateMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
 	}
 	isTransactionActive = false
@@ -123,7 +126,8 @@ func (as *AuthService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		deletemap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		deletemap[erro.ErrorType] = erro.ServerErrorType
+		deletemap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
 	}
@@ -137,7 +141,8 @@ func (as *AuthService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 	if err != nil {
 		fmterr := fmt.Sprintf("Transaction Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		deletemap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		deletemap[erro.ErrorType] = erro.ServerErrorType
+		deletemap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
@@ -163,7 +168,8 @@ func (as *AuthService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 	}
 	err = commitTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 	if err != nil {
-		deletemap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		deletemap[erro.ErrorType] = erro.ServerErrorType
+		deletemap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
 	}
 	isTransactionActive = false
@@ -190,7 +196,8 @@ func (as *AuthService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		updatemap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		updatemap[erro.ErrorType] = erro.ServerErrorType
+		updatemap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ServerErrorType}
 	}
@@ -219,9 +226,9 @@ func (as *AuthService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 		}
 		return &ServiceResponse{Success: bdresponse.Success}
 	}
-	fmterr := "Invalid data in request"
-	updatemap[erro.ClientErrorType] = fmterr
-	as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, UpdateAccount, traceid, fmterr)
+	updatemap[erro.ErrorType] = erro.ClientErrorType
+	updatemap[erro.ErrorMessage] = erro.ErrorInvalidCountDinamicParameter
+	as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, UpdateAccount, traceid, erro.ErrorInvalidCountDinamicParameter)
 	metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
 	return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ClientErrorType}
 }
@@ -233,7 +240,8 @@ func (as *AuthService) GetMyProfile(ctx context.Context, useridstr string) *Serv
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		getMyProfileMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		getMyProfileMap[erro.ErrorType] = erro.ServerErrorType
+		getMyProfileMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: getMyProfileMap, ErrorType: erro.ServerErrorType}
 	}
@@ -251,7 +259,8 @@ func (as *AuthService) GetProfileById(ctx context.Context, useridstr string, get
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		getProfilebyIdMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		getProfilebyIdMap[erro.ErrorType] = erro.ServerErrorType
+		getProfilebyIdMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ServerErrorType}
 	}
@@ -259,13 +268,15 @@ func (as *AuthService) GetProfileById(ctx context.Context, useridstr string, get
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		getProfilebyIdMap[erro.ServerErrorType] = erro.UserServiceUnavalaible
+		getProfilebyIdMap[erro.ErrorType] = erro.ServerErrorType
+		getProfilebyIdMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ServerErrorType}
 	}
 	if userid == getid {
 		as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Person attempted to search for their own profile by ID")
-		getProfilebyIdMap[erro.ClientErrorType] = "You cannot search for your own profile by ID"
+		getProfilebyIdMap[erro.ErrorType] = erro.ClientErrorType
+		getProfilebyIdMap[erro.ErrorMessage] = erro.ErrorSearchOwnProfile
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ClientErrorType}
 	}

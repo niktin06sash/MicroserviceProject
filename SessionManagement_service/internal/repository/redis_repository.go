@@ -30,7 +30,7 @@ func (redisrepo *AuthRedis) validateContext(ctx context.Context, place string) (
 	case <-ctx.Done():
 		fmterr := fmt.Sprintf("Context error: %v", ctx.Err())
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return "", status.Errorf(codes.Internal, "Request timed out")
+		return "", status.Errorf(codes.Internal, erro.RequestTimedOut)
 	default:
 		return traceID, nil
 	}
@@ -76,8 +76,8 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 	if err != nil {
 		if err == redis.Nil {
 			if flagvalidate {
-				redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Session not found")
-				return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session not found")}
+				redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, erro.SessionNotFound)
+				return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, erro.SessionIdRequired)}
 			}
 			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful verification of missing session")
 			return &RepositoryResponse{Success: true}
@@ -89,24 +89,24 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 	if len(result) == 0 {
 		if flagvalidate {
 			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Session is empty or invalid")
-			return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session is empty or invalid")}
+			return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, erro.SessionNotFound)}
 		}
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful verification of missing session")
 		return &RepositoryResponse{Success: true}
 	}
 	if !flagvalidate {
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Authorized-request for unauthorized users")
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Already Authorized")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, erro.AlreadyAuthorized)}
 	}
 	userIDString, ok := result["UserID"]
 	if !ok {
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Get UserID from session error")
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session not found")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, erro.SessionNotFound)}
 	}
 	expirationTimeString, ok := result["ExpirationTime"]
 	if !ok {
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Get ExpirationTime from session error")
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session not found")}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, erro.SessionNotFound)}
 	}
 	expirationTime, err := time.Parse(time.RFC3339, expirationTimeString)
 	if err != nil {
@@ -135,7 +135,7 @@ func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string)
 			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Session not found")
 			return &RepositoryResponse{
 				Success: false,
-				Errors:  status.Errorf(codes.InvalidArgument, "Session not found"),
+				Errors:  status.Errorf(codes.InvalidArgument, erro.SessionNotFound),
 			}
 		}
 		fmterr := fmt.Sprintf("Del session error: %v", err)

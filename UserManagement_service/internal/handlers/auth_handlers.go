@@ -173,7 +173,7 @@ func (h *Handler) GetUserById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	getprofileresponse := h.Services.GetProfileById(r.Context(), persondata["userID"], persondata["getID"])
-	msg := fmt.Sprintf("Person with id %v has successfully received person with id %v data", persondata["userID"], persondata["getID"])
+	msg := fmt.Sprintf("Person with id %v has successfully received data if person with id %v", persondata["userID"], persondata["getID"])
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
 	response.SendResponse(r.Context(), w, response.HTTPResponse{Success: true, Data: getprofileresponse.Data}, http.StatusOK, traceID, place, h.KafkaProducer)
 }

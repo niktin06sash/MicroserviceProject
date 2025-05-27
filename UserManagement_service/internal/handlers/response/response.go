@@ -28,7 +28,7 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, resp HTTPResponse,
 		w.WriteHeader(http.StatusInternalServerError)
 		badresp := HTTPResponse{
 			Success: false,
-			Errors:  map[string]string{erro.ServerErrorType: erro.RequestTimedOut},
+			Errors:  map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.RequestTimedOut},
 		}
 		json.NewEncoder(w).Encode(badresp)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
@@ -43,7 +43,7 @@ func SendResponse(ctx context.Context, w http.ResponseWriter, resp HTTPResponse,
 		w.WriteHeader(http.StatusInternalServerError)
 		badreq := HTTPResponse{
 			Success: false,
-			Errors:  map[string]string{erro.ServerErrorType: erro.UserServiceUnavalaible},
+			Errors:  map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible},
 		}
 		json.NewEncoder(w).Encode(badreq)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
