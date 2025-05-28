@@ -41,6 +41,13 @@ const UpdatePassword = "Repository-UpdatePassword"
 const UpdateEmail = "Repository-UpdateEmail"
 const GetMyProfile = "Repository-GetMyProfile"
 const GetProfileById = "Repository-GetProfileById"
+const (
+	KeyUserID       = "userid"
+	KeyUserEmail    = "useremail"
+	KeyUserName     = "username"
+	KeyUserPassword = "userpassword"
+	KeyUserTable    = "users"
+)
 
 type Repository struct {
 	DBUserRepos

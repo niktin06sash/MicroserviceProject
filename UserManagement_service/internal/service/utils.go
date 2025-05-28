@@ -169,7 +169,7 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 	}
 }
 
-func requestToDB(response *repository.DBRepositoryResponse, mapa map[string]string) (*repository.DBRepositoryResponse, *ServiceResponse) {
+func requestToDB(response *repository.RepositoryResponse, mapa map[string]string) (*repository.RepositoryResponse, *ServiceResponse) {
 	if !response.Success && response.Errors != nil {
 		switch response.Errors.Type {
 		case erro.ServerErrorType:
