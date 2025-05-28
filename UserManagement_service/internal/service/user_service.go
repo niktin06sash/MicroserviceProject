@@ -22,6 +22,7 @@ import (
 type AuthService struct {
 	Dbrepo        repository.DBUserRepos
 	Dbtxmanager   repository.DBTransactionManager
+	Redisrepo     repository.RedisUserRepos
 	KafkaProducer kafka.KafkaProducerService
 	Validator     *validator.Validate
 	GrpcClient    client.GrpcClientService
@@ -50,50 +51,33 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	}
 	user := &model.User{Id: uuid.New(), Password: string(hashpass), Email: req.Email, Name: req.Name}
 	var tx *sql.Tx
-	tx, err = as.Dbtxmanager.BeginTx(ctx)
-	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
-	if err != nil {
-		fmterr := fmt.Sprintf("Transaction Error: %v", err)
-		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		registrateMap[erro.ErrorType] = erro.ServerErrorType
-		registrateMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
-		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
-	}
-	isTransactionActive := true
-	defer func() {
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
-			isTransactionActive = false
-		} else {
-			as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
-		}
-	}()
+	tx, err = beginTransaction(ctx, as.Dbtxmanager, registrateMap, place, traceid, as.KafkaProducer)
+	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
 	bdresponse, serviceresponse := requestToDB(as.Dbrepo.CreateUser(ctx, tx, user), registrateMap)
 	if serviceresponse != nil {
+		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
 	}
-	userID := bdresponse.Data[repository.KeyUserID].(uuid.UUID)
+	userID := bdresponse.Data[repository.KeyUserID].(string)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
-		return as.GrpcClient.CreateSession(ctx, userID.String())
+		return as.GrpcClient.CreateSession(ctx, userID)
 	}, traceid, registrateMap, place, as.KafkaProducer)
 	if serviceresponse != nil {
+		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
 	}
-	err = commitTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
+	err = commitTransaction(as.Dbtxmanager, tx, registrateMap, traceid, place, as.KafkaProducer)
 	if err != nil {
+		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		_, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 			return as.GrpcClient.DeleteSession(ctx, grpcresponse.SessionID)
 		}, traceid, registrateMap, place, as.KafkaProducer)
 		if serviceresponse != nil {
 			as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Failed to delete session after transaction failure")
 		}
-		registrateMap[erro.ErrorType] = erro.ServerErrorType
-		registrateMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
 		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
 	}
-	isTransactionActive = false
+	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
 	return &ServiceResponse{Success: true, Data: map[string]any{"userID": userID, "sessionID": grpcresponse.SessionID, "expiresession": time.Unix(grpcresponse.ExpiryTime, 0)}}
 }
 func (as *AuthService) AuthenticateAndLogin(ctx context.Context, req *model.AuthenticationRequest) *ServiceResponse {
@@ -108,9 +92,9 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, req *model.Auth
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	userID := bdresponse.Data[repository.KeyUserID].(uuid.UUID)
+	userID := bdresponse.Data[repository.KeyUserID].(string)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
-		return as.GrpcClient.CreateSession(ctx, userID.String())
+		return as.GrpcClient.CreateSession(ctx, userID)
 	}, traceid, authenticateMap, place, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
@@ -122,13 +106,8 @@ func (as *AuthService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 	const place = DeleteAccount
 	deletemap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
-	userid, err := uuid.Parse(useridstr)
+	userid, err := parsingUserId(useridstr, deletemap, traceid, place, as.KafkaProducer)
 	if err != nil {
-		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
-		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		deletemap[erro.ErrorType] = erro.ServerErrorType
-		deletemap[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
 	}
 	errorvalidate := validateData(as.Validator, req, traceid, place, as.KafkaProducer)
@@ -136,43 +115,30 @@ func (as *AuthService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 		return &ServiceResponse{Success: false, Errors: errorvalidate, ErrorType: erro.ClientErrorType}
 	}
 	var tx *sql.Tx
-	tx, err = as.Dbtxmanager.BeginTx(ctx)
-	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
-	if err != nil {
-		fmterr := fmt.Sprintf("Transaction Error: %v", err)
-		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		deletemap[erro.ErrorType] = erro.ServerErrorType
-		deletemap[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
-		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
-	}
-	isTransactionActive := true
-	defer func() {
-		if isTransactionActive {
-			rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
-			isTransactionActive = false
-		} else {
-			as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and user has successfully deleted his account with all data")
-		}
-	}()
+	tx, err = beginTransaction(ctx, as.Dbtxmanager, deletemap, place, traceid, as.KafkaProducer)
 	_, serviceresponse := requestToDB(as.Dbrepo.DeleteUser(ctx, tx, userid, req.Password), deletemap)
 	if serviceresponse != nil {
+		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
+		return serviceresponse
+	}
+	_, serviceresponse = requestToDB(as.Redisrepo.DeleteProfile(ctx, userid), deletemap)
+	if serviceresponse != nil {
+		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
 	}
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 		return as.GrpcClient.DeleteSession(ctx, sessionID)
 	}, traceid, deletemap, place, as.KafkaProducer)
 	if serviceresponse != nil {
+		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
 	}
-	err = commitTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
+	err = commitTransaction(as.Dbtxmanager, tx, deletemap, traceid, place, as.KafkaProducer)
 	if err != nil {
-		deletemap[erro.ErrorType] = erro.ServerErrorType
-		deletemap[erro.ErrorMessage] = erro.UserServiceUnavalaible
+		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
 	}
-	isTransactionActive = false
+	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and user has successfully deleted his account with all data")
 	return &ServiceResponse{Success: grpcresponse.Success}
 }
 func (as *AuthService) Logout(ctx context.Context, sessionID string) *ServiceResponse {
@@ -192,60 +158,56 @@ func (as *AuthService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 	const place = UpdateAccount
 	traceid := ctx.Value("traceID").(string)
 	updatemap := make(map[string]string)
-	userid, err := uuid.Parse(useridstr)
+	userid, err := parsingUserId(useridstr, updatemap, traceid, place, as.KafkaProducer)
 	if err != nil {
-		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
-		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		updatemap[erro.ErrorType] = erro.ServerErrorType
-		updatemap[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ServerErrorType}
 	}
 	errorvalidate := validateData(as.Validator, req, traceid, place, as.KafkaProducer)
 	if errorvalidate != nil {
 		return &ServiceResponse{Success: false, Errors: errorvalidate, ErrorType: erro.ClientErrorType}
 	}
+	var tx *sql.Tx
+	tx, err = beginTransaction(ctx, as.Dbtxmanager, updatemap, place, traceid, as.KafkaProducer)
 	if req.Name != "" && req.Email == "" && req.LastPassword == "" && req.NewPassword == "" && updateType == "name" {
-		bdresponse, serviceresponse := requestToDB(as.Dbrepo.UpdateUserName(ctx, userid, req.Name), updatemap)
-		if serviceresponse != nil {
-			return serviceresponse
-		}
-		return &ServiceResponse{Success: bdresponse.Success}
+		return updateAndCommit(ctx, as.Dbtxmanager, as.Dbrepo.UpdateUserData, as.Redisrepo.DeleteProfile, tx, userid, updateType, updatemap, traceid, place, as.KafkaProducer, req.Name)
 	}
 	if req.Name == "" && req.Email == "" && req.LastPassword != "" && req.NewPassword != "" && updateType == "password" {
-		bdresponse, serviceresponse := requestToDB(as.Dbrepo.UpdateUserPassword(ctx, userid, req.LastPassword, req.NewPassword), updatemap)
-		if serviceresponse != nil {
-			return serviceresponse
-		}
-		return &ServiceResponse{Success: bdresponse.Success}
+		return updateAndCommit(ctx, as.Dbtxmanager, as.Dbrepo.UpdateUserData, as.Redisrepo.DeleteProfile, tx, userid, updateType, updatemap, traceid, place, as.KafkaProducer, req.LastPassword, req.NewPassword)
 	}
 	if req.Name == "" && req.Email != "" && req.LastPassword != "" && req.NewPassword == "" && updateType == "email" {
-		bdresponse, serviceresponse := requestToDB(as.Dbrepo.UpdateUserEmail(ctx, userid, req.Email, req.LastPassword), updatemap)
-		if serviceresponse != nil {
-			return serviceresponse
-		}
-		return &ServiceResponse{Success: bdresponse.Success}
+		return updateAndCommit(ctx, as.Dbtxmanager, as.Dbrepo.UpdateUserData, as.Redisrepo.DeleteProfile, tx, userid, updateType, updatemap, traceid, place, as.KafkaProducer, req.Email, req.LastPassword)
 	}
 	updatemap[erro.ErrorType] = erro.ClientErrorType
 	updatemap[erro.ErrorMessage] = erro.ErrorInvalidCountDinamicParameter
 	as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, UpdateAccount, traceid, erro.ErrorInvalidCountDinamicParameter)
-	metrics.UserErrorsTotal.WithLabelValues("ClientError").Inc()
+	metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+	err = commitTransaction(as.Dbtxmanager, tx, updatemap, traceid, place, as.KafkaProducer)
+	if err != nil {
+		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
+		return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ServerErrorType}
+	}
 	return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ClientErrorType}
 }
 func (as *AuthService) GetMyProfile(ctx context.Context, useridstr string) *ServiceResponse {
 	const place = GetMyProfile
 	getMyProfileMap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
-	userid, err := uuid.Parse(useridstr)
+	userid, err := parsingUserId(useridstr, getMyProfileMap, traceid, place, as.KafkaProducer)
 	if err != nil {
-		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
-		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		getMyProfileMap[erro.ErrorType] = erro.ServerErrorType
-		getMyProfileMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: getMyProfileMap, ErrorType: erro.ServerErrorType}
 	}
+	redisresponse, serviceresponse := requestToDB(as.Redisrepo.GetProfile(ctx, userid), getMyProfileMap)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	if redisresponse.Success {
+		return &ServiceResponse{Success: redisresponse.Success, Data: redisresponse.Data}
+	}
 	bdresponse, serviceresponse := requestToDB(as.Dbrepo.GetMyProfile(ctx, userid), getMyProfileMap)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	_, serviceresponse = requestToDB(as.Redisrepo.AddProfile(ctx, userid, bdresponse.Data), getMyProfileMap)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -255,22 +217,12 @@ func (as *AuthService) GetProfileById(ctx context.Context, useridstr string, get
 	const place = GetProfileById
 	getProfilebyIdMap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
-	userid, err := uuid.Parse(useridstr)
+	userid, err := parsingUserId(useridstr, getProfilebyIdMap, traceid, place, as.KafkaProducer)
 	if err != nil {
-		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
-		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		getProfilebyIdMap[erro.ErrorType] = erro.ServerErrorType
-		getProfilebyIdMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ServerErrorType}
 	}
-	getid, err := uuid.Parse(getidstr)
+	getid, err := parsingUserId(useridstr, getProfilebyIdMap, traceid, place, as.KafkaProducer)
 	if err != nil {
-		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
-		as.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
-		getProfilebyIdMap[erro.ErrorType] = erro.ServerErrorType
-		getProfilebyIdMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ServerErrorType}
 	}
 	if userid == getid {
@@ -280,7 +232,18 @@ func (as *AuthService) GetProfileById(ctx context.Context, useridstr string, get
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ClientErrorType}
 	}
+	redisresponse, serviceresponse := requestToDB(as.Redisrepo.GetProfile(ctx, getid), getProfilebyIdMap)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	if redisresponse.Success {
+		return &ServiceResponse{Success: redisresponse.Success, Data: redisresponse.Data}
+	}
 	bdresponse, serviceresponse := requestToDB(as.Dbrepo.GetProfileById(ctx, getid), getProfilebyIdMap)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	_, serviceresponse = requestToDB(as.Redisrepo.AddProfile(ctx, getid, bdresponse.Data), getProfilebyIdMap)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
