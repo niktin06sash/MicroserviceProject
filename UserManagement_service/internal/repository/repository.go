@@ -16,9 +16,7 @@ type DBUserRepos interface {
 	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *RepositoryResponse
 	AuthenticateUser(ctx context.Context, useremail, password string) *RepositoryResponse
 	DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *RepositoryResponse
-	UpdateUserName(ctx context.Context, userId uuid.UUID, name string) *RepositoryResponse
-	UpdateUserEmail(ctx context.Context, userId uuid.UUID, email string, password string) *RepositoryResponse
-	UpdateUserPassword(ctx context.Context, userId uuid.UUID, lastpassword string, newpassword string) *RepositoryResponse
+	UpdateUserData(ctx context.Context, tx *sql.Tx, userId uuid.UUID, updateType string, args ...interface{}) *RepositoryResponse
 	GetMyProfile(ctx context.Context, userid uuid.UUID) *RepositoryResponse
 	GetProfileById(ctx context.Context, getid uuid.UUID) *RepositoryResponse
 }
