@@ -28,9 +28,9 @@ type AuthService struct {
 	GrpcClient    client.GrpcClientService
 }
 
-func NewAuthService(dbrepo repository.DBUserRepos, dbtxmanager repository.DBTransactionManager, kafkaProd kafka.KafkaProducerService, grpc *client.GrpcClient) *AuthService {
+func NewAuthService(dbrepo repository.DBUserRepos, dbtxmanager repository.DBTransactionManager, redisrepo repository.RedisUserRepos, kafkaProd kafka.KafkaProducerService, grpc *client.GrpcClient) *AuthService {
 	validator := validator.New()
-	return &AuthService{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
+	return &AuthService{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Redisrepo: redisrepo, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
 }
 func (as *AuthService) RegistrateAndLogin(ctx context.Context, req *model.RegistrationRequest) *ServiceResponse {
 	const place = RegistrateAndLogin
@@ -221,7 +221,7 @@ func (as *AuthService) GetProfileById(ctx context.Context, useridstr string, get
 	if err != nil {
 		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ServerErrorType}
 	}
-	getid, err := parsingUserId(useridstr, getProfilebyIdMap, traceid, place, as.KafkaProducer)
+	getid, err := parsingUserId(getidstr, getProfilebyIdMap, traceid, place, as.KafkaProducer)
 	if err != nil {
 		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ServerErrorType}
 	}

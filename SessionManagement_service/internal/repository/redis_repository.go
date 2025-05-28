@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 )
 
 type AuthRedis struct {
@@ -57,14 +56,6 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string, traceID string, place string, flagvalidate bool) *RepositoryResponse {
 	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, sessionID).Result()
 	if err != nil {
-		if err == redis.Nil {
-			if flagvalidate {
-				redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, erro.SessionNotFound)
-				return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, erro.SessionIdRequired)}
-			}
-			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful verification of missing session")
-			return &RepositoryResponse{Success: true}
-		}
 		fmterr := fmt.Sprintf("HGetAll session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)}
@@ -109,18 +100,18 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
 	const place = DeleteSession
 	traceID := ctx.Value("traceID").(string)
-	err := redisrepo.Client.RedisClient.Del(ctx, sessionID).Err()
+	num, err := redisrepo.Client.RedisClient.Del(ctx, sessionID).Result()
 	if err != nil {
-		if err == redis.Nil {
-			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Session not found")
-			return &RepositoryResponse{
-				Success: false,
-				Errors:  status.Errorf(codes.InvalidArgument, erro.SessionNotFound),
-			}
-		}
 		fmterr := fmt.Sprintf("Del session error: %v", err)
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)}
+	}
+	if num == 0 {
+		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Session not found")
+		return &RepositoryResponse{
+			Success: false,
+			Errors:  status.Errorf(codes.InvalidArgument, erro.SessionNotFound),
+		}
 	}
 	redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Successful session deleted")
 	return &RepositoryResponse{Success: true}
