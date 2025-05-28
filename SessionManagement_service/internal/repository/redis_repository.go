@@ -24,24 +24,10 @@ func NewAuthRedis(client *RedisObject, kafka kafka.KafkaProducerService) *AuthRe
 	return &AuthRedis{Client: client, KafkaProducer: kafka}
 }
 
-func (redisrepo *AuthRedis) validateContext(ctx context.Context, place string) (string, error) {
-	traceID := ctx.Value("traceID").(string)
-	select {
-	case <-ctx.Done():
-		fmterr := fmt.Sprintf("Context error: %v", ctx.Err())
-		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return "", status.Errorf(codes.Internal, erro.RequestTimedOut)
-	default:
-		return traceID, nil
-	}
-}
 func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Session) *RepositoryResponse {
-	var place = SetSession
-	traceID, err := redisrepo.validateContext(ctx, place)
-	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: err}
-	}
-	err = redisrepo.Client.RedisClient.HSet(ctx, session.SessionID, map[string]interface{}{
+	const place = SetSession
+	traceID := ctx.Value("traceID").(string)
+	err := redisrepo.Client.RedisClient.HSet(ctx, session.SessionID, map[string]interface{}{
 		"UserID":         session.UserID,
 		"ExpirationTime": session.ExpirationTime.Format(time.RFC3339),
 	}).Err()
@@ -62,11 +48,8 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 }
 
 func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
-	var place = GetSession
-	traceID, err := redisrepo.validateContext(ctx, place)
-	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: err}
-	}
+	const place = GetSession
+	traceID := ctx.Value("traceID").(string)
 	flag := ctx.Value("flagvalidate").(string)
 	flagValidate := flag == "true"
 	return redisrepo.getSessionData(ctx, sessionID, traceID, place, flagValidate)
@@ -101,12 +84,12 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 	userIDString, ok := result["UserID"]
 	if !ok {
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Get UserID from session error")
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, erro.SessionNotFound)}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)}
 	}
 	expirationTimeString, ok := result["ExpirationTime"]
 	if !ok {
 		redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Get ExpirationTime from session error")
-		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, erro.SessionNotFound)}
+		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)}
 	}
 	expirationTime, err := time.Parse(time.RFC3339, expirationTimeString)
 	if err != nil {
@@ -124,12 +107,9 @@ func (redisrepo *AuthRedis) getSessionData(ctx context.Context, sessionID string
 	return &RepositoryResponse{Success: true, UserID: userID.String(), ExpirationTime: expirationTime}
 }
 func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
-	var place = DeleteSession
-	traceID, err := redisrepo.validateContext(ctx, place)
-	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: err}
-	}
-	err = redisrepo.Client.RedisClient.Del(ctx, sessionID).Err()
+	const place = DeleteSession
+	traceID := ctx.Value("traceID").(string)
+	err := redisrepo.Client.RedisClient.Del(ctx, sessionID).Err()
 	if err != nil {
 		if err == redis.Nil {
 			redisrepo.KafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Session not found")

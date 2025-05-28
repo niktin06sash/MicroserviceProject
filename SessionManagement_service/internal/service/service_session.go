@@ -24,23 +24,9 @@ type SessionService struct {
 func NewSessionService(repo repository.RedisSessionRepos, kafka kafka.KafkaProducerService) *SessionService {
 	return &SessionService{repo: repo, kafkaProducer: kafka}
 }
-func (s *SessionService) validateContext(ctx context.Context, place string) (string, error) {
-	traceID := ctx.Value("traceID").(string)
-	select {
-	case <-ctx.Done():
-		fmterr := fmt.Sprintf("Context error: %v", ctx.Err())
-		s.kafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, fmterr)
-		return "", status.Errorf(codes.Internal, erro.RequestTimedOut)
-	default:
-		return traceID, nil
-	}
-}
 func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
 	const place = UseCase_CreateSession
-	traceID, err := s.validateContext(ctx, place)
-	if err != nil {
-		return &pb.CreateSessionResponse{Success: false}, err
-	}
+	traceID := ctx.Value("traceID").(string)
 	if req.UserID == "" {
 		s.kafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, "Required userID")
 		return &pb.CreateSessionResponse{Success: false}, status.Errorf(codes.InvalidArgument, erro.UserIdRequired)
@@ -62,10 +48,7 @@ func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessio
 }
 func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
 	const place = UseCase_ValidateSession
-	traceID, err := s.validateContext(ctx, place)
-	if err != nil {
-		return &pb.ValidateSessionResponse{Success: false}, err
-	}
+	traceID := ctx.Value("traceID").(string)
 	flag := ctx.Value("flagvalidate").(string)
 	switch flag {
 	case "true":
@@ -85,10 +68,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, req *pb.ValidateSe
 }
 func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
 	const place = UseCase_DeleteSession
-	traceID, err := s.validateContext(ctx, place)
-	if err != nil {
-		return &pb.DeleteSessionResponse{Success: false}, err
-	}
+	traceID := ctx.Value("traceID").(string)
 	if _, err := uuid.Parse(req.SessionID); err != nil {
 		fmterr := fmt.Sprintf("UUID-Parse sessionID error: %v", err)
 		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, fmterr)
