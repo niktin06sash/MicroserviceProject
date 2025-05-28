@@ -121,7 +121,7 @@ func (as *AuthService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
 	}
-	_, serviceresponse = requestToDB(as.Redisrepo.DeleteProfile(ctx, userid), deletemap)
+	_, serviceresponse = requestToDB(as.Redisrepo.DeleteProfileCache(ctx, useridstr), deletemap)
 	if serviceresponse != nil {
 		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
@@ -169,13 +169,13 @@ func (as *AuthService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 	var tx *sql.Tx
 	tx, err = beginTransaction(ctx, as.Dbtxmanager, updatemap, place, traceid, as.KafkaProducer)
 	if req.Name != "" && req.Email == "" && req.LastPassword == "" && req.NewPassword == "" && updateType == "name" {
-		return updateAndCommit(ctx, as.Dbtxmanager, as.Dbrepo.UpdateUserData, as.Redisrepo.DeleteProfile, tx, userid, updateType, updatemap, traceid, place, as.KafkaProducer, req.Name)
+		return updateAndCommit(ctx, as.Dbtxmanager, as.Dbrepo.UpdateUserData, as.Redisrepo.DeleteProfileCache, tx, userid, updateType, updatemap, traceid, place, as.KafkaProducer, req.Name)
 	}
 	if req.Name == "" && req.Email == "" && req.LastPassword != "" && req.NewPassword != "" && updateType == "password" {
-		return updateAndCommit(ctx, as.Dbtxmanager, as.Dbrepo.UpdateUserData, as.Redisrepo.DeleteProfile, tx, userid, updateType, updatemap, traceid, place, as.KafkaProducer, req.LastPassword, req.NewPassword)
+		return updateAndCommit(ctx, as.Dbtxmanager, as.Dbrepo.UpdateUserData, as.Redisrepo.DeleteProfileCache, tx, userid, updateType, updatemap, traceid, place, as.KafkaProducer, req.LastPassword, req.NewPassword)
 	}
 	if req.Name == "" && req.Email != "" && req.LastPassword != "" && req.NewPassword == "" && updateType == "email" {
-		return updateAndCommit(ctx, as.Dbtxmanager, as.Dbrepo.UpdateUserData, as.Redisrepo.DeleteProfile, tx, userid, updateType, updatemap, traceid, place, as.KafkaProducer, req.Email, req.LastPassword)
+		return updateAndCommit(ctx, as.Dbtxmanager, as.Dbrepo.UpdateUserData, as.Redisrepo.DeleteProfileCache, tx, userid, updateType, updatemap, traceid, place, as.KafkaProducer, req.Email, req.LastPassword)
 	}
 	updatemap[erro.ErrorType] = erro.ClientErrorType
 	updatemap[erro.ErrorMessage] = erro.ErrorInvalidCountDinamicParameter
@@ -196,7 +196,7 @@ func (as *AuthService) GetMyProfile(ctx context.Context, useridstr string) *Serv
 	if err != nil {
 		return &ServiceResponse{Success: false, Errors: getMyProfileMap, ErrorType: erro.ServerErrorType}
 	}
-	redisresponse, serviceresponse := requestToDB(as.Redisrepo.GetProfile(ctx, userid), getMyProfileMap)
+	redisresponse, serviceresponse := requestToDB(as.Redisrepo.GetProfileCache(ctx, useridstr), getMyProfileMap)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -207,7 +207,7 @@ func (as *AuthService) GetMyProfile(ctx context.Context, useridstr string) *Serv
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	_, serviceresponse = requestToDB(as.Redisrepo.AddProfile(ctx, userid, bdresponse.Data), getMyProfileMap)
+	_, serviceresponse = requestToDB(as.Redisrepo.AddProfileCache(ctx, useridstr, bdresponse.Data), getMyProfileMap)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -232,7 +232,7 @@ func (as *AuthService) GetProfileById(ctx context.Context, useridstr string, get
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ClientErrorType}
 	}
-	redisresponse, serviceresponse := requestToDB(as.Redisrepo.GetProfile(ctx, getid), getProfilebyIdMap)
+	redisresponse, serviceresponse := requestToDB(as.Redisrepo.GetProfileCache(ctx, getidstr), getProfilebyIdMap)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -243,7 +243,7 @@ func (as *AuthService) GetProfileById(ctx context.Context, useridstr string, get
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	_, serviceresponse = requestToDB(as.Redisrepo.AddProfile(ctx, getid, bdresponse.Data), getProfilebyIdMap)
+	_, serviceresponse = requestToDB(as.Redisrepo.AddProfileCache(ctx, getidstr, bdresponse.Data), getProfilebyIdMap)
 	if serviceresponse != nil {
 		return serviceresponse
 	}

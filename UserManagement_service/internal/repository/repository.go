@@ -26,11 +26,14 @@ type DBTransactionManager interface {
 	CommitTx(tx *sql.Tx) error
 }
 type RedisUserRepos interface {
-	AddProfile(ctx context.Context, id uuid.UUID, data map[string]any) *RepositoryResponse
-	DeleteProfile(ctx context.Context, id uuid.UUID) *RepositoryResponse
-	GetProfile(ctx context.Context, id uuid.UUID) *RepositoryResponse
+	AddProfileCache(ctx context.Context, id string, data map[string]any) *RepositoryResponse
+	DeleteProfileCache(ctx context.Context, id string) *RepositoryResponse
+	GetProfileCache(ctx context.Context, id string) *RepositoryResponse
 }
 
+const GetProfileCache = "Repository-GetProfileCache"
+const DeleteProfileCache = "Repository-DeleteProfileCache"
+const AddProfileCache = "Repository-AddProfileCache"
 const CreateUser = "Repository-CreateUser"
 const AuthenticateUser = "Repository-AuthenticateUser"
 const DeleteUser = "Repository-DeleteUser"
