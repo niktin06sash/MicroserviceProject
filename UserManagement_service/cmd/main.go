@@ -27,10 +27,20 @@ func main() {
 	if err != nil {
 		return
 	}
+	redis, err := repository.NewRedisConnection(config.Redis)
+	if err != nil {
+		return
+	}
 	metrics.Start()
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
-	repositories := repository.NewRepository(db, kafkaProducer)
+	if err != nil {
+		return
+	}
+	repositories := repository.NewRepository(db, redis, kafkaProducer)
 	grpcclient := client.NewGrpcClient(config.SessionService)
+	if err != nil {
+		return
+	}
 	service := service.NewService(repositories, kafkaProducer, grpcclient)
 	middleware := middleware.NewMiddleware(kafkaProducer)
 	handlers := handlers.NewHandler(service, middleware, kafkaProducer)

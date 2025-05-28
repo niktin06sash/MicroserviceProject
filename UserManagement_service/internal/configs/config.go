@@ -12,6 +12,7 @@ type Config struct {
 	Database       DatabaseConfig       `mapstructure:"database"`
 	Kafka          KafkaConfig          `mapstructure:"kafka"`
 	SessionService SessionServiceConfig `mapstructure:"session_service"`
+	Redis          RedisConfig          `mapstructure:"redis"`
 }
 
 type ServerConfig struct {
@@ -44,6 +45,13 @@ type SessionServiceConfig struct {
 	GrpcAddress string `mapstructure:"grpc_address"`
 }
 
+type RedisConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
+}
+
 func LoadConfig() Config {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yml")
@@ -71,9 +79,11 @@ func LoadConfig() Config {
 	return config
 }
 func LoadDockerConfig(config *Config) {
+	redis := os.Getenv("REDIS_HOST")
 	db := os.Getenv("DB_HOST")
 	kafka := os.Getenv("KAFKA_BOOTSTRAP_SERVERS")
 	grpcaddr := os.Getenv("SESSION_SERVICE_GRPC_ADDRESS")
+	config.Redis.Host = redis
 	config.Database.Host = db
 	config.Kafka.BootstrapServers = kafka
 	config.SessionService.GrpcAddress = grpcaddr
