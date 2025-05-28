@@ -32,7 +32,10 @@ func main() {
 	config := configs.LoadConfig()
 	metrics.Start()
 	kafkaprod := kafka.NewKafkaProducer(config.Kafka)
-	grpcclient := client.NewGrpcClient(config.SessionService)
+	grpcclient, err := client.NewGrpcClient(config.SessionService)
+	if err != nil {
+		return
+	}
 	middleware := middleware.NewMiddleware(grpcclient, kafkaprod)
 	handler := handlers.NewHandler(middleware, kafkaprod, config.Routes)
 	srv := &server.Server{}
