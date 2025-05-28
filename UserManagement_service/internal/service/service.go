@@ -42,6 +42,6 @@ func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducerServi
 
 	return &Service{
 
-		UserService: NewAuthService(repos.DBUserRepos, repos.DBTransactionManager, kafkaProd, clientgrpc),
+		UserService: NewAuthService(repos.DBUserRepos, repos.DBTransactionManager, repos.RedisUserRepos, kafkaProd, clientgrpc),
 	}
 }

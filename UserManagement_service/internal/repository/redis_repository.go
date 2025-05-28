@@ -7,7 +7,6 @@ import (
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
-	"github.com/redis/go-redis/v9"
 )
 
 type AuthRedisRepo struct {
@@ -44,14 +43,16 @@ func (redis *AuthRedisRepo) AddProfileCache(ctx context.Context, id string, data
 func (redisrepo *AuthRedisRepo) DeleteProfileCache(ctx context.Context, id string) *RepositoryResponse {
 	const place = DeleteProfileCache
 	traceID := ctx.Value("traceID").(string)
-	err := redisrepo.Client.RedisClient.Del(ctx, id).Err()
+	num, err := redisrepo.Client.RedisClient.Del(ctx, id).Result()
 	if err != nil {
-		if err == redis.Nil {
-			return &RepositoryResponse{Success: true}
-		}
 		fmterr := fmt.Sprintf("Del profile-cache error: %v", err)
 		redisrepo.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Message: erro.UserServiceUnavalaible, Type: erro.ServerErrorType}}
+	}
+	if num == 0 {
+		return &RepositoryResponse{
+			Success: false,
+		}
 	}
 	redisrepo.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, "Successful profile-cache deleted")
 	return &RepositoryResponse{Success: true}
@@ -61,12 +62,12 @@ func (redisrepo *AuthRedisRepo) GetProfileCache(ctx context.Context, id string) 
 	traceID := ctx.Value("traceID").(string)
 	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, id).Result()
 	if err != nil {
-		if err == redis.Nil {
-			return &RepositoryResponse{Success: true}
-		}
 		fmterr := fmt.Sprintf("HGetAll profile-cache error: %v", err)
 		redisrepo.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Message: erro.UserServiceUnavalaible, Type: erro.ServerErrorType}}
+	}
+	if len(result) == 0 {
+		return &RepositoryResponse{Success: false}
 	}
 	userIDstr, ok := result["UserID"]
 	if !ok {
