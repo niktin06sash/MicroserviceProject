@@ -74,7 +74,7 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	userID := bdresponse.Data["userID"].(uuid.UUID)
+	userID := bdresponse.Data[repository.KeyUserID].(uuid.UUID)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
 		return as.GrpcClient.CreateSession(ctx, userID.String())
 	}, traceid, registrateMap, place, as.KafkaProducer)
@@ -108,7 +108,7 @@ func (as *AuthService) AuthenticateAndLogin(ctx context.Context, req *model.Auth
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	userID := bdresponse.Data["userID"].(uuid.UUID)
+	userID := bdresponse.Data[repository.KeyUserID].(uuid.UUID)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
 		return as.GrpcClient.CreateSession(ctx, userID.String())
 	}, traceid, authenticateMap, place, as.KafkaProducer)
