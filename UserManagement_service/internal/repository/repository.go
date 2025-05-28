@@ -13,19 +13,24 @@ import (
 
 //go:generate mockgen -source=repository.go -destination=mocks/mock.go
 type DBUserRepos interface {
-	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *DBRepositoryResponse
-	AuthenticateUser(ctx context.Context, useremail, password string) *DBRepositoryResponse
-	DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *DBRepositoryResponse
-	UpdateUserName(ctx context.Context, userId uuid.UUID, name string) *DBRepositoryResponse
-	UpdateUserEmail(ctx context.Context, userId uuid.UUID, email string, password string) *DBRepositoryResponse
-	UpdateUserPassword(ctx context.Context, userId uuid.UUID, lastpassword string, newpassword string) *DBRepositoryResponse
-	GetMyProfile(ctx context.Context, userid uuid.UUID) *DBRepositoryResponse
-	GetProfileById(ctx context.Context, getid uuid.UUID) *DBRepositoryResponse
+	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *RepositoryResponse
+	AuthenticateUser(ctx context.Context, useremail, password string) *RepositoryResponse
+	DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *RepositoryResponse
+	UpdateUserName(ctx context.Context, userId uuid.UUID, name string) *RepositoryResponse
+	UpdateUserEmail(ctx context.Context, userId uuid.UUID, email string, password string) *RepositoryResponse
+	UpdateUserPassword(ctx context.Context, userId uuid.UUID, lastpassword string, newpassword string) *RepositoryResponse
+	GetMyProfile(ctx context.Context, userid uuid.UUID) *RepositoryResponse
+	GetProfileById(ctx context.Context, getid uuid.UUID) *RepositoryResponse
 }
 type DBTransactionManager interface {
 	BeginTx(ctx context.Context) (*sql.Tx, error)
 	RollbackTx(tx *sql.Tx) error
 	CommitTx(tx *sql.Tx) error
+}
+type RedisUserRepos interface {
+	AddProfile(ctx context.Context, id uuid.UUID, data map[string]any) *RepositoryResponse
+	DeleteProfile(ctx context.Context, id uuid.UUID) *RepositoryResponse
+	GetProfile(ctx context.Context, id uuid.UUID) *RepositoryResponse
 }
 
 const CreateUser = "Repository-CreateUser"
@@ -40,20 +45,18 @@ const GetProfileById = "Repository-GetProfileById"
 type Repository struct {
 	DBUserRepos
 	DBTransactionManager
+	RedisUserRepos
 }
-type DBRepositoryResponse struct {
+type RepositoryResponse struct {
 	Success bool
 	Data    map[string]any
 	Errors  *erro.ErrorResponse
 }
-type ErrorResponse struct {
-	Message string
-	Type    string
-}
 
-func NewRepository(db *DBObject, kafka kafka.KafkaProducerService) *Repository {
+func NewRepository(db *DBObject, redis *RedisObject, kafka kafka.KafkaProducerService) *Repository {
 	return &Repository{
 		DBUserRepos:          NewAuthPostgresRepo(db, kafka),
 		DBTransactionManager: NewTxManagerRepo(db),
+		RedisUserRepos:       NewAuthRedisRepo(redis, kafka),
 	}
 }
