@@ -227,7 +227,7 @@ func updateAndCommit(
 	ctx context.Context,
 	txManager repository.DBTransactionManager,
 	dbFunc func(context.Context, *sql.Tx, uuid.UUID, string, ...interface{}) *repository.RepositoryResponse,
-	redisFunc func(context.Context, uuid.UUID) *repository.RepositoryResponse,
+	redisFunc func(context.Context, string) *repository.RepositoryResponse,
 	tx *sql.Tx,
 	userid uuid.UUID,
 	updateType string,
@@ -242,7 +242,7 @@ func updateAndCommit(
 		rollbackTransaction(txManager, tx, traceid, place, kafkaProducer)
 		return serviceresponse
 	}
-	_, serviceresponse = requestToDB(redisFunc(ctx, userid), mapa)
+	_, serviceresponse = requestToDB(redisFunc(ctx, userid.String()), mapa)
 	if serviceresponse != nil {
 		rollbackTransaction(txManager, tx, traceid, place, kafkaProducer)
 		return serviceresponse
