@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
@@ -27,7 +26,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if !serviceResponse(regresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
-	userID := regresponse.Data["userID"].(uuid.UUID)
+	userID := regresponse.Data["userID"].(string)
 	sessionID := regresponse.Data["sessionID"].(string)
 	expiresession := regresponse.Data["expiresession"].(time.Time)
 	response.AddSessionCookie(w, sessionID, expiresession)
@@ -52,7 +51,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	if !serviceResponse(auresponse, r, w, traceID, place, h.KafkaProducer) {
 		return
 	}
-	userID := auresponse.Data["userID"].(uuid.UUID)
+	userID := auresponse.Data["userID"].(string)
 	sessionID := auresponse.Data["sessionID"].(string)
 	expiresession := auresponse.Data["expiresession"].(time.Time)
 	response.AddSessionCookie(w, sessionID, expiresession)
