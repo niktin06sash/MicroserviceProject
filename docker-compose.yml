@@ -1,3 +1,7 @@
+networks:
+  frontend_net:
+  backend_net:
+  data_net:
 services:
     zookeeper:
       networks:
@@ -11,11 +15,6 @@ services:
         - zookeeper_log:/var/lib/zookeeper/log
       ports:
         - "2181:2181"
-      healthcheck:
-        test:  ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok || exit 1"]
-        interval: 10s
-        timeout: 5s
-        retries: 3
     
     kafka:
       networks:
@@ -24,7 +23,6 @@ services:
       container_name: kafka
       depends_on:
         zookeeper:
-          condition: service_healthy
       volumes:
         - kafka_data:/var/lib/kafka/data
       environment:
@@ -47,11 +45,6 @@ services:
         KAFKA_LOG_SEGMENT_BYTES: 1073741824
       ports:
         - "9092:9092"
-      healthcheck:
-        test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
-        interval: 10s
-        timeout: 5s
-        retries: 3
     
     sessiondb:
       networks:
@@ -60,12 +53,23 @@ services:
       container_name: sessiondb
       command: redis-server --save 60 1 
       volumes:
-      - redis_data:/data
+      - session_data:/data
       ports:
         - "6379:6379"
     
+    profiledb:
+      networks:
+        - data_net
+      image: redis:7
+      container_name: profiledb
+      command: redis-server --save 60 1 
+      volumes:
+      - profile_data:/data
+      ports:
+        - "6380:6380"
+    
     userdb:
-      image: postgres:15
+      image: postgres:latest
       container_name: userdb
       environment:
         POSTGRES_USER: postgres
@@ -75,21 +79,20 @@ services:
         - "5432:5432"
       volumes:
         - postgres_data:/var/lib/postgresql/data
+      networks:
+        - data_net
+      restart: always
       healthcheck:
         test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
         interval: 10s
         timeout: 5s
         retries: 3
-      networks:
-        - data_net
-      restart: always
 
     migrate:
       image: migrate/migrate
       container_name: migrate
       depends_on:
         userdb:
-          condition: service_healthy
       environment:
         DATABASE_URL: "postgres://postgres:my_password@userdb:5432/fc2?sslmode=disable"
       volumes:
@@ -110,9 +113,7 @@ services:
         - prometheus_data:/prometheus
       depends_on:
         user_service:
-          condition: service_healthy
         api_service:
-          condition: service_healthy
     
     session_service:
       networks:
@@ -130,9 +131,7 @@ services:
         - "50052:50052"
       depends_on:
         sessiondb:
-          condition: service_healthy
         kafka:
-          condition: service_healthy
     
     user_service:
       networks:
@@ -151,11 +150,9 @@ services:
         - "8082:8082"
       depends_on:
         userdb:
-          condition: service_healthy
         kafka:
-          condition: service_healthy
         session_service:
-          condition: service_healthy
+        profiledb:
     
     logs_service:
       networks:
@@ -171,7 +168,6 @@ services:
         - logs_data:/root/logs_service/internal/logs 
       depends_on:
         kafka:
-          condition: service_healthy
     
     api_service:
       networks:
@@ -190,20 +186,14 @@ services:
         - "8083:8083"
       depends_on:
         user_service:
-          condition: service_healthy
         kafka:
-          condition: service_healthy
         session_service:
-          condition: service_healthy
-networks:
-  frontend_net:
-  backend_net:
-  data_net:
 volumes:
     zookeeper_log:
     zookeeper_data:
     kafka_data:
     postgres_data:
     prometheus_data:
-    redis_data:
+    session_data:
+    profile_data:
     logs_data:
