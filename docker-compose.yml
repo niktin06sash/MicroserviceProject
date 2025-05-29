@@ -22,14 +22,14 @@ services:
       image: confluentinc/cp-kafka:7.0.0
       container_name: kafka
       depends_on:
-        zookeeper:
+        - zookeeper
       volumes:
         - kafka_data:/var/lib/kafka/data
       environment:
         KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
         KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
         KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-        KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+        KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
         KAFKA_CREATE_TOPICS: >
           api-info-log-topic:1:1,
           api-warn-log-topic:1:1,
@@ -51,7 +51,7 @@ services:
         - data_net
       image: redis:7
       container_name: sessiondb
-      command: redis-server --save 60 1 
+      command: redis-server --port 6379 --save 60 1
       volumes:
       - session_data:/data
       ports:
@@ -62,7 +62,7 @@ services:
         - data_net
       image: redis:7
       container_name: profiledb
-      command: redis-server --save 60 1 
+      command: redis-server --port 6380 --save 60 1
       volumes:
       - profile_data:/data
       ports:
@@ -88,19 +88,6 @@ services:
         timeout: 5s
         retries: 3
 
-    migrate:
-      image: migrate/migrate
-      container_name: migrate
-      depends_on:
-        userdb:
-      environment:
-        DATABASE_URL: "postgres://postgres:my_password@userdb:5432/fc2?sslmode=disable"
-      volumes:
-        - ./UserManagement_service/schema:/schema
-      networks:
-        - data_net
-      command: ["migrate", "-path", "/schema", "-database", "$$DATABASE_URL", "up"]
-
     prometheus:
       networks:
         - backend_net 
@@ -112,8 +99,8 @@ services:
         - ./prometheus.yml:/etc/prometheus/prometheus.yml
         - prometheus_data:/prometheus
       depends_on:
-        user_service:
-        api_service:
+        - user_service
+        - api_service
     
     session_service:
       networks:
@@ -130,8 +117,8 @@ services:
       ports:
         - "50052:50052"
       depends_on:
-        sessiondb:
-        kafka:
+        - sessiondb
+        - kafka
     
     user_service:
       networks:
@@ -143,16 +130,17 @@ services:
       environment:
         DOCKER: "TRUE"
         DB_HOST: userdb
+        REDIS_HOST: profiledb
         KAFKA_BOOTSTRAP_SERVERS: kafka:9092
         SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
       container_name: user_service
       ports:
         - "8082:8082"
       depends_on:
-        userdb:
-        kafka:
-        session_service:
-        profiledb:
+        - userdb
+        - kafka
+        - session_service
+        - profiledb
     
     logs_service:
       networks:
@@ -167,7 +155,7 @@ services:
       volumes:
         - logs_data:/root/logs_service/internal/logs 
       depends_on:
-        kafka:
+        - kafka
     
     api_service:
       networks:
@@ -180,14 +168,14 @@ services:
         DOCKER: "TRUE"
         SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
         KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-        USER_SERVICE_HOST: user_service
+        USER_SERVICE_HOST: user_service:8082
       container_name: api_service
       ports:
         - "8083:8083"
       depends_on:
-        user_service:
-        kafka:
-        session_service:
+        - user_service
+        - kafka
+        - session_service
 volumes:
     zookeeper_log:
     zookeeper_data:

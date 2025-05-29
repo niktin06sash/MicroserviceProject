@@ -4,7 +4,7 @@ User_Service_DIR := UserManagement_service
 Logs_Service_DIR := Logs_service
 Swagger_DIR := $(API_Service_DIR)/docs
 
-.PHONY: all start stop clean swagger redis kafka run shutdown dockerstart dockerstop dockerrun dockershutdown
+.PHONY: all start tests stop clean swagger redis kafka run shutdown dockerstart dockerstop dockerrun dockershutdown
 
 all: start
 
@@ -12,6 +12,20 @@ swagger:
 	@echo "Generating Swagger documentation for API Service..."
 	cd $(API_Service_DIR) && swag init --pd -d ./cmd,./internal/handlers,./internal/handlers/response
 	@echo "Swagger documentation generated in $(Swagger_DIR)."
+
+dockerstart: 
+	@echo "Starting all services..."
+	docker-compose up -d
+
+dockerstop:
+	@echo "Stopping all services..."
+	docker-compose stop kafka
+	docker-compose stop zookeeper
+	docker-compose stop
+	@echo "All services stopped."
+dockerrun: swagger dockerstart
+dockershutdown: dockerstop clean
+
 kafka:
 	@echo "Starting Zookeeper..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd C:\Users\nikit\kafka; .\bin\windows\zookeeper-server-start.bat .\config\zookeeper.properties'"
@@ -54,17 +68,3 @@ tests:
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(User_Service_DIR)/internal/service/; go test -v ./...'"
 run: kafka swagger prometheus redis start
 shutdown: stop clean
-
-dockerstart: 
-	@echo "Starting all services..."
-	docker-compose up -d
-
-dockerstop:
-	@echo "Stopping all services..."
-	docker-compose stop kafka
-	docker-compose stop zookeeper
-	docker-compose stop logs_service
-	docker-compose stop
-	@echo "All services stopped."
-dockerrun: tests swagger dockerstart
-dockershutdown: dockerstop clean
