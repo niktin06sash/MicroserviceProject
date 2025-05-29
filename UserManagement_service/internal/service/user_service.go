@@ -51,7 +51,10 @@ func (as *AuthService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	}
 	user := &model.User{Id: uuid.New(), Password: string(hashpass), Email: req.Email, Name: req.Name}
 	var tx *sql.Tx
-	tx, err = beginTransaction(ctx, as.Dbtxmanager, registrateMap, place, traceid, as.KafkaProducer)
+	tx, resp := beginTransaction(ctx, as.Dbtxmanager, registrateMap, place, traceid, as.KafkaProducer)
+	if resp != nil {
+		return resp
+	}
 	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
 	bdresponse, serviceresponse := requestToDB(as.Dbrepo.CreateUser(ctx, tx, user), registrateMap)
 	if serviceresponse != nil {
@@ -115,7 +118,10 @@ func (as *AuthService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 		return &ServiceResponse{Success: false, Errors: errorvalidate, ErrorType: erro.ClientErrorType}
 	}
 	var tx *sql.Tx
-	tx, err = beginTransaction(ctx, as.Dbtxmanager, deletemap, place, traceid, as.KafkaProducer)
+	tx, resp := beginTransaction(ctx, as.Dbtxmanager, deletemap, place, traceid, as.KafkaProducer)
+	if resp != nil {
+		return resp
+	}
 	_, serviceresponse := requestToDB(as.Dbrepo.DeleteUser(ctx, tx, userid, req.Password), deletemap)
 	if serviceresponse != nil {
 		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
@@ -167,7 +173,10 @@ func (as *AuthService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 		return &ServiceResponse{Success: false, Errors: errorvalidate, ErrorType: erro.ClientErrorType}
 	}
 	var tx *sql.Tx
-	tx, err = beginTransaction(ctx, as.Dbtxmanager, updatemap, place, traceid, as.KafkaProducer)
+	tx, resp := beginTransaction(ctx, as.Dbtxmanager, updatemap, place, traceid, as.KafkaProducer)
+	if resp != nil {
+		return resp
+	}
 	if req.Name != "" && req.Email == "" && req.LastPassword == "" && req.NewPassword == "" && updateType == "name" {
 		return updateAndCommit(ctx, as.Dbtxmanager, as.Dbrepo.UpdateUserData, as.Redisrepo.DeleteProfileCache, tx, userid, updateType, updatemap, traceid, place, as.KafkaProducer, req.Name)
 	}

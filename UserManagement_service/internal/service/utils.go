@@ -43,6 +43,11 @@ func validateData[T any](val *validator.Validate, data T, traceid string, place 
 					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
 					erors[erro.ErrorType] = erro.ClientErrorType + "_" + strconv.Itoa(count)
 					erors[erro.ErrorMessage] = fmterr
+				case "max":
+					fmterr := fmt.Sprintf("%s is too long", err.Field())
+					kafkaProd.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
+					erors[erro.ErrorType] = erro.ClientErrorType + "_" + strconv.Itoa(count)
+					erors[erro.ErrorMessage] = fmterr
 				}
 				metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			}
@@ -51,15 +56,17 @@ func validateData[T any](val *validator.Validate, data T, traceid string, place 
 	}
 	return nil
 }
-func beginTransaction(ctx context.Context, txman repository.DBTransactionManager, mapa map[string]string, place, traceid string, kafkaprod kafka.KafkaProducerService) (*sql.Tx, error) {
+func beginTransaction(ctx context.Context, txman repository.DBTransactionManager, mapa map[string]string, place, traceid string, kafkaprod kafka.KafkaProducerService) (*sql.Tx, *ServiceResponse) {
 	tx, err := txman.BeginTx(ctx)
 	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	if err != nil {
 		fmterr := fmt.Sprintf("Transaction Error: %v", err)
 		kafkaprod.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+		mapa[erro.ErrorType] = mapa[erro.ServerErrorType]
+		mapa[erro.ErrorMessage] = mapa[erro.UserServiceUnavalaible]
 		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-		return nil, err
+		return nil, &ServiceResponse{Success: false, Errors: mapa}
 	}
 	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	return tx, nil
