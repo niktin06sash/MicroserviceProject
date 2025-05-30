@@ -132,8 +132,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	msg := fmt.Sprintf("Person with id %v has successfully update his %s", persondata["userID"], persondata["update_type"])
 	h.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	msg = fmt.Sprintf("You have successfully updated your %v!", persondata["update_type"])
-	response.SendResponse(r, w, response.HTTPResponse{Success: true, Data: map[string]any{"message": msg}}, http.StatusOK, traceID, place, h.KafkaProducer)
+	response.SendResponse(r, w, response.HTTPResponse{Success: true, Data: updateresponse.Data}, http.StatusOK, traceID, place, h.KafkaProducer)
 }
 func (h *Handler) MyProfile(w http.ResponseWriter, r *http.Request) {
 	const place = MyProfile

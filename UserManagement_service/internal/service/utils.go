@@ -260,5 +260,6 @@ func updateAndCommit(
 		return &ServiceResponse{Success: false, Errors: mapa, ErrorType: erro.ServerErrorType}
 	}
 	kafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and profile's data updates")
-	return &ServiceResponse{Success: bdresponse.Success}
+	msg := fmt.Sprintf("You have successfully updated your %v!", updateType)
+	return &ServiceResponse{Success: bdresponse.Success, Data: map[string]any{"message": msg}}
 }

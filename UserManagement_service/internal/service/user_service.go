@@ -21,13 +21,13 @@ import (
 type UserServiceImplement struct {
 	Dbrepo        repository.DBUserRepos
 	Dbtxmanager   repository.DBTransactionManager
-	Redisrepo     repository.RedisUserRepos
+	Redisrepo     repository.CacheUserRepos
 	KafkaProducer kafka.KafkaProducerService
 	Validator     *validator.Validate
 	GrpcClient    client.GrpcClientService
 }
 
-func NewUserServiceImplement(dbrepo repository.DBUserRepos, dbtxmanager repository.DBTransactionManager, redisrepo repository.RedisUserRepos, kafkaProd kafka.KafkaProducerService, grpc *client.GrpcClient) *UserServiceImplement {
+func NewUserServiceImplement(dbrepo repository.DBUserRepos, dbtxmanager repository.DBTransactionManager, redisrepo repository.CacheUserRepos, kafkaProd kafka.KafkaProducerService, grpc *client.GrpcClient) *UserServiceImplement {
 	validator := validator.New()
 	return &UserServiceImplement{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Redisrepo: redisrepo, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
 }

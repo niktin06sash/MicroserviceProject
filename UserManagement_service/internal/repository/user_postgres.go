@@ -16,16 +16,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthPostgresRepo struct {
+type UserPostgresRepo struct {
 	Db            *DBObject
 	KafkaProducer kafka.KafkaProducerService
 }
 
-func NewAuthPostgresRepo(db *DBObject, kafkaprod kafka.KafkaProducerService) *AuthPostgresRepo {
-	return &AuthPostgresRepo{Db: db, KafkaProducer: kafkaprod}
+func NewUserPostgresRepo(db *DBObject, kafkaprod kafka.KafkaProducerService) *UserPostgresRepo {
+	return &UserPostgresRepo{Db: db, KafkaProducer: kafkaprod}
 }
 
-func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *RepositoryResponse {
+func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *RepositoryResponse {
 	const place = CreateUser
 	start := time.Now()
 	defer deferMetrics(place, start)
@@ -49,7 +49,7 @@ func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful create person")
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: createdUserID.String()}, Errors: nil}
 }
-func (repoap *AuthPostgresRepo) AuthenticateUser(ctx context.Context, useremail, userpassword string) *RepositoryResponse {
+func (repoap *UserPostgresRepo) AuthenticateUser(ctx context.Context, useremail, userpassword string) *RepositoryResponse {
 	const place = AuthenticateUser
 	start := time.Now()
 	defer deferMetrics(place, start)
@@ -79,7 +79,7 @@ func (repoap *AuthPostgresRepo) AuthenticateUser(ctx context.Context, useremail,
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful authenticate person")
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userId.String()}, Errors: nil}
 }
-func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *RepositoryResponse {
+func (repoap *UserPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *RepositoryResponse {
 	const place = DeleteUser
 	start := time.Now()
 	defer deferMetrics(place, start)
@@ -109,7 +109,7 @@ func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful delete person")
 	return &RepositoryResponse{Success: true}
 }
-func (repoap *AuthPostgresRepo) UpdateUserData(ctx context.Context, tx *sql.Tx, userId uuid.UUID, updateType string, args ...interface{}) *RepositoryResponse {
+func (repoap *UserPostgresRepo) UpdateUserData(ctx context.Context, tx *sql.Tx, userId uuid.UUID, updateType string, args ...interface{}) *RepositoryResponse {
 	switch updateType {
 	case "name":
 		name := args[0].(string)
@@ -125,7 +125,7 @@ func (repoap *AuthPostgresRepo) UpdateUserData(ctx context.Context, tx *sql.Tx, 
 	}
 	return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Message: erro.ErrorInvalidDinamicParameter, Type: erro.ClientErrorType}}
 }
-func (repoap *AuthPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UUID) *RepositoryResponse {
+func (repoap *UserPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UUID) *RepositoryResponse {
 	const place = GetMyProfile
 	start := time.Now()
 	defer deferMetrics(place, start)
@@ -142,7 +142,7 @@ func (repoap *AuthPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UU
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful get my profile")
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userid.String(), KeyUserEmail: email, KeyUserName: name}, Errors: nil}
 }
-func (repoap *AuthPostgresRepo) GetProfileById(ctx context.Context, getid uuid.UUID) *RepositoryResponse {
+func (repoap *UserPostgresRepo) GetProfileById(ctx context.Context, getid uuid.UUID) *RepositoryResponse {
 	const place = GetProfileById
 	start := time.Now()
 	defer deferMetrics(place, start)
@@ -164,7 +164,7 @@ func (repoap *AuthPostgresRepo) GetProfileById(ctx context.Context, getid uuid.U
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful get profile by id")
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: getid.String(), KeyUserEmail: email, KeyUserName: name}, Errors: nil}
 }
-func (repoap *AuthPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, userId uuid.UUID, name string) *RepositoryResponse {
+func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, userId uuid.UUID, name string) *RepositoryResponse {
 	const place = UpdateName
 	start := time.Now()
 	defer deferMetrics(place, start)
@@ -178,7 +178,7 @@ func (repoap *AuthPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, 
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful update username")
 	return &RepositoryResponse{Success: true}
 }
-func (repoap *AuthPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx, userId uuid.UUID, email string, password string) *RepositoryResponse {
+func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx, userId uuid.UUID, email string, password string) *RepositoryResponse {
 	const place = UpdateEmail
 	start := time.Now()
 	defer deferMetrics(place, start)
@@ -220,7 +220,7 @@ func (repoap *AuthPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 	repoap.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Successful update useremail")
 	return &RepositoryResponse{Success: true}
 }
-func (repoap *AuthPostgresRepo) updateUserPassword(ctx context.Context, tx *sql.Tx, userId uuid.UUID, lastpassword string, newpassword string) *RepositoryResponse {
+func (repoap *UserPostgresRepo) updateUserPassword(ctx context.Context, tx *sql.Tx, userId uuid.UUID, lastpassword string, newpassword string) *RepositoryResponse {
 	const place = UpdatePassword
 	start := time.Now()
 	defer deferMetrics(place, start)

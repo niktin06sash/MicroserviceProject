@@ -27,18 +27,26 @@ type DBTransactionManager interface {
 	RollbackTx(tx *sql.Tx) error
 	CommitTx(tx *sql.Tx) error
 }
-type RedisUserRepos interface {
+type DBFriendshipRepos interface {
+	GetMyFriends(ctx context.Context, userID uuid.UUID) *RepositoryResponse
+}
+type CacheUserRepos interface {
 	AddProfileCache(ctx context.Context, id string, data map[string]any) *RepositoryResponse
 	DeleteProfileCache(ctx context.Context, id string) *RepositoryResponse
 	GetProfileCache(ctx context.Context, id string) *RepositoryResponse
 }
-type DBFriendshipRepos interface {
-	GetMyFriends(ctx context.Context, userID uuid.UUID) *RepositoryResponse
+type CacheFriendshipRepos interface {
+	AddFriendsCache(ctx context.Context, id string, data map[string]any) *RepositoryResponse
+	DeleteFriendsCache(ctx context.Context, id string) *RepositoryResponse
+	GetFriendsCache(ctx context.Context, id string) *RepositoryResponse
 }
 
 const GetProfileCache = "Repository-GetProfileCache"
 const DeleteProfileCache = "Repository-DeleteProfileCache"
+const DeleteFriendsCache = "Repository-DeleteFriendsCache"
 const AddProfileCache = "Repository-AddProfileCache"
+const AddFriendsCache = "Repository-AddFriendsCache"
+const GetFriendsCache = "Repository-GetFriendsCache"
 const CreateUser = "Repository-CreateUser"
 const AuthenticateUser = "Repository-AuthenticateUser"
 const DeleteUser = "Repository-DeleteUser"
@@ -63,8 +71,9 @@ const (
 type Repository struct {
 	DBUserRepos
 	DBTransactionManager
-	RedisUserRepos
 	DBFriendshipRepos
+	CacheUserRepos
+	CacheFriendshipRepos
 }
 type RepositoryResponse struct {
 	Success bool
@@ -74,10 +83,11 @@ type RepositoryResponse struct {
 
 func NewRepository(db *DBObject, redis *RedisObject, kafka kafka.KafkaProducerService) *Repository {
 	return &Repository{
-		DBUserRepos:          NewAuthPostgresRepo(db, kafka),
+		DBUserRepos:          NewUserPostgresRepo(db, kafka),
 		DBTransactionManager: NewTxManagerRepo(db),
-		RedisUserRepos:       NewAuthRedisRepo(redis, kafka),
+		CacheUserRepos:       NewUserRedisRepo(redis, kafka),
 		DBFriendshipRepos:    NewFriendPostgresRepo(db, kafka),
+		CacheFriendshipRepos: NewFriendshipRedisRepo(redis, kafka),
 	}
 }
 func deferMetrics(place string, start time.Time) {
