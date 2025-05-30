@@ -28,7 +28,7 @@ func NewUserPostgresRepo(db *DBObject, kafkaprod kafka.KafkaProducerService) *Us
 func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *RepositoryResponse {
 	const place = CreateUser
 	start := time.Now()
-	defer deferMetrics(place, start)
+	defer DBMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var createdUserID uuid.UUID
 	err := tx.QueryRowContext(ctx,
@@ -52,7 +52,7 @@ func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 func (repoap *UserPostgresRepo) AuthenticateUser(ctx context.Context, useremail, userpassword string) *RepositoryResponse {
 	const place = AuthenticateUser
 	start := time.Now()
-	defer deferMetrics(place, start)
+	defer DBMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	var userId uuid.UUID
@@ -82,7 +82,7 @@ func (repoap *UserPostgresRepo) AuthenticateUser(ctx context.Context, useremail,
 func (repoap *UserPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *RepositoryResponse {
 	const place = DeleteUser
 	start := time.Now()
-	defer deferMetrics(place, start)
+	defer DBMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", KeyUserPassword, KeyUserTable, KeyUserID), userId).Scan(&hashpass)
@@ -128,7 +128,7 @@ func (repoap *UserPostgresRepo) UpdateUserData(ctx context.Context, tx *sql.Tx, 
 func (repoap *UserPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UUID) *RepositoryResponse {
 	const place = GetMyProfile
 	start := time.Now()
-	defer deferMetrics(place, start)
+	defer DBMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var email string
 	var name string
@@ -145,7 +145,7 @@ func (repoap *UserPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UU
 func (repoap *UserPostgresRepo) GetProfileById(ctx context.Context, getid uuid.UUID) *RepositoryResponse {
 	const place = GetProfileById
 	start := time.Now()
-	defer deferMetrics(place, start)
+	defer DBMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var email string
 	var name string
@@ -167,7 +167,7 @@ func (repoap *UserPostgresRepo) GetProfileById(ctx context.Context, getid uuid.U
 func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, userId uuid.UUID, name string) *RepositoryResponse {
 	const place = UpdateName
 	start := time.Now()
-	defer deferMetrics(place, start)
+	defer DBMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	_, err := tx.ExecContext(ctx, fmt.Sprintf("UPDATE %s SET %s = $1 where %s = $2", KeyUserTable, KeyUserName, KeyUserID), name, userId)
 	if err != nil {
@@ -181,7 +181,7 @@ func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, 
 func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx, userId uuid.UUID, email string, password string) *RepositoryResponse {
 	const place = UpdateEmail
 	start := time.Now()
-	defer deferMetrics(place, start)
+	defer DBMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", KeyUserPassword, KeyUserTable, KeyUserID), userId).Scan(&hashpass)
@@ -223,7 +223,7 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 func (repoap *UserPostgresRepo) updateUserPassword(ctx context.Context, tx *sql.Tx, userId uuid.UUID, lastpassword string, newpassword string) *RepositoryResponse {
 	const place = UpdatePassword
 	start := time.Now()
-	defer deferMetrics(place, start)
+	defer DBMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", KeyUserPassword, KeyUserTable, KeyUserID), userId).Scan(&hashpass)

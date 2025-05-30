@@ -23,11 +23,7 @@ func NewFriendPostgresRepo(db *DBObject, kafkaprod kafka.KafkaProducerService) *
 func (repoap *FriendPostgresRepo) GetMyFriends(ctx context.Context, userID uuid.UUID) *RepositoryResponse {
 	const place = GetMyFriends
 	start := time.Now()
-	defer func() {
-		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
-		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
-	}()
+	defer DBMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	rows, err := repoap.Db.DB.QueryContext(ctx, fmt.Sprintf(`SELECT %s FROM %s WHERE %s = $1`, KeyFriendID, KeyFriendshipsTable, KeyUserID), userID)
 	if err != nil {

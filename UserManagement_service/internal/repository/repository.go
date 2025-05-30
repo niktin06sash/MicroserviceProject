@@ -90,8 +90,13 @@ func NewRepository(db *DBObject, redis *RedisObject, kafka kafka.KafkaProducerSe
 		CacheFriendshipRepos: NewFriendshipRedisRepo(redis, kafka),
 	}
 }
-func deferMetrics(place string, start time.Time) {
+func DBMetrics(place string, start time.Time) {
 	metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
 	duration := time.Since(start).Seconds()
 	metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
+}
+func CacheMetrics(place string, start time.Time) {
+	metrics.UserCacheQueriesTotal.WithLabelValues(place).Inc()
+	duration := time.Since(start).Seconds()
+	metrics.UserCacheQueryDuration.WithLabelValues(place).Observe(duration)
 }

@@ -57,6 +57,19 @@ var UserDBErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "user_service_db_errors_total",
 	Help: "Total number of errors encountered when interacting with the database",
 }, []string{"error_type", "query_type"})
+var UserCacheQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	Name:    "user_service_cache_query_duration_seconds",
+	Help:    "Histogram for the query duration in seconds to the cache",
+	Buckets: []float64{0.01, 0.05, 0.1, 0.5, 1},
+}, []string{"query_type"})
+var UserCacheQueriesTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "user_service_cache_queries_total",
+	Help: "Total number of queries executed on the cache",
+}, []string{"query_type"})
+var UserCacheErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "user_service_cache_errors_total",
+	Help: "Total number of errors encountered when interacting with the cache",
+}, []string{"query_type"})
 var UserKafkaProducerMessagesSent = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "user_service_kafka_producer_messages_sent_total",
 	Help: "Total number of messages sent to Kafka by User-Service",
