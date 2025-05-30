@@ -10,6 +10,7 @@ routes:
    /api/me/update: "http://localhost:8082/me/update"
    /api/me: "http://localhost:8082/me"
    /api/users/id/: "http://localhost:8082/users/id"
+   /api/me/friends: "http://localhost:8082/me/friends"
 kafka:
   bootstrap_servers: localhost:9092
   retry_backoff_ms: 500
