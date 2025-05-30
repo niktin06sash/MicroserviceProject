@@ -38,5 +38,6 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	r.PATCH("/api/me/update", h.Middleware.Authorized(), h.Update)
 	r.GET("/api/me", h.Middleware.Authorized(), h.MyProfile)
 	r.GET("/api/users/id/:id", h.Middleware.Authorized(), h.GetUserById)
+	r.GET("/api/me/friends", h.Middleware.Authorized(), h.MyFriends)
 	return r
 }
