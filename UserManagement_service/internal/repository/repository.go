@@ -3,9 +3,11 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 
 	"github.com/google/uuid"
@@ -30,6 +32,9 @@ type RedisUserRepos interface {
 	DeleteProfileCache(ctx context.Context, id string) *RepositoryResponse
 	GetProfileCache(ctx context.Context, id string) *RepositoryResponse
 }
+type DBFriendshipRepos interface {
+	GetMyFriends(ctx context.Context, userID uuid.UUID) *RepositoryResponse
+}
 
 const GetProfileCache = "Repository-GetProfileCache"
 const DeleteProfileCache = "Repository-DeleteProfileCache"
@@ -42,18 +47,24 @@ const UpdatePassword = "Repository-UpdatePassword"
 const UpdateEmail = "Repository-UpdateEmail"
 const GetMyProfile = "Repository-GetMyProfile"
 const GetProfileById = "Repository-GetProfileById"
+const GetMyFriends = "Repository-GetMyFriends"
+
 const (
-	KeyUserID       = "userid"
-	KeyUserEmail    = "useremail"
-	KeyUserName     = "username"
-	KeyUserPassword = "userpassword"
-	KeyUserTable    = "users"
+	KeyFriendID         = "friendid"
+	KeyUserID           = "userid"
+	KeyUserEmail        = "useremail"
+	KeyUserName         = "username"
+	KeyUserPassword     = "userpassword"
+	KeyUserTable        = "users"
+	KeyFriendshipsTable = "friendships"
+	KeyFriends          = "friends"
 )
 
 type Repository struct {
 	DBUserRepos
 	DBTransactionManager
 	RedisUserRepos
+	DBFriendshipRepos
 }
 type RepositoryResponse struct {
 	Success bool
@@ -66,5 +77,11 @@ func NewRepository(db *DBObject, redis *RedisObject, kafka kafka.KafkaProducerSe
 		DBUserRepos:          NewAuthPostgresRepo(db, kafka),
 		DBTransactionManager: NewTxManagerRepo(db),
 		RedisUserRepos:       NewAuthRedisRepo(redis, kafka),
+		DBFriendshipRepos:    NewFriendPostgresRepo(db, kafka),
 	}
+}
+func deferMetrics(place string, start time.Time) {
+	metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
+	duration := time.Since(start).Seconds()
+	metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
 }
