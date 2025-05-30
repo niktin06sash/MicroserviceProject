@@ -28,11 +28,7 @@ func NewAuthPostgresRepo(db *DBObject, kafkaprod kafka.KafkaProducerService) *Au
 func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *RepositoryResponse {
 	const place = CreateUser
 	start := time.Now()
-	defer func() {
-		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
-		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
-	}()
+	defer deferMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var createdUserID uuid.UUID
 	err := tx.QueryRowContext(ctx,
@@ -56,11 +52,7 @@ func (repoap *AuthPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 func (repoap *AuthPostgresRepo) AuthenticateUser(ctx context.Context, useremail, userpassword string) *RepositoryResponse {
 	const place = AuthenticateUser
 	start := time.Now()
-	defer func() {
-		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
-		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
-	}()
+	defer deferMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	var userId uuid.UUID
@@ -90,11 +82,7 @@ func (repoap *AuthPostgresRepo) AuthenticateUser(ctx context.Context, useremail,
 func (repoap *AuthPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *RepositoryResponse {
 	const place = DeleteUser
 	start := time.Now()
-	defer func() {
-		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
-		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
-	}()
+	defer deferMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", KeyUserPassword, KeyUserTable, KeyUserID), userId).Scan(&hashpass)
@@ -140,11 +128,7 @@ func (repoap *AuthPostgresRepo) UpdateUserData(ctx context.Context, tx *sql.Tx, 
 func (repoap *AuthPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UUID) *RepositoryResponse {
 	const place = GetMyProfile
 	start := time.Now()
-	defer func() {
-		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
-		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
-	}()
+	defer deferMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var email string
 	var name string
@@ -161,11 +145,7 @@ func (repoap *AuthPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UU
 func (repoap *AuthPostgresRepo) GetProfileById(ctx context.Context, getid uuid.UUID) *RepositoryResponse {
 	const place = GetProfileById
 	start := time.Now()
-	defer func() {
-		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
-		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
-	}()
+	defer deferMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var email string
 	var name string
@@ -187,11 +167,7 @@ func (repoap *AuthPostgresRepo) GetProfileById(ctx context.Context, getid uuid.U
 func (repoap *AuthPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, userId uuid.UUID, name string) *RepositoryResponse {
 	const place = UpdateName
 	start := time.Now()
-	defer func() {
-		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
-		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
-	}()
+	defer deferMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	_, err := tx.ExecContext(ctx, fmt.Sprintf("UPDATE %s SET %s = $1 where %s = $2", KeyUserTable, KeyUserName, KeyUserID), name, userId)
 	if err != nil {
@@ -205,11 +181,7 @@ func (repoap *AuthPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, 
 func (repoap *AuthPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx, userId uuid.UUID, email string, password string) *RepositoryResponse {
 	const place = UpdateEmail
 	start := time.Now()
-	defer func() {
-		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
-		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
-	}()
+	defer deferMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", KeyUserPassword, KeyUserTable, KeyUserID), userId).Scan(&hashpass)
@@ -251,11 +223,7 @@ func (repoap *AuthPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 func (repoap *AuthPostgresRepo) updateUserPassword(ctx context.Context, tx *sql.Tx, userId uuid.UUID, lastpassword string, newpassword string) *RepositoryResponse {
 	const place = UpdatePassword
 	start := time.Now()
-	defer func() {
-		metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
-		duration := time.Since(start).Seconds()
-		metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
-	}()
+	defer deferMetrics(place, start)
 	traceid := ctx.Value("traceID").(string)
 	var hashpass string
 	err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", KeyUserPassword, KeyUserTable, KeyUserID), userId).Scan(&hashpass)
