@@ -27,7 +27,7 @@ func (repoap *FriendPostgresRepo) GetMyFriends(ctx context.Context, userID uuid.
 	traceid := ctx.Value("traceID").(string)
 	rows, err := repoap.Db.DB.QueryContext(ctx, fmt.Sprintf(`SELECT %s FROM %s WHERE %s = $1`, KeyFriendID, KeyFriendshipsTable, KeyUserID), userID)
 	if err != nil {
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}

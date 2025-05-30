@@ -42,7 +42,7 @@ func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "INSERT").Inc()
 			return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ClientErrorType, Message: erro.ErrorUniqueEmailConst}}
 		}
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "INSERT").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -64,7 +64,7 @@ func (repoap *UserPostgresRepo) AuthenticateUser(ctx context.Context, useremail,
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
 			return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ClientErrorType, Message: erro.ErrorEmailNotRegisterConst}}
 		}
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -88,7 +88,7 @@ func (repoap *UserPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 	err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", KeyUserPassword, KeyUserTable, KeyUserID), userId).Scan(&hashpass)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -102,7 +102,7 @@ func (repoap *UserPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 	_, err = tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s where %s = $1", KeyUserTable, KeyUserID), userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("DELETE").Inc()
 	if err != nil {
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "DELETE").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -135,7 +135,7 @@ func (repoap *UserPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UU
 	err := repoap.Db.DB.QueryRowContext(ctx, fmt.Sprintf("SELECT %s, %s FROM %s WHERE %s = $1", KeyUserEmail, KeyUserName, KeyUserTable, KeyUserID), userid).Scan(&email, &name)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -157,7 +157,7 @@ func (repoap *UserPostgresRepo) GetProfileById(ctx context.Context, getid uuid.U
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
 			return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ClientErrorType, Message: "Unregistered id has been entered"}}
 		}
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -171,7 +171,7 @@ func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, 
 	traceid := ctx.Value("traceID").(string)
 	_, err := tx.ExecContext(ctx, fmt.Sprintf("UPDATE %s SET %s = $1 where %s = $2", KeyUserTable, KeyUserName, KeyUserID), name, userId)
 	if err != nil {
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -187,7 +187,7 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 	err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", KeyUserPassword, KeyUserTable, KeyUserID), userId).Scan(&hashpass)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -201,7 +201,7 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 	var count int
 	err = tx.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s = $1", KeyUserTable, KeyUserEmail), email).Scan(&count)
 	if err != nil {
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -213,7 +213,7 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 	_, err = tx.ExecContext(ctx, fmt.Sprintf("UPDATE %s SET %s = $1 where %s = $2", KeyUserTable, KeyUserEmail, KeyUserID), email, userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -229,7 +229,7 @@ func (repoap *UserPostgresRepo) updateUserPassword(ctx context.Context, tx *sql.
 	err := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", KeyUserPassword, KeyUserTable, KeyUserID), userId).Scan(&hashpass)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
@@ -243,15 +243,14 @@ func (repoap *UserPostgresRepo) updateUserPassword(ctx context.Context, tx *sql.
 	hashnewpass, err := bcrypt.GenerateFromPassword([]byte(newpassword), bcrypt.DefaultCost)
 	metrics.UserDBQueriesTotal.WithLabelValues("GenerateHashPassword").Inc()
 	if err != nil {
-		fmterr := fmt.Sprintf("Generate HashPassword Error: %v", err)
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Generate HashPassword Error: %v", err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "GenerateHashPassword").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	_, err = tx.ExecContext(ctx, fmt.Sprintf("UPDATE %s SET %s = $1 where %s = $2", KeyUserTable, KeyUserPassword, KeyUserID), hashnewpass, userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
-		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
+		repoap.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err))
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
