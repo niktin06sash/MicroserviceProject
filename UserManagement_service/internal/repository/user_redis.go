@@ -9,41 +9,43 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 )
 
-type AuthRedisRepo struct {
+type UserRedisRepo struct {
 	Client        *RedisObject
 	KafkaProducer kafka.KafkaProducerService
 }
 
-func NewAuthRedisRepo(red *RedisObject, kafkaprod kafka.KafkaProducerService) *AuthRedisRepo {
-	return &AuthRedisRepo{Client: red, KafkaProducer: kafkaprod}
+func NewUserRedisRepo(red *RedisObject, kafkaprod kafka.KafkaProducerService) *UserRedisRepo {
+	return &UserRedisRepo{Client: red, KafkaProducer: kafkaprod}
 }
 
-func (redis *AuthRedisRepo) AddProfileCache(ctx context.Context, id string, data map[string]any) *RepositoryResponse {
+func (redisrepo *UserRedisRepo) AddProfileCache(ctx context.Context, id string, data map[string]any) *RepositoryResponse {
 	const place = AddProfileCache
+	key := fmt.Sprintf("user:%s:profile", id)
 	traceID := ctx.Value("traceID").(string)
-	err := redis.Client.RedisClient.HSet(ctx, id, map[string]interface{}{
+	err := redisrepo.Client.RedisClient.HSet(ctx, key, map[string]interface{}{
 		"UserID":    data[KeyUserID],
 		"UserEmail": data[KeyUserEmail],
 		"UserName":  data[KeyUserName],
 	}).Err()
 	if err != nil {
 		fmterr := fmt.Sprintf("Hset profile-cache error: %v", err)
-		redis.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
+		redisrepo.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Message: erro.UserServiceUnavalaible, Type: erro.ServerErrorType}}
 	}
-	err = redis.Client.RedisClient.Expire(ctx, id, time.Until(time.Now().Add(1*time.Hour))).Err()
+	err = redisrepo.Client.RedisClient.Expire(ctx, key, time.Until(time.Now().Add(1*time.Hour))).Err()
 	if err != nil {
 		fmterr := fmt.Sprintf("Expire profile-cache error: %v", err)
-		redis.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
+		redisrepo.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
 		return &RepositoryResponse{Success: false, Errors: &erro.ErrorResponse{Message: erro.UserServiceUnavalaible, Type: erro.ServerErrorType}}
 	}
-	redis.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, "Successful profile-cache installation")
+	redisrepo.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, "Successful profile-cache installation")
 	return &RepositoryResponse{Success: true}
 }
-func (redisrepo *AuthRedisRepo) DeleteProfileCache(ctx context.Context, id string) *RepositoryResponse {
+func (redisrepo *UserRedisRepo) DeleteProfileCache(ctx context.Context, id string) *RepositoryResponse {
 	const place = DeleteProfileCache
+	key := fmt.Sprintf("user:%s:profile", id)
 	traceID := ctx.Value("traceID").(string)
-	num, err := redisrepo.Client.RedisClient.Del(ctx, id).Result()
+	num, err := redisrepo.Client.RedisClient.Del(ctx, key).Result()
 	if err != nil {
 		fmterr := fmt.Sprintf("Del profile-cache error: %v", err)
 		redisrepo.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
@@ -57,10 +59,11 @@ func (redisrepo *AuthRedisRepo) DeleteProfileCache(ctx context.Context, id strin
 	redisrepo.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, "Successful profile-cache deleted")
 	return &RepositoryResponse{Success: true}
 }
-func (redisrepo *AuthRedisRepo) GetProfileCache(ctx context.Context, id string) *RepositoryResponse {
+func (redisrepo *UserRedisRepo) GetProfileCache(ctx context.Context, id string) *RepositoryResponse {
 	const place = GetProfileCache
+	key := fmt.Sprintf("user:%s:profile", id)
 	traceID := ctx.Value("traceID").(string)
-	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, id).Result()
+	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, key).Result()
 	if err != nil {
 		fmterr := fmt.Sprintf("HGetAll profile-cache error: %v", err)
 		redisrepo.KafkaProducer.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
