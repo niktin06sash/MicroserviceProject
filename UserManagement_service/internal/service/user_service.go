@@ -187,12 +187,8 @@ func (as *UserServiceImplement) UpdateAccount(ctx context.Context, req *model.Up
 	updatemap[erro.ErrorMessage] = erro.ErrorInvalidCountDinamicParameter
 	as.KafkaProducer.NewUserLog(kafka.LogLevelWarn, UpdateAccount, traceid, erro.ErrorInvalidCountDinamicParameter)
 	metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
-	err = commitTransaction(as.Dbtxmanager, tx, updatemap, traceid, place, as.KafkaProducer)
-	if err != nil {
-		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
-		return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ServerErrorType}
-	}
-	return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ClientErrorType}
+	rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
+	return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ServerErrorType}
 }
 func (as *UserServiceImplement) GetMyProfile(ctx context.Context, useridstr string) *ServiceResponse {
 	const place = GetMyProfile
