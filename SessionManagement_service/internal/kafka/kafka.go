@@ -73,7 +73,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		producer.wg.Add(1)
 		go producer.sendLogs(i)
 	}
-	log.Println("[DEBUG] [Session-Service] [KafkaProducer] Successful connect to Kafka-Producer")
+	log.Println("[DEBUG] [Session-Service] Successful connect to Kafka-Producer")
 	return producer
 }
 func (kf *KafkaProducer) NewSessionLog(level, place, traceid, msg string) {
@@ -88,7 +88,7 @@ func (kf *KafkaProducer) NewSessionLog(level, place, traceid, msg string) {
 	select {
 	case kf.logchan <- newlog:
 	default:
-		log.Printf("[WARN] [Session-Service] [KafkaProducer] Log channel is full, dropping log: %+v", newlog)
+		log.Printf("[WARN] [Session-Service] Log channel is full, dropping log: %+v", newlog)
 	}
 }
 func (kf *KafkaProducer) Close() {
@@ -96,7 +96,7 @@ func (kf *KafkaProducer) Close() {
 	kf.cancel()
 	kf.wg.Wait()
 	kf.writer.Close()
-	log.Println("[DEBUG] [Session-Service] [KafkaProducer] Successful close Kafka-Producer")
+	log.Println("[DEBUG] [Session-Service] Successful close Kafka-Producer")
 }
 func (kf *KafkaProducer) sendLogs(num int) {
 	defer kf.wg.Done()
@@ -106,7 +106,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			return
 		case logg, ok := <-kf.logchan:
 			if !ok {
-				log.Printf("[INFO] [Session-Service] [KafkaProducer] [Worker: %v] Log channel closed, stopping worker", num)
+				log.Printf("[INFO] [Session-Service] [Worker: %v] Log channel closed, stopping worker", num)
 				return
 			}
 			ctx, cancel := context.WithTimeout(kf.context, 5*time.Second)
@@ -114,14 +114,14 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			topic := "session-" + strings.ToLower(logg.Level) + "-log-topic"
 			data, err := json.Marshal(logg)
 			if err != nil {
-				log.Printf("[ERROR] [Session-Service] [KafkaProducer] [Worker: %v] Failed to marshal log: %v", num, err)
+				log.Printf("[ERROR] [Session-Service] [Worker: %v] Failed to marshal log: %v", num, err)
 				continue
 			}
 		label:
 			for i := 0; i < 3; i++ {
 				select {
 				case <-ctx.Done():
-					log.Printf("[WARN] [Session-Service] [KafkaProducer] [Worker: %v] Context canceled or expired, dropping log: %v", num, err)
+					log.Printf("[WARN] [Session-Service] [Worker: %v] Context canceled or expired, dropping log: %v", num, err)
 					continue
 				default:
 					err = kf.writer.WriteMessages(ctx, kafka.Message{
@@ -132,12 +132,12 @@ func (kf *KafkaProducer) sendLogs(num int) {
 					if err == nil {
 						break label
 					}
-					log.Printf("[WARN] [Session-Service] [KafkaProducer] [Worker: %v] Retry %d failed to send log: %v", num, i+1, err)
+					log.Printf("[WARN] [Session-Service] [Worker: %v] Retry %d failed to send log: %v", num, i+1, err)
 					time.Sleep(1 * time.Second)
 				}
 			}
 			if err != nil {
-				log.Printf("[ERROR] [Session-Service] [KafkaProducer] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
+				log.Printf("[ERROR] [Session-Service] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
 			}
 		}
 	}
