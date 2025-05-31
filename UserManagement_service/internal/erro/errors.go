@@ -8,11 +8,6 @@ const ServerErrorType = "ServerError"
 const ErrorType = "type"
 const ErrorMessage = "message"
 
-type ErrorResponse struct {
-	Message string
-	Type    string
-}
-
 const (
 	ErrorSearchOwnProfile             = "You cannot search for your own profile by ID"
 	ErrorInvalidCountDinamicParameter = "Invalid count dinamic parameter in request"

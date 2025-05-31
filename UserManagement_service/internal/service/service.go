@@ -19,9 +19,6 @@ type UserService interface {
 	GetMyProfile(ctx context.Context, useridstr string) *ServiceResponse
 	GetProfileById(ctx context.Context, useridstr string, findidstr string) *ServiceResponse
 }
-type FriendshipService interface {
-	GetMyFriends(ctx context.Context, useridstr string) *ServiceResponse
-}
 
 const RegistrateAndLogin = "UseCase-RegistrateAndLogin"
 const AuthenticateAndLogin = "UseCase-AuthenticateAndLogin"
@@ -34,7 +31,6 @@ const GetMyFriends = "UseCase-GetMyFriends"
 
 type Service struct {
 	UserService
-	FriendshipService
 }
 type ServiceResponse struct {
 	Success   bool
@@ -46,7 +42,6 @@ type ServiceResponse struct {
 func NewService(repos *repository.Repository, kafkaProd kafka.KafkaProducerService, clientgrpc *client.GrpcClient) *Service {
 
 	return &Service{
-		UserService:       NewUserServiceImplement(repos.DBUserRepos, repos.DBTransactionManager, repos.CacheUserRepos, kafkaProd, clientgrpc),
-		FriendshipService: NewFriendshipServiceImplement(repos.DBFriendshipRepos, repos.DBTransactionManager, repos.CacheFriendshipRepos, kafkaProd),
+		UserService: NewUserServiceImplement(repos.DBUserRepos, repos.DBTransactionManager, repos.CacheUserRepos, kafkaProd, clientgrpc),
 	}
 }

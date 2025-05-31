@@ -192,13 +192,14 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 	}
 }
 
-func requestToDB(response *repository.RepositoryResponse, mapa map[string]string) (*repository.RepositoryResponse, *ServiceResponse) {
+func requestToDB(response *repository.RepositoryResponse, traceid string, mapa map[string]string, kafkaprod kafka.KafkaProducerService) (*repository.RepositoryResponse, *ServiceResponse) {
 	if !response.Success && response.Errors != nil {
 		switch response.Errors.Type {
 		case erro.ServerErrorType:
 			mapa[erro.ErrorType] = erro.ServerErrorType
-			mapa[erro.ErrorMessage] = response.Errors.Message
+			mapa[erro.ErrorMessage] = erro.UserServiceUnavalaible
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+			kafkaprod.NewUserLog(kafka.LogLevelError, response.Errors.Place, traceid, response.Errors.Message)
 			return response, &ServiceResponse{
 				Success:   false,
 				Errors:    mapa,
@@ -209,6 +210,7 @@ func requestToDB(response *repository.RepositoryResponse, mapa map[string]string
 			mapa[erro.ErrorType] = erro.ClientErrorType
 			mapa[erro.ErrorMessage] = response.Errors.Message
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+			kafkaprod.NewUserLog(kafka.LogLevelWarn, response.Errors.Place, traceid, response.Errors.Message)
 			return response, &ServiceResponse{
 				Success:   false,
 				Errors:    mapa,
@@ -244,12 +246,12 @@ func updateAndCommit(
 	kafkaProducer kafka.KafkaProducerService,
 	args ...interface{},
 ) *ServiceResponse {
-	bdresponse, serviceresponse := requestToDB(dbFunc(ctx, tx, userid, updateType, args...), mapa)
+	bdresponse, serviceresponse := requestToDB(dbFunc(ctx, tx, userid, updateType, args...), traceid, mapa, kafkaProducer)
 	if serviceresponse != nil {
 		rollbackTransaction(txManager, tx, traceid, place, kafkaProducer)
 		return serviceresponse
 	}
-	_, serviceresponse = requestToDB(redisFunc(ctx, userid.String()), mapa)
+	_, serviceresponse = requestToDB(redisFunc(ctx, userid.String()), traceid, mapa, kafkaProducer)
 	if serviceresponse != nil {
 		rollbackTransaction(txManager, tx, traceid, place, kafkaProducer)
 		return serviceresponse

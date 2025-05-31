@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 
@@ -27,26 +25,15 @@ type DBTransactionManager interface {
 	RollbackTx(tx *sql.Tx) error
 	CommitTx(tx *sql.Tx) error
 }
-type DBFriendshipRepos interface {
-	GetMyFriends(ctx context.Context, userID uuid.UUID) *RepositoryResponse
-}
 type CacheUserRepos interface {
 	AddProfileCache(ctx context.Context, id string, data map[string]any) *RepositoryResponse
 	DeleteProfileCache(ctx context.Context, id string) *RepositoryResponse
 	GetProfileCache(ctx context.Context, id string) *RepositoryResponse
 }
-type CacheFriendshipRepos interface {
-	AddFriendsCache(ctx context.Context, id string, data map[string]any) *RepositoryResponse
-	DeleteFriendsCache(ctx context.Context, id string) *RepositoryResponse
-	GetFriendsCache(ctx context.Context, id string) *RepositoryResponse
-}
 
 const GetProfileCache = "Repository-GetProfileCache"
 const DeleteProfileCache = "Repository-DeleteProfileCache"
-const DeleteFriendsCache = "Repository-DeleteFriendsCache"
 const AddProfileCache = "Repository-AddProfileCache"
-const AddFriendsCache = "Repository-AddFriendsCache"
-const GetFriendsCache = "Repository-GetFriendsCache"
 const CreateUser = "Repository-CreateUser"
 const AuthenticateUser = "Repository-AuthenticateUser"
 const DeleteUser = "Repository-DeleteUser"
@@ -55,8 +42,7 @@ const UpdatePassword = "Repository-UpdatePassword"
 const UpdateEmail = "Repository-UpdateEmail"
 const GetMyProfile = "Repository-GetMyProfile"
 const GetProfileById = "Repository-GetProfileById"
-const GetMyFriends = "Repository-GetMyFriends"
-
+const UpdateUserData = "Repository-UpdateUserData"
 const (
 	KeyFriendID         = "friendid"
 	KeyUserID           = "userid"
@@ -71,23 +57,24 @@ const (
 type Repository struct {
 	DBUserRepos
 	DBTransactionManager
-	DBFriendshipRepos
 	CacheUserRepos
-	CacheFriendshipRepos
 }
 type RepositoryResponse struct {
 	Success bool
 	Data    map[string]any
-	Errors  *erro.ErrorResponse
+	Errors  *ErrorResponse
+}
+type ErrorResponse struct {
+	Message string
+	Type    string
+	Place   string
 }
 
-func NewRepository(db *DBObject, redis *RedisObject, kafka kafka.KafkaProducerService) *Repository {
+func NewRepository(db *DBObject, redis *RedisObject) *Repository {
 	return &Repository{
-		DBUserRepos:          NewUserPostgresRepo(db, kafka),
+		DBUserRepos:          NewUserPostgresRepo(db),
 		DBTransactionManager: NewTxManagerRepo(db),
-		CacheUserRepos:       NewUserRedisRepo(redis, kafka),
-		DBFriendshipRepos:    NewFriendPostgresRepo(db, kafka),
-		CacheFriendshipRepos: NewFriendshipRedisRepo(redis, kafka),
+		CacheUserRepos:       NewUserRedisRepo(redis),
 	}
 }
 func DBMetrics(place string, start time.Time) {
