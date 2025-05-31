@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"time"
 
-	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 )
 
@@ -19,18 +17,21 @@ type Repository struct {
 }
 type RepositoryResponse struct {
 	Success        bool
-	SessionId      string
-	ExpirationTime time.Time
-	UserID         string
+	SuccessMessage string
+	Data           map[string]any
 	Errors         error
+	Place          string
 }
 
+const KeySessionId = "sessionID"
+const KeyUserId = "userID"
+const ExpiryTime = "expirytime"
 const SetSession = "Repository-SetSession"
 const GetSession = "Repository-GetSession"
 const DeleteSession = "Repository-DeleteSession"
 
-func NewRepository(client *RedisObject, kafkaprod kafka.KafkaProducerService) *Repository {
+func NewRepository(client *RedisObject) *Repository {
 	return &Repository{
-		RedisSessionRepos: NewAuthRedis(client, kafkaprod),
+		RedisSessionRepos: NewSessionRedis(client),
 	}
 }
