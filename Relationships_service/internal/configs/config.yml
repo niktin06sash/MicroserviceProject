@@ -1,0 +1,26 @@
+server:
+  port: "50053"
+mongodb:  
+  host: localhost
+  port: 27017          
+  password: ""     
+  db: relationships 
+rabbitmq:
+  host: localhost     
+  port: 5672                
+  name: guest         
+  password: guest       
+  queue: relationships-queue
+  exchange: user-events-exchange
+  routing_key: user.events
+  consumer_tag: relationships-consumer
+kafka:
+  bootstrap_servers: localhost:9092 
+  retry_backoff_ms: 500
+  batch_size: 16384
+  acks: "all" 
+  topics:
+    info_log: "relationships-info-log-topic"
+    error_log: "relationships-error-log-topic"
+    warn_log: "relationships-warn-log-topic"
+              

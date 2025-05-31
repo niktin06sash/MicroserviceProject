@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package relationships;
+option go_package = "github.com/niktin06sash/MicroserviceProject/Relationships_service/proto";
+service RelationshipsService {
+    rpc MyFriends(FriendsRequest) returns (FriendsResponse);
+    rpc MyOutgoingFriendsReq(FriendsRequest) returns (FriendsResponse);
+    rpc MyIncomingFriendsReq(FriendsRequest) returns (FriendsResponse);
+    rpc SendFriendReq(SendFriendReqRequest) returns (BaseResponse);
+    rpc AcceptFriendReq(AcceptFriendReqRequest) returns (AcceptFriendReqResponse);
+    rpc RejectFriendReq(RejectFriendReqRequest) returns (BaseResponse);
+    rpc RemoveFriend(RemoveFriendRequest) returns (BaseResponse);
+    rpc CancelOutgoingFriendReq(CancelOutgoingFriendReqRequest) returns (BaseResponse);
+    rpc GetFriendshipStatus(GetFriendshipStatusRequest) returns (GetFriendshipStatusResponse);
+}
+message User {
+    string id = 1;
+    string name = 2;
+    string email = 3;
+}
+message BaseResponse {
+    bool success = 1;
+    string message = 2;
+}
+message FriendsRequest {
+    string user_id = 1;
+}
+message FriendsResponse {
+    repeated User friends = 1;
+    BaseResponse meta = 2;
+}
+message SendFriendReqRequest {
+    string sender_id = 1;
+    string receiver_id = 2;
+}
+message SendFriendReqResponse {
+    BaseResponse meta = 1;
+}
+message AcceptFriendReqRequest {
+    string acceptor_id = 1;
+    string requester_id = 2;
+}
+message AcceptFriendReqResponse {
+    BaseResponse meta = 1;
+}
+message RejectFriendReqRequest {
+    string rejector_id = 1;
+    string requester_id = 2;
+}
+message RejectFriendReqResponse {
+    BaseResponse meta = 1;
+}
+message RemoveFriendRequest {
+    string user_id = 1;
+    string friend_id = 2;
+}
+message RemoveFriendResponse {
+   BaseResponse meta = 1;
+}
+message CancelOutgoingFriendReqRequest {
+    string sender_id = 1;
+    string receiver_id = 2;
+}
+message CancelFriendReqResponse {
+    BaseResponse meta = 1;
+}
+message GetFriendshipStatusRequest {
+    string user1_id = 1;
+    string user2_id = 2;
+}
+message GetFriendshipStatusResponse {
+    string status = 1;
+}
