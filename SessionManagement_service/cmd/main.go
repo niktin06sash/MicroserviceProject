@@ -24,7 +24,7 @@ func main() {
 		return
 	}
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
-	repository := repository.NewRepository(redis, kafkaProducer)
+	repository := repository.NewRepository(redis)
 	service := service.NewSessionAPI(repository, kafkaProducer)
 	srv := server.NewGrpcServer(service)
 	serverError := make(chan error, 1)
