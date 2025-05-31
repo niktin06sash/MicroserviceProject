@@ -53,7 +53,7 @@ func (as *UserServiceImplement) RegistrateAndLogin(ctx context.Context, req *mod
 	if resp != nil {
 		return resp
 	}
-	bdresponse, serviceresponse := requestToDB(as.Dbrepo.CreateUser(ctx, tx, user), registrateMap)
+	bdresponse, serviceresponse := requestToDB(as.Dbrepo.CreateUser(ctx, tx, user), traceid, registrateMap, as.KafkaProducer)
 	if serviceresponse != nil {
 		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
@@ -88,7 +88,7 @@ func (as *UserServiceImplement) AuthenticateAndLogin(ctx context.Context, req *m
 	if errorvalidate != nil {
 		return &ServiceResponse{Success: false, Errors: errorvalidate, ErrorType: erro.ClientErrorType}
 	}
-	bdresponse, serviceresponse := requestToDB(as.Dbrepo.AuthenticateUser(ctx, req.Email, req.Password), authenticateMap)
+	bdresponse, serviceresponse := requestToDB(as.Dbrepo.AuthenticateUser(ctx, req.Email, req.Password), traceid, authenticateMap, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -119,12 +119,12 @@ func (as *UserServiceImplement) DeleteAccount(ctx context.Context, req *model.De
 	if resp != nil {
 		return resp
 	}
-	_, serviceresponse := requestToDB(as.Dbrepo.DeleteUser(ctx, tx, userid, req.Password), deletemap)
+	_, serviceresponse := requestToDB(as.Dbrepo.DeleteUser(ctx, tx, userid, req.Password), traceid, deletemap, as.KafkaProducer)
 	if serviceresponse != nil {
 		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
 	}
-	_, serviceresponse = requestToDB(as.Redisrepo.DeleteProfileCache(ctx, useridstr), deletemap)
+	_, serviceresponse = requestToDB(as.Redisrepo.DeleteProfileCache(ctx, useridstr), traceid, deletemap, as.KafkaProducer)
 	if serviceresponse != nil {
 		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
@@ -202,18 +202,18 @@ func (as *UserServiceImplement) GetMyProfile(ctx context.Context, useridstr stri
 	if err != nil {
 		return &ServiceResponse{Success: false, Errors: getMyProfileMap, ErrorType: erro.ServerErrorType}
 	}
-	redisresponse, serviceresponse := requestToDB(as.Redisrepo.GetProfileCache(ctx, useridstr), getMyProfileMap)
+	redisresponse, serviceresponse := requestToDB(as.Redisrepo.GetProfileCache(ctx, useridstr), traceid, getMyProfileMap, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	if redisresponse.Success {
 		return &ServiceResponse{Success: redisresponse.Success, Data: redisresponse.Data}
 	}
-	bdresponse, serviceresponse := requestToDB(as.Dbrepo.GetMyProfile(ctx, userid), getMyProfileMap)
+	bdresponse, serviceresponse := requestToDB(as.Dbrepo.GetMyProfile(ctx, userid), traceid, getMyProfileMap, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	_, serviceresponse = requestToDB(as.Redisrepo.AddProfileCache(ctx, useridstr, bdresponse.Data), getMyProfileMap)
+	_, serviceresponse = requestToDB(as.Redisrepo.AddProfileCache(ctx, useridstr, bdresponse.Data), traceid, getMyProfileMap, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -238,18 +238,18 @@ func (as *UserServiceImplement) GetProfileById(ctx context.Context, useridstr st
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: getProfilebyIdMap, ErrorType: erro.ClientErrorType}
 	}
-	redisresponse, serviceresponse := requestToDB(as.Redisrepo.GetProfileCache(ctx, getidstr), getProfilebyIdMap)
+	redisresponse, serviceresponse := requestToDB(as.Redisrepo.GetProfileCache(ctx, getidstr), traceid, getProfilebyIdMap, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	if redisresponse.Success {
 		return &ServiceResponse{Success: redisresponse.Success, Data: redisresponse.Data}
 	}
-	bdresponse, serviceresponse := requestToDB(as.Dbrepo.GetProfileById(ctx, getid), getProfilebyIdMap)
+	bdresponse, serviceresponse := requestToDB(as.Dbrepo.GetProfileById(ctx, getid), traceid, getProfilebyIdMap, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	_, serviceresponse = requestToDB(as.Redisrepo.AddProfileCache(ctx, getidstr, bdresponse.Data), getProfilebyIdMap)
+	_, serviceresponse = requestToDB(as.Redisrepo.AddProfileCache(ctx, getidstr, bdresponse.Data), traceid, getProfilebyIdMap, as.KafkaProducer)
 	if serviceresponse != nil {
 		return serviceresponse
 	}

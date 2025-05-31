@@ -33,7 +33,7 @@ func main() {
 	}
 	metrics.Start()
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
-	repositories := repository.NewRepository(db, redis, kafkaProducer)
+	repositories := repository.NewRepository(db, redis)
 	grpcclient, err := client.NewGrpcClient(config.SessionService)
 	if err != nil {
 		return
