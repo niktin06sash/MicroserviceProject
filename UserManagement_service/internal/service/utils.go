@@ -199,7 +199,7 @@ func requestToDB(response *repository.RepositoryResponse, traceid string, mapa m
 			mapa[erro.ErrorType] = erro.ServerErrorType
 			mapa[erro.ErrorMessage] = erro.UserServiceUnavalaible
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-			kafkaprod.NewUserLog(kafka.LogLevelError, response.Errors.Place, traceid, response.Errors.Message)
+			kafkaprod.NewUserLog(kafka.LogLevelError, response.Place, traceid, response.Errors.Message)
 			return response, &ServiceResponse{
 				Success:   false,
 				Errors:    mapa,
@@ -210,7 +210,7 @@ func requestToDB(response *repository.RepositoryResponse, traceid string, mapa m
 			mapa[erro.ErrorType] = erro.ClientErrorType
 			mapa[erro.ErrorMessage] = response.Errors.Message
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
-			kafkaprod.NewUserLog(kafka.LogLevelWarn, response.Errors.Place, traceid, response.Errors.Message)
+			kafkaprod.NewUserLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors.Message)
 			return response, &ServiceResponse{
 				Success:   false,
 				Errors:    mapa,
@@ -218,6 +218,7 @@ func requestToDB(response *repository.RepositoryResponse, traceid string, mapa m
 			}
 		}
 	}
+	kafkaprod.NewUserLog(kafka.LogLevelInfo, response.Place, traceid, response.SuccessMessage)
 	return response, nil
 }
 func parsingUserId(useridstr string, mapa map[string]string, traceid string, place string, kafkaprod kafka.KafkaProducerService) (uuid.UUID, error) {

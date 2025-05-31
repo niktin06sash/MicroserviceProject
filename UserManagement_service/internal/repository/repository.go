@@ -60,14 +60,15 @@ type Repository struct {
 	CacheUserRepos
 }
 type RepositoryResponse struct {
-	Success bool
-	Data    map[string]any
-	Errors  *ErrorResponse
+	Success        bool
+	SuccessMessage string
+	Place          string
+	Data           map[string]any
+	Errors         *ErrorResponse
 }
 type ErrorResponse struct {
 	Message string
 	Type    string
-	Place   string
 }
 
 func NewRepository(db *DBObject, redis *RedisObject) *Repository {

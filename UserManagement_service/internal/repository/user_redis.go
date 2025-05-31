@@ -29,14 +29,14 @@ func (redisrepo *UserRedisRepo) AddProfileCache(ctx context.Context, id string, 
 	}).Err()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues("HSET").Inc()
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("Hset profiles-cache error: %v", err), Type: erro.ServerErrorType, Place: place}}
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("Hset profiles-cache error: %v", err), Type: erro.ServerErrorType}, Place: place}
 	}
 	err = redisrepo.Client.RedisClient.Expire(ctx, key, time.Until(time.Now().Add(1*time.Hour))).Err()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues("EXPIRE").Inc()
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("Expire profiles-cache error: %v", err), Type: erro.ServerErrorType, Place: place}}
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("Expire profiles-cache error: %v", err), Type: erro.ServerErrorType}, Place: place}
 	}
-	return &RepositoryResponse{Success: true}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successful add profile in cache", Place: place}
 }
 func (redisrepo *UserRedisRepo) DeleteProfileCache(ctx context.Context, id string) *RepositoryResponse {
 	const place = DeleteProfileCache
@@ -46,14 +46,14 @@ func (redisrepo *UserRedisRepo) DeleteProfileCache(ctx context.Context, id strin
 	num, err := redisrepo.Client.RedisClient.Del(ctx, key).Result()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues("DEL").Inc()
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("Del profiles-cache error: %v", err), Type: erro.ServerErrorType, Place: place}}
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("Del profiles-cache error: %v", err), Type: erro.ServerErrorType}, Place: place}
 	}
 	if num == 0 {
 		return &RepositoryResponse{
 			Success: false,
 		}
 	}
-	return &RepositoryResponse{Success: true}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successful get profile from cache", Place: place}
 }
 func (redisrepo *UserRedisRepo) GetProfileCache(ctx context.Context, id string) *RepositoryResponse {
 	const place = GetProfileCache
@@ -63,7 +63,7 @@ func (redisrepo *UserRedisRepo) GetProfileCache(ctx context.Context, id string) 
 	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, key).Result()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues("HGETALL").Inc()
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("HGetAll profiles-cache error: %v", err), Type: erro.ServerErrorType, Place: place}}
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("HGetAll profiles-cache error: %v", err), Type: erro.ServerErrorType}, Place: place}
 	}
 	if len(result) == 0 {
 		return &RepositoryResponse{Success: false}
@@ -71,5 +71,5 @@ func (redisrepo *UserRedisRepo) GetProfileCache(ctx context.Context, id string) 
 	userIDstr := result["UserID"]
 	userEmail := result["UserEmail"]
 	userName := result["UserName"]
-	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userIDstr, KeyUserEmail: userEmail, KeyUserName: userName}}
+	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userIDstr, KeyUserEmail: userEmail, KeyUserName: userName}, SuccessMessage: "Successful delete profile from cache", Place: place}
 }
