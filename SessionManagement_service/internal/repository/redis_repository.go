@@ -34,7 +34,7 @@ func (redisrepo *SessionRedis) SetSession(ctx context.Context, session model.Ses
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, fmt.Sprintf("Expire session error: %v", err)), Place: place}
 	}
-	return &RepositoryResponse{Success: true, Data: map[string]any{KeySessionId: session.SessionID, ExpiryTime: session.ExpirationTime}, SuccessMessage: "Successfull session installation"}
+	return &RepositoryResponse{Success: true, Data: map[string]any{KeySessionId: session.SessionID, ExpiryTime: session.ExpirationTime}, SuccessMessage: "Successfull session installation", Place: place}
 }
 
 func (redisrepo *SessionRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
@@ -63,7 +63,7 @@ func (redisrepo *SessionRedis) getSessionData(ctx context.Context, sessionID str
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.Internal, fmt.Sprintf("UUID-parse error: %v", err)), Place: place}
 	}
-	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserId: userIDString}, SuccessMessage: "Successfull get session"}
+	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserId: userIDString}, SuccessMessage: "Successfull get session", Place: place}
 }
 func (redisrepo *SessionRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
 	const place = DeleteSession
@@ -74,5 +74,5 @@ func (redisrepo *SessionRedis) DeleteSession(ctx context.Context, sessionID stri
 	if num == 0 {
 		return &RepositoryResponse{Success: false, Errors: status.Errorf(codes.InvalidArgument, "Session is empty or invalid"), Place: place}
 	}
-	return &RepositoryResponse{Success: true, SuccessMessage: "Successfull delete session"}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successfull delete session", Place: place}
 }
