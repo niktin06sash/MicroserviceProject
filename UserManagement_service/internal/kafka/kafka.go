@@ -76,7 +76,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		producer.wg.Add(1)
 		go producer.sendLogs(i)
 	}
-	log.Println("[DEBUG] [User-Service] [KafkaProducer] Successful connect to Kafka-Producer")
+	log.Println("[DEBUG] [User-Service] Successful connect to Kafka-Producer")
 	return producer
 }
 func (kf *KafkaProducer) NewUserLog(level, place, traceid, msg string) {
@@ -92,7 +92,7 @@ func (kf *KafkaProducer) NewUserLog(level, place, traceid, msg string) {
 	case kf.logchan <- newlog:
 		metrics.UserKafkaProducerBufferSize.Set(float64(len(kf.logchan)))
 	default:
-		log.Printf("[WARN] [User-Service] [KafkaProducer] Log channel is full, dropping log: %+v", newlog)
+		log.Printf("[WARN] [User-Service]  Log channel is full, dropping log: %+v", newlog)
 	}
 }
 func (kf *KafkaProducer) Close() {
@@ -100,7 +100,7 @@ func (kf *KafkaProducer) Close() {
 	kf.cancel()
 	kf.wg.Wait()
 	kf.writer.Close()
-	log.Println("[DEBUG] [User-Service] [KafkaProducer] Successful close Kafka-Producer")
+	log.Println("[DEBUG] [User-Service] Successful close Kafka-Producer")
 }
 func (kf *KafkaProducer) sendLogs(num int) {
 	defer kf.wg.Done()
@@ -110,7 +110,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			return
 		case logg, ok := <-kf.logchan:
 			if !ok {
-				log.Printf("[INFO] [User-Service] [KafkaProducer] [Worker: %v] Log channel closed, stopping worker", num)
+				log.Printf("[INFO] [User-Service] [Worker: %v] Log channel closed, stopping worker", num)
 				return
 			}
 			metrics.UserKafkaProducerBufferSize.Set(float64(len(kf.logchan)))
@@ -119,14 +119,14 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			topic := "user-" + strings.ToLower(logg.Level) + "-log-topic"
 			data, err := json.Marshal(logg)
 			if err != nil {
-				log.Printf("[ERROR] [User-Service] [KafkaProducer] [Worker: %v] Failed to marshal log: %v", num, err)
+				log.Printf("[ERROR] [User-Service] [Worker: %v] Failed to marshal log: %v", num, err)
 				continue
 			}
 		label:
 			for i := 0; i < 3; i++ {
 				select {
 				case <-ctx.Done():
-					log.Printf("[WARN] [User-Service] [KafkaProducer] [Worker: %v] Context canceled or expired, dropping log: %v", num, err)
+					log.Printf("[WARN] [User-Service] [Worker: %v] Context canceled or expired, dropping log: %v", num, err)
 					continue
 				default:
 					err = kf.writer.WriteMessages(ctx, kafka.Message{
@@ -138,12 +138,12 @@ func (kf *KafkaProducer) sendLogs(num int) {
 						metrics.UserKafkaProducerMessagesSent.WithLabelValues(topic).Inc()
 						break label
 					}
-					log.Printf("[WARN] [User-Service] [KafkaProducer] [Worker: %v] Retry %d failed to send log: %v", num, i+1, err)
+					log.Printf("[WARN] [User-Service] [Worker: %v] Retry %d failed to send log: %v", num, i+1, err)
 					time.Sleep(1 * time.Second)
 				}
 			}
 			if err != nil {
-				log.Printf("[ERROR] [User-Service] [KafkaProducer] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
+				log.Printf("[ERROR] [User-Service] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
 				metrics.UserKafkaProducerErrorsTotal.WithLabelValues(topic).Inc()
 				metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			}

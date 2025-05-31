@@ -79,7 +79,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		producer.wg.Add(1)
 		go producer.sendLogs(i)
 	}
-	log.Println("[DEBUG] [API-Service] [KafkaProducer] Successful connect to Kafka-Producer")
+	log.Println("[DEBUG] [API-Service] Successful connect to Kafka-Producer")
 	return producer
 }
 
@@ -88,11 +88,11 @@ func (kf *KafkaProducer) Close() {
 	kf.cancel()
 	kf.wg.Wait()
 	kf.writer.Close()
-	log.Println("[DEBUG] [API-Service] [KafkaProducer] Successful close Kafka-Producer")
+	log.Println("[DEBUG] [API-Service] Successful close Kafka-Producer")
 }
 func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg string) {
 	if err := c.Context().Err(); err != nil {
-		log.Printf("[WARN] [API-Service] [KafkaProducer] Context canceled or expired, dropping log: %v", err)
+		log.Printf("[WARN] [API-Service] Context canceled or expired, dropping log: %v", err)
 		return
 	}
 	newlog := APILog{
@@ -110,7 +110,7 @@ func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg s
 	case kf.logchan <- newlog:
 		metrics.APIKafkaProducerBufferSize.Set(float64(len(kf.logchan)))
 	default:
-		log.Printf("[WARN] [API-Service] [KafkaProducer] Log channel is full, dropping log: %+v", newlog)
+		log.Printf("[WARN] [API-Service] Log channel is full, dropping log: %+v", newlog)
 	}
 }
 func (kf *KafkaProducer) sendLogs(num int) {
@@ -121,7 +121,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			return
 		case logg, ok := <-kf.logchan:
 			if !ok {
-				log.Printf("[INFO] [API-Service] [KafkaProducer] [Worker: %v] Log channel closed, stopping worker", num)
+				log.Printf("[INFO] [API-Service] [Worker: %v] Log channel closed, stopping worker", num)
 				return
 			}
 			metrics.APIKafkaProducerBufferSize.Set(float64(len(kf.logchan)))
@@ -130,14 +130,14 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			topic := "api-" + strings.ToLower(logg.Level) + "-log-topic"
 			data, err := json.Marshal(logg)
 			if err != nil {
-				log.Printf("[ERROR] [API-Service] [KafkaProducer] [Worker: %v] Failed to marshal log: %v", num, err)
+				log.Printf("[ERROR] [API-Service] [Worker: %v] Failed to marshal log: %v", num, err)
 				continue
 			}
 		label:
 			for i := 0; i < 3; i++ {
 				select {
 				case <-ctx.Done():
-					log.Printf("[WARN] [API-Service] [KafkaProducer] [Worker: %v] Context canceled or expired, dropping log: %v", num, err)
+					log.Printf("[WARN] [API-Service] [Worker: %v] Context canceled or expired, dropping log: %v", num, err)
 					continue
 				default:
 					err = kf.writer.WriteMessages(ctx, kafka.Message{
@@ -149,12 +149,12 @@ func (kf *KafkaProducer) sendLogs(num int) {
 						metrics.APIKafkaProducerMessagesSent.WithLabelValues(topic).Inc()
 						break label
 					}
-					log.Printf("[WARN] [API-Service] [KafkaProducer] [Worker: %v] Retry %d failed to send log: %v", num, i+1, err)
+					log.Printf("[WARN] [API-Service] [Worker: %v] Retry %d failed to send log: %v", num, i+1, err)
 					time.Sleep(1 * time.Second)
 				}
 			}
 			if err != nil {
-				log.Printf("[ERROR] [API-Service] [KafkaProducer] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
+				log.Printf("[ERROR] [API-Service] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
 				metrics.APIKafkaProducerErrorsTotal.WithLabelValues(topic).Inc()
 				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
 			}
