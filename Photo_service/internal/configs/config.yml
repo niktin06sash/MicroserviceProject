@@ -1,0 +1,31 @@
+server:
+  port: "50053"
+mongodb:  
+  host: localhost
+  port: 27017          
+  password: ""     
+  db: media
+redis:  
+  host: localhost
+  port: 6381      
+  password: ""      
+  db: 0
+rabbitmq:
+  host: localhost     
+  port: 5672                
+  name: guest         
+  password: guest       
+  queue: media-queue
+  exchange: user-events-exchange
+  routing_key: user.events
+  consumer_tag: media-consumer
+kafka:
+  bootstrap_servers: localhost:9092 
+  retry_backoff_ms: 500
+  batch_size: 16384
+  acks: "all" 
+  topics:
+    info_log: "media-info-log-topic"
+    error_log: "media-error-log-topic"
+    warn_log: "media-warn-log-topic"
+              
