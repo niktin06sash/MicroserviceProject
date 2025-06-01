@@ -1,10 +1,13 @@
 server:
   port: "50053"
-mongodb:  
+database:
+  driver: postgres
   host: localhost
-  port: 27017          
-  password: ""     
-  db: media
+  port: 5432
+  user: postgres
+  password: my_password
+  name:  photos
+  sslmode: disable     
 redis:  
   host: localhost
   port: 6381      
