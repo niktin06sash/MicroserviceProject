@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
-	MongoDB  MongoDBConfig  `mapstructure:"mongodb"`
+	Database DatabaseConfig `mapstructure:"mongodb"`
 	Redis    RedisConfig    `mapstructure:"redis"`
 	RabbitMQ RabbitMQConfig `mapstructure:"rabbitmq"`
 	Kafka    KafkaConfig    `mapstructure:"kafka"`
@@ -19,13 +19,15 @@ type ServerConfig struct {
 	Port string `mapstructure:"port"`
 }
 
-type MongoDBConfig struct {
+type DatabaseConfig struct {
+	Driver   string `mapstructure:"driver"`
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`
+	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
-	DB       string `mapstructure:"db"`
+	Name     string `mapstructure:"name"`
+	SSLMode  string `mapstructure:"sslmode"`
 }
-
 type RedisConfig struct {
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`
@@ -88,9 +90,9 @@ func LoadDockerConfig(config *Config) {
 	redis := os.Getenv("REDIS_HOST")
 	kafka := os.Getenv("KAFKA_BOOTSTRAP_SERVERS")
 	rabbit := os.Getenv("RABBITMQ_HOST")
-	mongo := os.Getenv("MONGODB_HOST")
+	db := os.Getenv("DB_HOST")
 	config.Redis.Host = redis
 	config.Kafka.BootstrapServers = kafka
 	config.RabbitMQ.Host = rabbit
-	config.MongoDB.Host = mongo
+	config.Database.Host = db
 }

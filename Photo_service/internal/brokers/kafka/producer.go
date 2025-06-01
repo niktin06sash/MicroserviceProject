@@ -18,7 +18,7 @@ const (
 	LogLevelError = "ERROR"
 )
 
-type SessionLog struct {
+type PhotoLog struct {
 	Level     string `json:"-"`
 	Service   string `json:"service"`
 	Place     string `json:"place"`
@@ -28,13 +28,13 @@ type SessionLog struct {
 }
 type KafkaProducer struct {
 	writer  *kafka.Writer
-	logchan chan SessionLog
+	logchan chan PhotoLog
 	wg      *sync.WaitGroup
 	context context.Context
 	cancel  context.CancelFunc
 }
 type KafkaProducerService interface {
-	NewSessionLog(level, place, traceid, msg string)
+	NewPhotoLog(level, place, traceid, msg string)
 }
 
 func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
@@ -61,7 +61,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		RequiredAcks:    acks,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	logs := make(chan SessionLog, 1000)
+	logs := make(chan PhotoLog, 1000)
 	producer := &KafkaProducer{
 		writer:  w,
 		logchan: logs,
@@ -76,10 +76,10 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 	log.Println("[DEBUG] [Photo-Service] Successful connect to Kafka-Producer")
 	return producer
 }
-func (kf *KafkaProducer) NewSessionLog(level, place, traceid, msg string) {
-	newlog := SessionLog{
+func (kf *KafkaProducer) NewPhotoLog(level, place, traceid, msg string) {
+	newlog := PhotoLog{
 		Level:     level,
-		Service:   "Session-Service",
+		Service:   "Photo-Service",
 		Place:     place,
 		TraceID:   traceid,
 		Timestamp: time.Now().Format(time.RFC3339),
