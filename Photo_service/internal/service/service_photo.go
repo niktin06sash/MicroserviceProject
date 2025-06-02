@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
@@ -17,10 +16,10 @@ type DBPhotoRepos interface {
 }
 type PhotoService struct {
 	repo          DBPhotoRepos
-	kafkaProducer kafka.KafkaProducerService
+	kafkaProducer LogProducer
 }
 
-func NewPhotoService(repo DBPhotoRepos, kafka kafka.KafkaProducerService) *PhotoService {
+func NewPhotoService(repo DBPhotoRepos, kafka LogProducer) *PhotoService {
 	return &PhotoService{repo: repo, kafkaProducer: kafka}
 }
 

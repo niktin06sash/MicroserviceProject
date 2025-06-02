@@ -19,18 +19,21 @@ type DBUserIDRepos interface {
 	AddUserId(ctx context.Context, userid string) *repository.RepositoryResponse
 	DeleteUserData(ctx context.Context, userid string) *repository.RepositoryResponse
 }
+type LogProducer interface {
+	NewPhotoLog(level, place, traceid, msg string)
+}
 type RabbitConsumer struct {
 	conn          *amqp.Connection
 	channel       *amqp.Channel
 	queue         amqp.Queue
 	userrepo      DBUserIDRepos
-	kafkaproducer kafka.KafkaProducerService
+	kafkaproducer LogProducer
 	wg            *sync.WaitGroup
 	ctx           context.Context
 	cancel        context.CancelFunc
 }
 
-func NewRabbitConsumer(config configs.RabbitMQConfig, kafkaprod kafka.KafkaProducerService, dbrepo DBUserIDRepos) (*RabbitConsumer, error) {
+func NewRabbitConsumer(config configs.RabbitMQConfig, kafkaprod LogProducer, dbrepo DBUserIDRepos) (*RabbitConsumer, error) {
 	connstr := fmt.Sprintf("amqp://%s:%s@%s:%s/", config.Name, config.Password, config.Host, strconv.Itoa(config.Port))
 	conn, err := amqp.Dial(connstr)
 	if err != nil {
