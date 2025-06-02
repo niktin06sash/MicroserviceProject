@@ -12,14 +12,18 @@ import (
 type PhotoAPI struct {
 	pb.UnimplementedPhotoServiceServer
 	photoService  SessionAuthentication
-	kafkaProducer kafka.KafkaProducerService
+	kafkaProducer LogProducer
 }
 
-func NewPhotoAPI(repos DBPhotoRepos, kafka kafka.KafkaProducerService) *PhotoAPI {
+func NewPhotoAPI(repos DBPhotoRepos, kafka LogProducer) *PhotoAPI {
 	return &PhotoAPI{
 		kafkaProducer: kafka,
 		photoService:  NewPhotoService(repos, kafka),
 	}
+}
+
+type LogProducer interface {
+	NewPhotoLog(level, place, traceid, msg string)
 }
 
 const API_LoadPhoto = "API-LoadPhoto"
