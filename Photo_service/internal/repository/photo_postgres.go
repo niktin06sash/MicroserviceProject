@@ -2,7 +2,11 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"fmt"
 
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/model"
 )
 
@@ -14,21 +18,77 @@ func NewPhotoPostgresRepo(db *DBObject) *PhotoPostgresRepo {
 	return &PhotoPostgresRepo{Db: db}
 }
 
-func (ph *PhotoPostgresRepo) LoadUserID(ctx context.Context, userid string) {
+const LoadPhoto = "Repository-LoadPhoto"
+const DeletePhoto = "Repository-DeletePhoto"
+const GetPhotos = "Repository-GetPhotos"
+const GetPhoto = "Repository-GetPhoto"
 
-}
-func (ph *PhotoPostgresRepo) DeleteUserData(ctx context.Context, userid string) {
+const KeyPhotoTable = "photos"
+const KeyPhotoID = "photo_id"
+const KeyUserID = "user_id"
+const KeyPhotoURL = "url"
+const KeyPhotoSize = "size"
+const KeyContentType = "content_type"
+const KeyCreatedTime = "created_at"
 
-}
 func (ph *PhotoPostgresRepo) LoadPhoto(ctx context.Context, photo *model.Photo) *RepositoryResponse {
-
+	const place = LoadPhoto
+	err := ph.Db.DB.QueryRowContext(ctx,
+		fmt.Sprintf("INSERT INTO %s (%s, %s, %s, %s, %s, %s) VALUES ($1, $2, $3, $4, $5, $6)",
+			KeyPhotoTable, KeyPhotoID, KeyUserID, KeyPhotoURL, KeyPhotoSize, KeyContentType, KeyCreatedTime),
+		photo.ID, photo.UserID, photo.URL, photo.Size, photo.ContentType, photo.CreatedAt).Err()
+	if err != nil {
+		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyPhotoTable, err)
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
+	}
+	return &RepositoryResponse{Success: true, Data: map[string]any{"url": photo.URL, "photo_id": photo.ID}, SuccessMessage: "Photo successfully loaded to database", Place: place}
 }
 func (ph *PhotoPostgresRepo) DeletePhoto(ctx context.Context, userid string, photoid string) *RepositoryResponse {
-
+	const place = DeletePhoto
+	var url string
+	err := ph.Db.DB.QueryRowContext(ctx, fmt.Sprintf("DELETE FROM %s WHERE %s = $1 AND %s = $2 RETURNING %s", KeyPhotoTable, KeyPhotoID, KeyUserID, KeyPhotoURL), photoid, userid).Scan(&url)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ClientErrorType, Message: erro.DeleteSomeonePhoto}, Place: place}
+		}
+		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyPhotoTable, err)
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
+	}
+	return &RepositoryResponse{Success: true, Data: map[string]any{"url": url}, SuccessMessage: "Photo successfully deleted from database", Place: place}
 }
 func (ph *PhotoPostgresRepo) GetPhotos(ctx context.Context, userid string) *RepositoryResponse {
-
+	const place = GetPhotos
+	photoslice := make([]*model.Photo, 0)
+	rows, err := ph.Db.DB.QueryContext(ctx, fmt.Sprintf("SELECT %s, %s, %s, %s FROM %s WHERE %s = $1", KeyPhotoID, KeyPhotoURL, KeyContentType, KeyCreatedTime, KeyPhotoTable, KeyUserID), userid)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ClientErrorType, Message: "Unregistered userid has been entered"}, Place: place}
+		}
+		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyPhotoTable, err)
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var photo model.Photo
+		err := rows.Scan(&photo.ID, &photo.URL, &photo.ContentType, &photo.CreatedAt)
+		if err != nil {
+			fmterr := fmt.Sprintf("Error after request into %s: %v", KeyPhotoTable, err)
+			return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
+		}
+		photoslice = append(photoslice, &photo)
+	}
+	return &RepositoryResponse{Success: true, Data: map[string]any{"photos": photoslice}, SuccessMessage: "Photos successfully retrieved from database", Place: place}
 }
-func (ph *PhotoPostgresRepo) GetPhoto(ctx context.Context, userid string, photoid string) *RepositoryResponse {
-
+func (ph *PhotoPostgresRepo) GetPhoto(ctx context.Context, photoid string) *RepositoryResponse {
+	const place = GetPhoto
+	var photo model.Photo
+	err := ph.Db.DB.QueryRowContext(ctx, fmt.Sprintf("SELECT %s, %s, %s, %s FROM %s WHERE %s = $1", KeyPhotoID, KeyPhotoURL, KeyContentType, KeyCreatedTime, KeyPhotoTable, KeyPhotoID), photoid).Scan(&photo.ID, &photo.URL, &photo.ContentType, &photo.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ClientErrorType, Message: "A non-existent photoid has been entered"}, Place: place}
+		}
+		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyPhotoTable, err)
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
+	}
+	return &RepositoryResponse{Success: true, Data: map[string]any{"photo": photo}, SuccessMessage: "Photos successfully retrieved from database", Place: place}
 }

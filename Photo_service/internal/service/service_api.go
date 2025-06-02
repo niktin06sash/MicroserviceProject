@@ -5,20 +5,20 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 	"google.golang.org/grpc/metadata"
 )
 
 type PhotoAPI struct {
 	pb.UnimplementedPhotoServiceServer
-	sessionService SessionAuthentication
-	kafkaProducer  kafka.KafkaProducerService
+	photoService  SessionAuthentication
+	kafkaProducer kafka.KafkaProducerService
 }
 
-func NewPhotoAPI(repos *repository.Repository, kafka kafka.KafkaProducerService) *PhotoAPI {
+func NewPhotoAPI(repos DBPhotoRepos, kafka kafka.KafkaProducerService) *PhotoAPI {
 	return &PhotoAPI{
 		kafkaProducer: kafka,
+		photoService:  NewPhotoService(repos, kafka),
 	}
 }
 
@@ -39,7 +39,7 @@ func (s *PhotoAPI) LoadPhoto(ctx context.Context, req *pb.LoadPhotoRequest) (*pb
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
-	//resp, err := s.sessionService.CreateSession(ctx, req)
+	resp, err := s.photoService.LoadPhoto(ctx, req)
 	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	return resp, err
 }
@@ -49,7 +49,7 @@ func (s *PhotoAPI) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) 
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
-	//resp, err := s.sessionService.ValidateSession(ctx, req)
+	resp, err := s.photoService.DeletePhoto(ctx, req)
 	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	return resp, err
 }
@@ -59,7 +59,7 @@ func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.G
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
-	//resp, err := s.sessionService.DeleteSession(ctx, req)
+	resp, err := s.photoService.GetPhoto(ctx, req)
 	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	return resp, err
 }
@@ -68,7 +68,7 @@ func (s *PhotoAPI) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
-	//resp, err := s.sessionService.DeleteSession(ctx, req)
+	resp, err := s.photoService.GetPhotos(ctx, req)
 	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	return resp, err
 }
