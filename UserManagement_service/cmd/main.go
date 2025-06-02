@@ -33,12 +33,14 @@ func main() {
 	}
 	metrics.Start()
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
-	repositories := repository.NewRepository(db, redis)
+	tx := repository.NewTxManagerRepo(db)
+	redisdb := repository.NewUserRedisRepo(redis)
+	postgredb := repository.NewUserPostgresRepo(db)
 	grpcclient, err := client.NewGrpcClient(config.SessionService)
 	if err != nil {
 		return
 	}
-	service := service.NewService(repositories, kafkaProducer, grpcclient)
+	service := service.NewUserService(postgredb, tx, redisdb, kafkaProducer, grpcclient)
 	middleware := middleware.NewMiddleware(kafkaProducer)
 	handlers := handlers.NewHandler(service, middleware, kafkaProducer)
 	srv := &server.Server{}

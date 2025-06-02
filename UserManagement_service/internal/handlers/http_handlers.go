@@ -5,14 +5,13 @@ import (
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/middleware"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/gorilla/mux"
 )
 
 type Handler struct {
-	Services      *service.Service
+	Services      UserService
 	Middlewares   middleware.MiddlewareService
 	KafkaProducer kafka.KafkaProducerService
 }
@@ -26,7 +25,7 @@ const MyProfile = "API-MyProfile"
 const GetUserById = "API-GetUserById"
 const MyFriends = "API-MyFriends"
 
-func NewHandler(services *service.Service, middleware middleware.MiddlewareService, kafka kafka.KafkaProducerService) *Handler {
+func NewHandler(services UserService, middleware middleware.MiddlewareService, kafka kafka.KafkaProducerService) *Handler {
 	return &Handler{Services: services, Middlewares: middleware, KafkaProducer: kafka}
 }
 func (h *Handler) InitRoutes() *mux.Router {
