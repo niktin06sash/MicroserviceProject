@@ -5,16 +5,15 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
+	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
-
-	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,10 +21,10 @@ type UserService struct {
 	Dbrepo        DBUserRepos
 	Dbtxmanager   DBTransactionManager
 	Redisrepo     CacheUserRepos
-	RabbitEvents  UserEvent
-	KafkaProducer kafka.KafkaProducerService
+	RabbitEvents  EventProducer
+	KafkaProducer LogProducer
 	Validator     *validator.Validate
-	GrpcClient    client.GrpcClientService
+	GrpcClient    SessionClient
 }
 type DBUserRepos interface {
 	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *repository.RepositoryResponse
@@ -45,11 +44,18 @@ type CacheUserRepos interface {
 	DeleteProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
 	GetProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
 }
-type UserEvent interface {
+type EventProducer interface {
 	NewUserEvent(ctx context.Context, routingKey string, userid string, place string, traceid string) error
 }
+type LogProducer interface {
+	NewUserLog(level, place, traceid, msg string)
+}
+type SessionClient interface {
+	CreateSession(ctx context.Context, userID string) (*pb.CreateSessionResponse, error)
+	DeleteSession(ctx context.Context, sessionID string) (*pb.DeleteSessionResponse, error)
+}
 
-func NewUserService(dbrepo DBUserRepos, dbtxmanager DBTransactionManager, redisrepo CacheUserRepos, kafkaProd kafka.KafkaProducerService, rabbitevents UserEvent, grpc client.GrpcClientService) *UserService {
+func NewUserService(dbrepo DBUserRepos, dbtxmanager DBTransactionManager, redisrepo CacheUserRepos, kafkaProd LogProducer, rabbitevents EventProducer, grpc SessionClient) *UserService {
 	validator := validator.New()
 	return &UserService{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Redisrepo: redisrepo, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
 }

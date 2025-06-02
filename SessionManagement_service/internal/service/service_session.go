@@ -23,10 +23,10 @@ type SessionRepos interface {
 }
 type SessionService struct {
 	repo          SessionRepos
-	kafkaProducer kafka.KafkaProducerService
+	kafkaProducer LogProducer
 }
 
-func NewSessionService(repo SessionRepos, kafka kafka.KafkaProducerService) *SessionService {
+func NewSessionService(repo SessionRepos, kafka LogProducer) *SessionService {
 	return &SessionService{repo: repo, kafkaProducer: kafka}
 }
 func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
@@ -94,7 +94,7 @@ func (s *SessionService) DeleteSession(ctx context.Context, req *pb.DeleteSessio
 	}
 	return &pb.DeleteSessionResponse{Success: true}, nil
 }
-func requestToDB(ctx context.Context, operation func(context.Context) *repository.RepositoryResponse, traceid string, kafkaprod kafka.KafkaProducerService) (map[string]any, error) {
+func requestToDB(ctx context.Context, operation func(context.Context) *repository.RepositoryResponse, traceid string, kafkaprod LogProducer) (map[string]any, error) {
 	response := operation(ctx)
 	if response.Errors != nil {
 		st, _ := status.FromError(response.Errors)

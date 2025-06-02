@@ -32,15 +32,15 @@ func main() {
 	if err != nil {
 		return
 	}
+	tx := repository.NewTxManagerRepo(db)
+	redisdb := repository.NewUserRedisRepo(redis)
+	postgredb := repository.NewUserPostgresRepo(db)
 	metrics.Start()
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
 	rabbitproducer, err := rabbitmq.NewRabbitProducer(config.RabbitMQ, kafkaProducer)
 	if err != nil {
 		return
 	}
-	tx := repository.NewTxManagerRepo(db)
-	redisdb := repository.NewUserRedisRepo(redis)
-	postgredb := repository.NewUserPostgresRepo(db)
 	grpcclient, err := client.NewGrpcClient(config.SessionService)
 	if err != nil {
 		return

@@ -15,12 +15,15 @@ import (
 type SessionAPI struct {
 	pb.UnimplementedSessionServiceServer
 	sessionService SessionAuthentication
-	kafkaProducer  kafka.KafkaProducerService
+	kafkaProducer  LogProducer
 }
 type SessionAuthentication interface {
 	CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error)
 	ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error)
 	DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error)
+}
+type LogProducer interface {
+	NewSessionLog(level, place, traceid, msg string)
 }
 
 const API_CreateSession = "API-CreateSession"
@@ -31,7 +34,7 @@ const UseCase_CreateSession = "UseCase-CreateSession"
 const UseCase_ValidateSession = "UseCase-ValidateSession"
 const UseCase_DeleteSession = "UseCase-DeleteSession"
 
-func NewSessionAPI(repos SessionRepos, kafka kafka.KafkaProducerService) *SessionAPI {
+func NewSessionAPI(repos SessionRepos, kafka LogProducer) *SessionAPI {
 	return &SessionAPI{
 		sessionService: NewSessionService(repos, kafka),
 		kafkaProducer:  kafka,

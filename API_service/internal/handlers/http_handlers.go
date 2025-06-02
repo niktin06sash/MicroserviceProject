@@ -3,22 +3,26 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/docs"
-	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
-	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Handler struct {
-	Middleware    middleware.MiddlewareService
+	Middleware    Middleware
 	Routes        map[string]string
-	KafkaProducer kafka.KafkaProducerService
+	KafkaProducer LogProducer
+}
+type Middleware interface {
+	RateLimiter() gin.HandlerFunc
+	Logging() gin.HandlerFunc
+	Authorized() gin.HandlerFunc
+	AuthorizedNot() gin.HandlerFunc
 }
 
 const ProxyHTTP = "API-ProxyHTTP"
 
-func NewHandler(middleware middleware.MiddlewareService, kafkaproducer kafka.KafkaProducerService, routes map[string]string) *Handler {
+func NewHandler(middleware Middleware, kafkaproducer LogProducer, routes map[string]string) *Handler {
 	return &Handler{
 		Middleware:    middleware,
 		Routes:        routes,

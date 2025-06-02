@@ -11,9 +11,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type GrpcClientService interface {
-	ValidateSession(ctx context.Context, sessionid string) (*pb.ValidateSessionResponse, error)
-}
 type GrpcClient struct {
 	client pb.SessionServiceClient
 	conn   *grpc.ClientConn

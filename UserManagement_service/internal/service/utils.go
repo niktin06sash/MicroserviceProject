@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func validateData[T any](val *validator.Validate, data T, traceid string, place string, kafkaProd kafka.KafkaProducerService) map[string]string {
+func validateData[T any](val *validator.Validate, data T, traceid string, place string, kafkaProd LogProducer) map[string]string {
 	err := val.Struct(data)
 	if err != nil {
 		var count = 0
@@ -56,7 +56,7 @@ func validateData[T any](val *validator.Validate, data T, traceid string, place 
 	}
 	return nil
 }
-func beginTransaction(ctx context.Context, txman DBTransactionManager, mapa map[string]string, place, traceid string, kafkaprod kafka.KafkaProducerService) (*sql.Tx, *ServiceResponse) {
+func beginTransaction(ctx context.Context, txman DBTransactionManager, mapa map[string]string, place, traceid string, kafkaprod LogProducer) (*sql.Tx, *ServiceResponse) {
 	tx, err := txman.BeginTx(ctx)
 	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	if err != nil {
@@ -71,7 +71,7 @@ func beginTransaction(ctx context.Context, txman DBTransactionManager, mapa map[
 	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	return tx, nil
 }
-func rollbackTransaction(txMgr DBTransactionManager, tx *sql.Tx, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
+func rollbackTransaction(txMgr DBTransactionManager, tx *sql.Tx, traceid string, place string, kafkaprod LogProducer) {
 	if tx == nil {
 		return
 	}
@@ -101,7 +101,7 @@ func rollbackTransaction(txMgr DBTransactionManager, tx *sql.Tx, traceid string,
 		time.Sleep(100 * time.Millisecond)
 	}
 }
-func commitTransaction(txMgr DBTransactionManager, tx *sql.Tx, mapa map[string]string, traceid string, place string, kafkaprod kafka.KafkaProducerService) error {
+func commitTransaction(txMgr DBTransactionManager, tx *sql.Tx, mapa map[string]string, traceid string, place string, kafkaprod LogProducer) error {
 	if tx == nil {
 		return fmt.Errorf("Transaction is not active")
 	}
@@ -134,7 +134,7 @@ func commitTransaction(txMgr DBTransactionManager, tx *sql.Tx, mapa map[string]s
 	mapa[erro.ErrorMessage] = erro.UserServiceUnavalaible
 	return fmt.Errorf("Failed to commit transaction after all attempts")
 }
-func checkContext(ctx context.Context, mapa map[string]string, place string, traceID string, kafkaprod kafka.KafkaProducerService) *ServiceResponse {
+func checkContext(ctx context.Context, mapa map[string]string, place string, traceID string, kafkaprod LogProducer) *ServiceResponse {
 	select {
 	case <-ctx.Done():
 		fmterr := fmt.Sprintf("Context cancelled before operation: %v", ctx.Err())
@@ -147,7 +147,7 @@ func checkContext(ctx context.Context, mapa map[string]string, place string, tra
 		return nil
 	}
 }
-func retryOperationGrpc[T any](ctx context.Context, operation func(context.Context) (T, error), traceID string, errorMap map[string]string, place string, kafkaprod kafka.KafkaProducerService) (T, *ServiceResponse) {
+func retryOperationGrpc[T any](ctx context.Context, operation func(context.Context) (T, error), traceID string, errorMap map[string]string, place string, kafkaprod LogProducer) (T, *ServiceResponse) {
 	var response T
 	var err error
 	for i := 1; i <= 3; i++ {
@@ -192,7 +192,7 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 	}
 }
 
-func requestToDB(response *repository.RepositoryResponse, traceid string, mapa map[string]string, kafkaprod kafka.KafkaProducerService) (*repository.RepositoryResponse, *ServiceResponse) {
+func requestToDB(response *repository.RepositoryResponse, traceid string, mapa map[string]string, kafkaprod LogProducer) (*repository.RepositoryResponse, *ServiceResponse) {
 	if !response.Success && response.Errors != nil {
 		switch response.Errors.Type {
 		case erro.ServerErrorType:
@@ -221,7 +221,7 @@ func requestToDB(response *repository.RepositoryResponse, traceid string, mapa m
 	kafkaprod.NewUserLog(kafka.LogLevelInfo, response.Place, traceid, response.SuccessMessage)
 	return response, nil
 }
-func parsingUserId(useridstr string, mapa map[string]string, traceid string, place string, kafkaprod kafka.KafkaProducerService) (uuid.UUID, error) {
+func parsingUserId(useridstr string, mapa map[string]string, traceid string, place string, kafkaprod LogProducer) (uuid.UUID, error) {
 	userid, err := uuid.Parse(useridstr)
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
@@ -244,7 +244,7 @@ func updateAndCommit(
 	mapa map[string]string,
 	traceid string,
 	place string,
-	kafkaProducer kafka.KafkaProducerService,
+	kafkaProducer LogProducer,
 	args ...interface{},
 ) *ServiceResponse {
 	bdresponse, serviceresponse := requestToDB(dbFunc(ctx, tx, userid, updateType, args...), traceid, mapa, kafkaProducer)

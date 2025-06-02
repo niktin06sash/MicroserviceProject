@@ -16,8 +16,11 @@ type HTTPResponse struct {
 	Errors  map[string]string `json:"errors,omitempty"`
 	Data    map[string]any    `json:"data,omitempty"`
 }
+type LogProducer interface {
+	NewUserLog(level, place, traceid, msg string)
+}
 
-func SendResponse(r *http.Request, w http.ResponseWriter, resp HTTPResponse, status int, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
+func SendResponse(r *http.Request, w http.ResponseWriter, resp HTTPResponse, status int, traceid string, place string, kafkaprod LogProducer) {
 	ctx := r.Context()
 	start := ctx.Value("starttime").(time.Time)
 	w.Header().Set("Content-Type", "application/json")

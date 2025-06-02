@@ -14,7 +14,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 )
 
-func checkMethod(r *http.Request, w http.ResponseWriter, expectedMethod string, traceID string, place string, mapa map[string]string, kafkaproducer kafka.KafkaProducerService) bool {
+func checkMethod(r *http.Request, w http.ResponseWriter, expectedMethod string, traceID string, place string, mapa map[string]string, kafkaproducer LogProducer) bool {
 	if r.Method != expectedMethod {
 		fmterr := fmt.Sprintf("Invalid request method(expected %s but it was sent %v)", expectedMethod, r.Method)
 		kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
@@ -26,7 +26,7 @@ func checkMethod(r *http.Request, w http.ResponseWriter, expectedMethod string, 
 	}
 	return true
 }
-func getAllData[T any](r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, parser T, kafkaproducer kafka.KafkaProducerService) bool {
+func getAllData[T any](r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, parser T, kafkaproducer LogProducer) bool {
 	datafromperson, err := io.ReadAll(r.Body)
 	if err != nil {
 		fmterr := fmt.Sprintf("ReadAll Error: %v", err)
@@ -49,7 +49,7 @@ func getAllData[T any](r *http.Request, w http.ResponseWriter, traceID string, p
 	}
 	return true
 }
-func getPersonality(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, personmapa map[string]string, kafkaproducer kafka.KafkaProducerService) bool {
+func getPersonality(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, personmapa map[string]string, kafkaproducer LogProducer) bool {
 	sessionID, ok := r.Context().Value("sessionID").(string)
 	if !ok {
 		kafkaproducer.NewUserLog(kafka.LogLevelError, place, traceID, "Session ID not found in context")
@@ -72,7 +72,7 @@ func getPersonality(r *http.Request, w http.ResponseWriter, traceID string, plac
 	personmapa["userID"] = userID
 	return true
 }
-func serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.ResponseWriter, traceID string, place string, kafkaproducer kafka.KafkaProducerService) bool {
+func serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.ResponseWriter, traceID string, place string, kafkaproducer LogProducer) bool {
 	if !resp.Success {
 		switch resp.ErrorType {
 		case erro.ClientErrorType:
@@ -84,7 +84,7 @@ func serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.Resp
 	}
 	return true
 }
-func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, personmapa map[string]string, kafkaproducer kafka.KafkaProducerService) bool {
+func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, personmapa map[string]string, kafkaproducer LogProducer) bool {
 	query := r.URL.Query()
 	switch place {
 	case Update:
@@ -120,7 +120,7 @@ func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, 
 	}
 	return false
 }
-func getDinamicParameters(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, keys map[string]string, kafkaproducer kafka.KafkaProducerService) bool {
+func getDinamicParameters(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, keys map[string]string, kafkaproducer LogProducer) bool {
 	vars := mux.Vars(r)
 	switch place {
 	case GetUserById:
