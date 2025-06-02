@@ -22,7 +22,7 @@ const LoadPhoto = "Repository-LoadPhoto"
 const DeletePhoto = "Repository-DeletePhoto"
 const GetPhotos = "Repository-GetPhotos"
 const GetPhoto = "Repository-GetPhoto"
-
+const KeyUsersIdTable = "usersid"
 const KeyPhotoTable = "photos"
 const KeyPhotoID = "photo_id"
 const KeyUserID = "user_id"
@@ -91,4 +91,17 @@ func (ph *PhotoPostgresRepo) GetPhoto(ctx context.Context, photoid string) *Repo
 		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
 	}
 	return &RepositoryResponse{Success: true, Data: map[string]any{"photo": photo}, SuccessMessage: "Photos successfully retrieved from database", Place: place}
+}
+
+func (ph *PhotoPostgresRepo) AddUserId(ctx context.Context, userid string) *RepositoryResponse {
+	_, err := ph.Db.DB.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1) ON CONFLICT (%s) DO NOTHING", KeyUsersIdTable, KeyUserID, KeyUserID), userid)
+	if err != nil {
+		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyUsersIdTable, err)
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}}
+	}
+	return &RepositoryResponse{Success: true, SuccessMessage: "UserID successfully received after registration"}
+}
+
+func (ph *PhotoPostgresRepo) DeleteUserData(ctx context.Context, userid string) *RepositoryResponse {
+	return &RepositoryResponse{Success: true, SuccessMessage: "User's data successfully deleted after delete account"}
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/rabbitmq"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/server"
@@ -25,6 +26,7 @@ func main() {
 	}
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
 	postgres := repository.NewPhotoPostgresRepo(db)
+	rabbitconsumer := rabbitmq.NewRabbitConsumer(config.RabbitMQ, kafkaProducer, postgres)
 	api := service.NewPhotoAPI(postgres, kafkaProducer)
 	srv := server.NewGrpcServer(api)
 	serverError := make(chan error, 1)
@@ -55,6 +57,7 @@ func main() {
 	log.Println("[DEBUG] [Photo-Service] Service has shutted down successfully")
 	defer func() {
 		db.Close()
+		rabbitconsumer.Close()
 		kafkaProducer.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
