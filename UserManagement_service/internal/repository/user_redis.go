@@ -16,7 +16,11 @@ type UserRedisRepo struct {
 func NewUserRedisRepo(red *RedisObject) *UserRedisRepo {
 	return &UserRedisRepo{Client: red}
 }
-
+func CacheMetrics(place string, start time.Time) {
+	metrics.UserCacheQueriesTotal.WithLabelValues(place).Inc()
+	duration := time.Since(start).Seconds()
+	metrics.UserCacheQueryDuration.WithLabelValues(place).Observe(duration)
+}
 func (redisrepo *UserRedisRepo) AddProfileCache(ctx context.Context, id string, data map[string]any) *RepositoryResponse {
 	const place = AddProfileCache
 	start := time.Now()

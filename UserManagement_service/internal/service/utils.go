@@ -56,7 +56,7 @@ func validateData[T any](val *validator.Validate, data T, traceid string, place 
 	}
 	return nil
 }
-func beginTransaction(ctx context.Context, txman repository.DBTransactionManager, mapa map[string]string, place, traceid string, kafkaprod kafka.KafkaProducerService) (*sql.Tx, *ServiceResponse) {
+func beginTransaction(ctx context.Context, txman DBTransactionManager, mapa map[string]string, place, traceid string, kafkaprod kafka.KafkaProducerService) (*sql.Tx, *ServiceResponse) {
 	tx, err := txman.BeginTx(ctx)
 	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	if err != nil {
@@ -71,7 +71,7 @@ func beginTransaction(ctx context.Context, txman repository.DBTransactionManager
 	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	return tx, nil
 }
-func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
+func rollbackTransaction(txMgr DBTransactionManager, tx *sql.Tx, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
 	if tx == nil {
 		return
 	}
@@ -101,7 +101,7 @@ func rollbackTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, trac
 		time.Sleep(100 * time.Millisecond)
 	}
 }
-func commitTransaction(txMgr repository.DBTransactionManager, tx *sql.Tx, mapa map[string]string, traceid string, place string, kafkaprod kafka.KafkaProducerService) error {
+func commitTransaction(txMgr DBTransactionManager, tx *sql.Tx, mapa map[string]string, traceid string, place string, kafkaprod kafka.KafkaProducerService) error {
 	if tx == nil {
 		return fmt.Errorf("Transaction is not active")
 	}
@@ -235,7 +235,7 @@ func parsingUserId(useridstr string, mapa map[string]string, traceid string, pla
 }
 func updateAndCommit(
 	ctx context.Context,
-	txManager repository.DBTransactionManager,
+	txManager DBTransactionManager,
 	dbFunc func(context.Context, *sql.Tx, uuid.UUID, string, ...interface{}) *repository.RepositoryResponse,
 	redisFunc func(context.Context, string) *repository.RepositoryResponse,
 	tx *sql.Tx,

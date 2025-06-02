@@ -18,20 +18,38 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserServiceImplement struct {
-	Dbrepo        repository.DBUserRepos
-	Dbtxmanager   repository.DBTransactionManager
-	Redisrepo     repository.CacheUserRepos
+type UserService struct {
+	Dbrepo        DBUserRepos
+	Dbtxmanager   DBTransactionManager
+	Redisrepo     CacheUserRepos
 	KafkaProducer kafka.KafkaProducerService
 	Validator     *validator.Validate
 	GrpcClient    client.GrpcClientService
 }
-
-func NewUserServiceImplement(dbrepo repository.DBUserRepos, dbtxmanager repository.DBTransactionManager, redisrepo repository.CacheUserRepos, kafkaProd kafka.KafkaProducerService, grpc *client.GrpcClient) *UserServiceImplement {
-	validator := validator.New()
-	return &UserServiceImplement{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Redisrepo: redisrepo, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
+type DBUserRepos interface {
+	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *repository.RepositoryResponse
+	AuthenticateUser(ctx context.Context, useremail, password string) *repository.RepositoryResponse
+	DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *repository.RepositoryResponse
+	UpdateUserData(ctx context.Context, tx *sql.Tx, userId uuid.UUID, updateType string, args ...interface{}) *repository.RepositoryResponse
+	GetMyProfile(ctx context.Context, userid uuid.UUID) *repository.RepositoryResponse
+	GetProfileById(ctx context.Context, getid uuid.UUID) *repository.RepositoryResponse
 }
-func (as *UserServiceImplement) RegistrateAndLogin(ctx context.Context, req *model.RegistrationRequest) *ServiceResponse {
+type DBTransactionManager interface {
+	BeginTx(ctx context.Context) (*sql.Tx, error)
+	RollbackTx(tx *sql.Tx) error
+	CommitTx(tx *sql.Tx) error
+}
+type CacheUserRepos interface {
+	AddProfileCache(ctx context.Context, id string, data map[string]any) *repository.RepositoryResponse
+	DeleteProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
+	GetProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
+}
+
+func NewUserService(dbrepo DBUserRepos, dbtxmanager DBTransactionManager, redisrepo CacheUserRepos, kafkaProd kafka.KafkaProducerService, grpc client.GrpcClientService) *UserService {
+	validator := validator.New()
+	return &UserService{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Redisrepo: redisrepo, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
+}
+func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.RegistrationRequest) *ServiceResponse {
 	const place = RegistrateAndLogin
 	registrateMap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
@@ -80,7 +98,7 @@ func (as *UserServiceImplement) RegistrateAndLogin(ctx context.Context, req *mod
 	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
 	return &ServiceResponse{Success: true, Data: map[string]any{"userID": userID, "sessionID": grpcresponse.SessionID, "expiresession": time.Unix(grpcresponse.ExpiryTime, 0)}}
 }
-func (as *UserServiceImplement) AuthenticateAndLogin(ctx context.Context, req *model.AuthenticationRequest) *ServiceResponse {
+func (as *UserService) AuthenticateAndLogin(ctx context.Context, req *model.AuthenticationRequest) *ServiceResponse {
 	const place = AuthenticateAndLogin
 	authenticateMap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
@@ -102,7 +120,7 @@ func (as *UserServiceImplement) AuthenticateAndLogin(ctx context.Context, req *m
 	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "The session was created successfully and received")
 	return &ServiceResponse{Success: true, Data: map[string]any{"userID": userID, "sessionID": grpcresponse.SessionID, "expiresession": time.Unix(grpcresponse.ExpiryTime, 0)}}
 }
-func (as *UserServiceImplement) DeleteAccount(ctx context.Context, req *model.DeletionRequest, sessionID string, useridstr string) *ServiceResponse {
+func (as *UserService) DeleteAccount(ctx context.Context, req *model.DeletionRequest, sessionID string, useridstr string) *ServiceResponse {
 	const place = DeleteAccount
 	deletemap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
@@ -144,7 +162,7 @@ func (as *UserServiceImplement) DeleteAccount(ctx context.Context, req *model.De
 	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and user has successfully deleted his account with all data")
 	return &ServiceResponse{Success: grpcresponse.Success}
 }
-func (as *UserServiceImplement) Logout(ctx context.Context, sessionID string) *ServiceResponse {
+func (as *UserService) Logout(ctx context.Context, sessionID string) *ServiceResponse {
 	const place = Logout
 	logMap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
@@ -157,7 +175,7 @@ func (as *UserServiceImplement) Logout(ctx context.Context, sessionID string) *S
 	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "The session was deleted successfully")
 	return &ServiceResponse{Success: grpcresponse.Success}
 }
-func (as *UserServiceImplement) UpdateAccount(ctx context.Context, req *model.UpdateRequest, useridstr string, updateType string) *ServiceResponse {
+func (as *UserService) UpdateAccount(ctx context.Context, req *model.UpdateRequest, useridstr string, updateType string) *ServiceResponse {
 	const place = UpdateAccount
 	traceid := ctx.Value("traceID").(string)
 	updatemap := make(map[string]string)
@@ -190,7 +208,7 @@ func (as *UserServiceImplement) UpdateAccount(ctx context.Context, req *model.Up
 	rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 	return &ServiceResponse{Success: false, Errors: updatemap, ErrorType: erro.ServerErrorType}
 }
-func (as *UserServiceImplement) GetMyProfile(ctx context.Context, useridstr string) *ServiceResponse {
+func (as *UserService) GetMyProfile(ctx context.Context, useridstr string) *ServiceResponse {
 	const place = GetMyProfile
 	getMyProfileMap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)
@@ -215,7 +233,7 @@ func (as *UserServiceImplement) GetMyProfile(ctx context.Context, useridstr stri
 	}
 	return &ServiceResponse{Success: bdresponse.Success, Data: bdresponse.Data}
 }
-func (as *UserServiceImplement) GetProfileById(ctx context.Context, useridstr string, getidstr string) *ServiceResponse {
+func (as *UserService) GetProfileById(ctx context.Context, useridstr string, getidstr string) *ServiceResponse {
 	const place = GetProfileById
 	getProfilebyIdMap := make(map[string]string)
 	traceid := ctx.Value("traceID").(string)

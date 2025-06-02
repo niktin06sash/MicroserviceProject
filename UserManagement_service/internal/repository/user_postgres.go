@@ -22,7 +22,11 @@ type UserPostgresRepo struct {
 func NewUserPostgresRepo(db *DBObject) *UserPostgresRepo {
 	return &UserPostgresRepo{Db: db}
 }
-
+func DBMetrics(place string, start time.Time) {
+	metrics.UserDBQueriesTotal.WithLabelValues(place).Inc()
+	duration := time.Since(start).Seconds()
+	metrics.UserDBQueryDuration.WithLabelValues(place).Observe(duration)
+}
 func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *RepositoryResponse {
 	const place = CreateUser
 	start := time.Now()
