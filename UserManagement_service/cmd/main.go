@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/middleware"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/server"
