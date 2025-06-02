@@ -28,7 +28,7 @@ kafka:
   batch_size: 16384
   acks: "all" 
   topics:
-    info_log: "media-info-log-topic"
-    error_log: "media-error-log-topic"
-    warn_log: "media-warn-log-topic"
+    info_log: "photo-info-log-topic"
+    error_log: "photo-error-log-topic"
+    warn_log: "photo-warn-log-topic"
               
