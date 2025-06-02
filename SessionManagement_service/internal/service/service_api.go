@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
-	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -32,9 +31,9 @@ const UseCase_CreateSession = "UseCase-CreateSession"
 const UseCase_ValidateSession = "UseCase-ValidateSession"
 const UseCase_DeleteSession = "UseCase-DeleteSession"
 
-func NewSessionAPI(repos *repository.Repository, kafka kafka.KafkaProducerService) *SessionAPI {
+func NewSessionAPI(repos SessionRepos, kafka kafka.KafkaProducerService) *SessionAPI {
 	return &SessionAPI{
-		sessionService: NewSessionService(repos.RedisSessionRepos, kafka),
+		sessionService: NewSessionService(repos, kafka),
 		kafkaProducer:  kafka,
 	}
 }
