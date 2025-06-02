@@ -18,10 +18,9 @@ rabbitmq:
   port: 5672                
   name: guest         
   password: guest       
-  queue: media-queue
+  queue: photo-queue
   exchange: user-events-exchange
-  routing_key: user.events
-  consumer_tag: media-consumer
+  consumer_tag: photo-consumer
 kafka:
   bootstrap_servers: localhost:9092 
   retry_backoff_ms: 500
