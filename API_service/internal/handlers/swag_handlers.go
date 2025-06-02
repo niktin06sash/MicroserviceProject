@@ -112,16 +112,3 @@ func (h *Handler) MyProfile(c *gin.Context) {
 func (h *Handler) GetUserById(c *gin.Context) {
 	h.ProxyHTTP(c)
 }
-
-// @Summary Received a user's friends list
-// @Description Received a user's friends list by sending a request with session.
-// @Tags User Management
-// @Produce json
-// @Success 200 {object} response.HTTPResponse "User successfully received his friends list"
-// @Failure 401 {object} response.HTTPResponse "Unauthorized"
-// @Failure 429 {object} response.HTTPResponse "Too many requests"
-// @Failure 500 {object} response.HTTPResponse "Internal server error"
-// @Router /api/me/friends [get]
-func (h *Handler) MyFriends(c *gin.Context) {
-	h.ProxyHTTP(c)
-}
