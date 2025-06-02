@@ -16,7 +16,7 @@ type SessionRedis struct {
 	Client *RedisObject
 }
 
-func NewSessionRedis(client *RedisObject) *SessionRedis {
+func NewSessionRepos(client *RedisObject) *SessionRedis {
 	return &SessionRedis{Client: client}
 }
 

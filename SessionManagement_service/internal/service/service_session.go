@@ -16,12 +16,17 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type SessionRepos interface {
+	SetSession(ctx context.Context, session model.Session) *repository.RepositoryResponse
+	GetSession(ctx context.Context, sessionID string) *repository.RepositoryResponse
+	DeleteSession(ctx context.Context, sessionID string) *repository.RepositoryResponse
+}
 type SessionService struct {
-	repo          repository.RedisSessionRepos
+	repo          SessionRepos
 	kafkaProducer kafka.KafkaProducerService
 }
 
-func NewSessionService(repo repository.RedisSessionRepos, kafka kafka.KafkaProducerService) *SessionService {
+func NewSessionService(repo SessionRepos, kafka kafka.KafkaProducerService) *SessionService {
 	return &SessionService{repo: repo, kafkaProducer: kafka}
 }
 func (s *SessionService) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
