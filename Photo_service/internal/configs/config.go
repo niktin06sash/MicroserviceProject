@@ -42,7 +42,6 @@ type RabbitMQConfig struct {
 	Password    string `mapstructure:"password"`
 	Queue       string `mapstructure:"queue"`
 	Exchange    string `mapstructure:"exchange"`
-	RoutingKey  string `mapstructure:"routing_key"`
 	ConsumerTag string `mapstructure:"consumer_tag"`
 }
 

@@ -30,17 +30,17 @@ type RabbitConsumer struct {
 	cancel        context.CancelFunc
 }
 
-func NewRabbitConsumer(config configs.RabbitMQConfig, kafkaprod kafka.KafkaProducerService, dbrepo DBUserIDRepos) *RabbitConsumer {
+func NewRabbitConsumer(config configs.RabbitMQConfig, kafkaprod kafka.KafkaProducerService, dbrepo DBUserIDRepos) (*RabbitConsumer, error) {
 	connstr := fmt.Sprintf("amqp://%s:%s@%s:%s/", config.Name, config.Password, config.Host, strconv.Itoa(config.Port))
 	conn, err := amqp.Dial(connstr)
 	if err != nil {
 		log.Printf("[DEBUG] [Photo-Service] Failed to connect to RabbitMQ: %v", err)
-		return nil
+		return nil, err
 	}
 	channel, err := conn.Channel()
 	if err != nil {
 		log.Printf("[DEBUG] [Photo-Service] Failed to open to channel: %v", err)
-		return nil
+		return nil, err
 	}
 	err = channel.ExchangeDeclare(
 		config.Exchange,
@@ -53,7 +53,7 @@ func NewRabbitConsumer(config configs.RabbitMQConfig, kafkaprod kafka.KafkaProdu
 	)
 	if err != nil {
 		log.Printf("[DEBUG] [Photo-Service] Failed to declare an exchange: %v", err)
-		return nil
+		return nil, err
 	}
 	queue, err := channel.QueueDeclare(
 		config.Queue,
@@ -65,9 +65,9 @@ func NewRabbitConsumer(config configs.RabbitMQConfig, kafkaprod kafka.KafkaProdu
 	)
 	if err != nil {
 		log.Printf("[DEBUG] [Photo-Service] Failed to declare an queue: %v", err)
-		return nil
+		return nil, err
 	}
-	routingKeys := []string{"user-registration", "user-delete"}
+	routingKeys := []string{"user.registration", "user.delete"}
 	for _, routingKey := range routingKeys {
 		err = channel.QueueBind(
 			queue.Name,
@@ -78,7 +78,7 @@ func NewRabbitConsumer(config configs.RabbitMQConfig, kafkaprod kafka.KafkaProdu
 		)
 		if err != nil {
 			log.Printf("[DEBUG] [Photo-Service] Failed to bind queue with routing key %s: %v", routingKey, err)
-			return nil
+			return nil, err
 		}
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -95,7 +95,7 @@ func NewRabbitConsumer(config configs.RabbitMQConfig, kafkaprod kafka.KafkaProdu
 	rc.wg.Add(1)
 	go rc.startConsuming()
 	log.Printf("[DEBUG] [Logs-Service] Successful connect to Rabbit-Consumer")
-	return rc
+	return rc, nil
 }
 
 type UserMessage struct {
@@ -141,7 +141,7 @@ func (rc *RabbitConsumer) startConsuming() {
 			ctx, cancel := context.WithTimeout(rc.ctx, 5*time.Second)
 			defer cancel()
 			switch msg.RoutingKey {
-			case "user-registration":
+			case "user.registration":
 				resp := rc.userrepo.AddUserId(ctx, newmsg.UserID)
 				if resp.Errors != nil {
 					rc.kafkaproducer.NewPhotoLog(kafka.LogLevelError, place, newmsg.Traceid, resp.Errors.Message)
@@ -149,7 +149,7 @@ func (rc *RabbitConsumer) startConsuming() {
 				}
 				rc.kafkaproducer.NewPhotoLog(kafka.LogLevelInfo, place, newmsg.Traceid, fmt.Sprintf("Received user registration event for userID: %s", newmsg.UserID))
 
-			case "user-delete":
+			case "user.delete":
 				resp := rc.userrepo.DeleteUserData(ctx, newmsg.UserID)
 				if resp.Errors != nil {
 					rc.kafkaproducer.NewPhotoLog(kafka.LogLevelError, place, newmsg.Traceid, resp.Errors.Message)
