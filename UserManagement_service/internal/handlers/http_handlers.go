@@ -3,8 +3,6 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/gorilla/mux"
@@ -12,8 +10,8 @@ import (
 
 type Handler struct {
 	Services      UserService
-	Middlewares   middleware.MiddlewareService
-	KafkaProducer kafka.KafkaProducerService
+	Middlewares   MiddlewareService
+	KafkaProducer LogProducer
 }
 
 const Registration = "API-Registration"
@@ -25,7 +23,16 @@ const MyProfile = "API-MyProfile"
 const GetUserById = "API-GetUserById"
 const MyFriends = "API-MyFriends"
 
-func NewHandler(services UserService, middleware middleware.MiddlewareService, kafka kafka.KafkaProducerService) *Handler {
+type MiddlewareService interface {
+	Logging(next http.Handler) http.Handler
+	Authorized(next http.Handler) http.Handler
+	AuthorizedNot(next http.Handler) http.Handler
+}
+type LogProducer interface {
+	NewUserLog(level, place, traceid, msg string)
+}
+
+func NewHandler(services UserService, middleware MiddlewareService, kafka LogProducer) *Handler {
 	return &Handler{Services: services, Middlewares: middleware, KafkaProducer: kafka}
 }
 func (h *Handler) InitRoutes() *mux.Router {

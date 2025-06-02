@@ -2,6 +2,7 @@ package response
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -41,8 +42,11 @@ type PersonUpdate struct {
 	LastPassword string `json:"last_password,omitempty"`
 	NewPassword  string `json:"new_password,omitempty"`
 }
+type LogProducer interface {
+	NewAPILog(c *http.Request, level, place, traceid, msg string)
+}
 
-func SendResponse(c *gin.Context, status int, response HTTPResponse, traceid string, place string, kafkaprod kafka.KafkaProducerService) {
+func SendResponse(c *gin.Context, status int, response HTTPResponse, traceid string, place string, kafkaprod LogProducer) {
 	start := c.MustGet("starttime").(time.Time)
 	c.JSON(status, response)
 	kafkaprod.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")

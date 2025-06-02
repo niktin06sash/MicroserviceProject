@@ -17,10 +17,13 @@ type RabbitProducer struct {
 	conn      *amqp.Connection
 	channel   *amqp.Channel
 	config    configs.RabbitMQConfig
-	kafkaprod kafka.KafkaProducerService
+	kafkaprod LogProducer
+}
+type LogProducer interface {
+	NewUserLog(level, place, traceid, msg string)
 }
 
-func NewRabbitProducer(config configs.RabbitMQConfig, kafkaprod kafka.KafkaProducerService) (*RabbitProducer, error) {
+func NewRabbitProducer(config configs.RabbitMQConfig, kafkaprod LogProducer) (*RabbitProducer, error) {
 	connString := fmt.Sprintf("amqp://%s:%s@%s:%s/", config.Name, config.Password, config.Host, strconv.Itoa(config.Port))
 	conn, err := amqp.Dial(connString)
 	if err != nil {

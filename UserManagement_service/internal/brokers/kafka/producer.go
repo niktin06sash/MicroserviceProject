@@ -35,11 +35,6 @@ type KafkaProducer struct {
 	cancel  context.CancelFunc
 }
 
-//go:generate mockgen -source=kafka.go -destination=mocks/mock.go
-type KafkaProducerService interface {
-	NewUserLog(level, place, traceid, msg string)
-}
-
 func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 	brokersString := config.BootstrapServers
 	brokers := strings.Split(brokersString, ",")

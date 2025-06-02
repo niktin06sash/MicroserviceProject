@@ -39,9 +39,6 @@ type KafkaProducer struct {
 	context context.Context
 	cancel  context.CancelFunc
 }
-type KafkaProducerService interface {
-	NewAPILog(c *http.Request, level, place, traceid, msg string)
-}
 
 func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 	brokersString := config.BootstrapServers

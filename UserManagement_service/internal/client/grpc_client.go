@@ -12,10 +12,6 @@ import (
 )
 
 //go:generate mockgen -source=grpc_client.go -destination=mocks/mock.go
-type GrpcClientService interface {
-	CreateSession(ctx context.Context, userID string) (*pb.CreateSessionResponse, error)
-	DeleteSession(ctx context.Context, sessionID string) (*pb.DeleteSessionResponse, error)
-}
 type GrpcClient struct {
 	client pb.SessionServiceClient
 	conn   *grpc.ClientConn

@@ -14,6 +14,10 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 )
 
+type LogProducer interface {
+	NewAPILog(c *http.Request, level, place, traceid, msg string)
+}
+
 func (h *Handler) ProxyHTTP(c *gin.Context) {
 	const place = ProxyHTTP
 	traceID := c.MustGet("traceID").(string)

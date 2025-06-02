@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -8,7 +9,12 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
+	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 )
+
+type SessionClient interface {
+	ValidateSession(ctx context.Context, sessionid string) (*pb.ValidateSessionResponse, error)
+}
 
 func (m *Middleware) Authorized() gin.HandlerFunc {
 	return func(c *gin.Context) {
