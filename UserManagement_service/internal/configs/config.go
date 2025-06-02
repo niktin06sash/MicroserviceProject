@@ -13,6 +13,7 @@ type Config struct {
 	Kafka          KafkaConfig          `mapstructure:"kafka"`
 	SessionService SessionServiceConfig `mapstructure:"session_service"`
 	Redis          RedisConfig          `mapstructure:"redis"`
+	RabbitMQ       RabbitMQConfig       `mapstructure:"rabbitmq"`
 }
 
 type ServerConfig struct {
@@ -50,6 +51,14 @@ type RedisConfig struct {
 	Port     int    `mapstructure:"port"`
 	Password string `mapstructure:"password"`
 	DB       int    `mapstructure:"db"`
+}
+type RabbitMQConfig struct {
+	Host       string `mapstructure:"host"`
+	Port       int    `mapstructure:"port"`
+	Name       string `mapstructure:"name"`
+	Password   string `mapstructure:"password"`
+	Exchange   string `mapstructure:"exchange"`
+	RoutingKey string `mapstructure:"routing_key"`
 }
 
 func LoadConfig() Config {

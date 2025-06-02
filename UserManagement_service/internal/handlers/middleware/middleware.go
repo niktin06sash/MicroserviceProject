@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 )
 
 type Middleware struct {

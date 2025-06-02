@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/rabbitmq"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers"
@@ -33,6 +34,10 @@ func main() {
 	}
 	metrics.Start()
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
+	rabbitproducer, err := rabbitmq.NewRabbitProducer(config.RabbitMQ, kafkaProducer)
+	if err != nil {
+		return
+	}
 	tx := repository.NewTxManagerRepo(db)
 	redisdb := repository.NewUserRedisRepo(redis)
 	postgredb := repository.NewUserPostgresRepo(db)

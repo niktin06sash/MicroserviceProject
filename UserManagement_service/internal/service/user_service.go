@@ -44,6 +44,9 @@ type CacheUserRepos interface {
 	DeleteProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
 	GetProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
 }
+type UserEvent interface {
+	NewUserEvent(ctx context.Context, routingKey string, message interface{}, place string, traceid string) error
+}
 
 func NewUserService(dbrepo DBUserRepos, dbtxmanager DBTransactionManager, redisrepo CacheUserRepos, kafkaProd kafka.KafkaProducerService, grpc client.GrpcClientService) *UserService {
 	validator := validator.New()
