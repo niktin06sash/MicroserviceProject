@@ -12,7 +12,14 @@ database:
   user: postgres
   password: my_password
   name: fc2
-  sslmode: disable      
+  sslmode: disable
+rabbitmq:
+  host: localhost     
+  port: 5672                
+  name: guest         
+  password: guest       
+  exchange: user-events-exchange
+  routing_key: user.events      
 kafka:
   bootstrap_servers: localhost:9092
   retry_backoff_ms: 500

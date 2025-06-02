@@ -23,7 +23,6 @@ const (
 	ErrorNotDeleteConst               = "Method is not DELETE"
 	ErrorReadAllConst                 = "ReadAll error"
 	ErrorUnmarshalConst               = "Unmarshal error"
-	ErrorMarshalConst                 = "Marshal error"
 	ErrorRequiredUserIDConst          = "UserID in request is required!"
 	ErrorNotRequiredUserIDConst       = "UserID in request is not-required!"
 	ErrorRequiredSessionIDConst       = "SessionID in request is required!"
