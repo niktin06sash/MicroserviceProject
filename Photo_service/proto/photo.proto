@@ -16,8 +16,9 @@ message LoadPhotoRequest {
 }
 message LoadPhotoResponse {
   bool status = 1;
-  string message = 2;
-  string url = 3;  
+  string photo_id = 2;
+  string url = 3;
+  string message = 4; 
 }
 message DeletePhotoRequest {
   string photo_id = 1;
@@ -34,7 +35,7 @@ message GetPhotosRequest {
 message Photo {
   string photo_id = 1;
   string url = 2;  
-  string upload_date = 3;
+  string created_at = 3;
   string content_type = 4;
 }
 
@@ -45,7 +46,6 @@ message GetPhotosResponse {
 
 message GetPhotoRequest {
   string photo_id = 1;
-  string user_id = 2;
 }
 message GetPhotoResponse {
   bool status = 1;

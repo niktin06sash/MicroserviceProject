@@ -24,8 +24,8 @@ func main() {
 		return
 	}
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
-	repository := repository.NewRepository(db)
-	api := service.NewPhotoAPI(repository, kafkaProducer)
+	postgres := repository.NewPhotoPostgresRepo(db)
+	api := service.NewPhotoAPI(postgres, kafkaProducer)
 	srv := server.NewGrpcServer(api)
 	serverError := make(chan error, 1)
 	go func() {
