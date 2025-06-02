@@ -22,6 +22,7 @@ type UserService struct {
 	Dbrepo        DBUserRepos
 	Dbtxmanager   DBTransactionManager
 	Redisrepo     CacheUserRepos
+	RabbitEvents  UserEvent
 	KafkaProducer kafka.KafkaProducerService
 	Validator     *validator.Validate
 	GrpcClient    client.GrpcClientService
@@ -45,10 +46,10 @@ type CacheUserRepos interface {
 	GetProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
 }
 type UserEvent interface {
-	NewUserEvent(ctx context.Context, routingKey string, message interface{}, place string, traceid string) error
+	NewUserEvent(ctx context.Context, routingKey string, userid string, place string, traceid string) error
 }
 
-func NewUserService(dbrepo DBUserRepos, dbtxmanager DBTransactionManager, redisrepo CacheUserRepos, kafkaProd kafka.KafkaProducerService, grpc client.GrpcClientService) *UserService {
+func NewUserService(dbrepo DBUserRepos, dbtxmanager DBTransactionManager, redisrepo CacheUserRepos, kafkaProd kafka.KafkaProducerService, rabbitevents UserEvent, grpc client.GrpcClientService) *UserService {
 	validator := validator.New()
 	return &UserService{Dbrepo: dbrepo, Dbtxmanager: dbtxmanager, Redisrepo: redisrepo, Validator: validator, KafkaProducer: kafkaProd, GrpcClient: grpc}
 }
@@ -86,6 +87,14 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	if serviceresponse != nil {
 		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
+	}
+	err = as.RabbitEvents.NewUserEvent(ctx, "user.registration", userID, place, traceid)
+	if err != nil {
+		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
+		registrateMap[erro.ErrorType] = erro.ServerErrorType
+		registrateMap[erro.ErrorMessage] = erro.UserServiceUnavalaible
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
 	}
 	err = commitTransaction(as.Dbtxmanager, tx, registrateMap, traceid, place, as.KafkaProducer)
 	if err != nil {
@@ -156,6 +165,14 @@ func (as *UserService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 	if serviceresponse != nil {
 		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
 		return serviceresponse
+	}
+	err = as.RabbitEvents.NewUserEvent(ctx, "user.delete", useridstr, place, traceid)
+	if err != nil {
+		rollbackTransaction(as.Dbtxmanager, tx, traceid, place, as.KafkaProducer)
+		deletemap[erro.ErrorType] = erro.ServerErrorType
+		deletemap[erro.ErrorMessage] = erro.UserServiceUnavalaible
+		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		return &ServiceResponse{Success: false, Errors: deletemap, ErrorType: erro.ServerErrorType}
 	}
 	err = commitTransaction(as.Dbtxmanager, tx, deletemap, traceid, place, as.KafkaProducer)
 	if err != nil {

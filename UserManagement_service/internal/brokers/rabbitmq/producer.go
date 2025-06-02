@@ -49,8 +49,13 @@ func NewRabbitProducer(config configs.RabbitMQConfig, kafkaprod kafka.KafkaProdu
 	return &RabbitProducer{conn: conn, channel: channel, config: config}, nil
 }
 
-func (rp *RabbitProducer) NewUserEvent(ctx context.Context, routingKey string, message interface{}, place string, traceid string) error {
-	body, err := json.Marshal(message)
+type Event struct {
+	Userid  string `json:"userid"`
+	Traceid string `json:"traceid"`
+}
+
+func (rp *RabbitProducer) NewUserEvent(ctx context.Context, routingKey string, userid string, place string, traceid string) error {
+	body, err := json.Marshal(Event{Userid: userid, Traceid: traceid})
 	if err != nil {
 		rp.kafkaprod.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Failed to marshal message: %v", err))
 		return err

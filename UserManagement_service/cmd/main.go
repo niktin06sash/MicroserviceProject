@@ -45,7 +45,7 @@ func main() {
 	if err != nil {
 		return
 	}
-	service := service.NewUserService(postgredb, tx, redisdb, kafkaProducer, grpcclient)
+	service := service.NewUserService(postgredb, tx, redisdb, kafkaProducer, rabbitproducer, grpcclient)
 	middleware := middleware.NewMiddleware(kafkaProducer)
 	handlers := handlers.NewHandler(service, middleware, kafkaProducer)
 	srv := &server.Server{}
