@@ -24,13 +24,17 @@ func main() {
 	if err != nil {
 		return
 	}
+	mega, err := repository.NewMegaClient(config.Mega)
+	if err != nil {
+		return
+	}
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
 	postgres := repository.NewPhotoPostgresRepo(db)
 	rabbitconsumer, err := rabbitmq.NewRabbitConsumer(config.RabbitMQ, kafkaProducer, postgres)
 	if err != nil {
 		return
 	}
-	api := service.NewPhotoAPI(postgres, kafkaProducer)
+	api := service.NewPhotoAPI(postgres, mega, kafkaProducer)
 	srv := server.NewGrpcServer(api)
 	serverError := make(chan error, 1)
 	go func() {

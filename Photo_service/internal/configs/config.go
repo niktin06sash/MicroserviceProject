@@ -13,6 +13,7 @@ type Config struct {
 	Redis    RedisConfig    `mapstructure:"redis"`
 	RabbitMQ RabbitMQConfig `mapstructure:"rabbitmq"`
 	Kafka    KafkaConfig    `mapstructure:"kafka"`
+	Mega     MegaConfig     `mapstructure:"mega"`
 }
 
 type ServerConfig struct {
@@ -58,6 +59,11 @@ type KafkaTopics struct {
 	ErrorLog string `mapstructure:"error_log"`
 	WarnLog  string `mapstructure:"warn_log"`
 }
+type MegaConfig struct {
+	Email         string `mapstructure:"email"`
+	Password      string `mapstructure:"password"`
+	MainDirectory string `mapstructure:"main_directory"`
+}
 
 func LoadConfig() Config {
 	viper.SetConfigName("config")
@@ -69,6 +75,17 @@ func LoadConfig() Config {
 			log.Printf("[DEBUG] [Photo-Service] Config file not found; using defaults or environment variables")
 		} else {
 			log.Fatalf("[DEBUG] [Photo-Service] Error reading config file: %s", err)
+		}
+	}
+	viper.SetConfigName("mega")
+	viper.SetConfigType("yml")
+	viper.AddConfigPath("internal/configs")
+	err = viper.ReadInConfig()
+	if err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Printf("[DEBUG] [Photo-Service] Mega file not found; using defaults or environment variables")
+		} else {
+			log.Fatalf("[DEBUG] [Photo-Service] Error reading mega file: %s", err)
 		}
 	}
 	var config Config

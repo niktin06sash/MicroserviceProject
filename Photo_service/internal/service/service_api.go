@@ -15,10 +15,10 @@ type PhotoAPI struct {
 	kafkaProducer LogProducer
 }
 
-func NewPhotoAPI(repos DBPhotoRepos, kafka LogProducer) *PhotoAPI {
+func NewPhotoAPI(repos DBPhotoRepos, cloud CloudPhotoStorage, kafka LogProducer) *PhotoAPI {
 	return &PhotoAPI{
 		kafkaProducer: kafka,
-		photoService:  NewPhotoService(repos, kafka),
+		photoService:  NewPhotoService(repos, cloud, kafka),
 	}
 }
 

@@ -14,13 +14,18 @@ type DBPhotoRepos interface {
 	GetPhotos(ctx context.Context, userid string) *repository.RepositoryResponse
 	GetPhoto(ctx context.Context, photoid string) *repository.RepositoryResponse
 }
+type CloudPhotoStorage interface {
+	UploadFile(localfilepath string, id string) *model.Photo
+	DeleteFile(id, contenttype string)
+}
 type PhotoService struct {
 	repo          DBPhotoRepos
+	cloud         CloudPhotoStorage
 	kafkaProducer LogProducer
 }
 
-func NewPhotoService(repo DBPhotoRepos, kafka LogProducer) *PhotoService {
-	return &PhotoService{repo: repo, kafkaProducer: kafka}
+func NewPhotoService(repo DBPhotoRepos, cloud CloudPhotoStorage, kafka LogProducer) *PhotoService {
+	return &PhotoService{repo: repo, kafkaProducer: kafka, cloud: cloud}
 }
 
 const UseCase_LoadPhoto = "UseCase_LoadPhoto"
