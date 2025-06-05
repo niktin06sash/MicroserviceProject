@@ -30,6 +30,7 @@ const KeyPhotoURL = "url"
 const KeyPhotoSize = "size"
 const KeyContentType = "content_type"
 const KeyCreatedTime = "created_at"
+const KeyPhoto = "photo"
 
 func (ph *PhotoPostgresRepo) LoadPhoto(ctx context.Context, photo *model.Photo) *RepositoryResponse {
 	const place = LoadPhoto
@@ -41,7 +42,7 @@ func (ph *PhotoPostgresRepo) LoadPhoto(ctx context.Context, photo *model.Photo) 
 		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyPhotoTable, err)
 		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
 	}
-	return &RepositoryResponse{Success: true, Data: map[string]any{"photo_id": photo.ID}, Place: place}
+	return &RepositoryResponse{Success: true, Data: map[string]any{KeyPhotoID: photo.ID}, Place: place}
 }
 func (ph *PhotoPostgresRepo) DeletePhoto(ctx context.Context, userid string, photoid string) *RepositoryResponse {
 	const place = DeletePhoto
@@ -54,7 +55,7 @@ func (ph *PhotoPostgresRepo) DeletePhoto(ctx context.Context, userid string, pho
 		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyPhotoTable, err)
 		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
 	}
-	return &RepositoryResponse{Success: true, Place: place, Data: map[string]any{"content_type": content_type}}
+	return &RepositoryResponse{Success: true, Place: place, Data: map[string]any{KeyContentType: content_type}}
 }
 func (ph *PhotoPostgresRepo) GetPhotos(ctx context.Context, userid string) *RepositoryResponse {
 	const place = GetPhotos
@@ -77,7 +78,7 @@ func (ph *PhotoPostgresRepo) GetPhotos(ctx context.Context, userid string) *Repo
 		}
 		photoslice = append(photoslice, &photo)
 	}
-	return &RepositoryResponse{Success: true, Data: map[string]any{"photos": photoslice}, Place: place}
+	return &RepositoryResponse{Success: true, Data: map[string]any{KeyPhoto: photoslice}, Place: place}
 }
 func (ph *PhotoPostgresRepo) GetPhoto(ctx context.Context, photoid string) *RepositoryResponse {
 	const place = GetPhoto
@@ -90,7 +91,7 @@ func (ph *PhotoPostgresRepo) GetPhoto(ctx context.Context, photoid string) *Repo
 		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyPhotoTable, err)
 		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
 	}
-	return &RepositoryResponse{Success: true, Data: map[string]any{"photo": photo}, Place: place}
+	return &RepositoryResponse{Success: true, Data: map[string]any{KeyPhoto: photo}, Place: place}
 }
 
 func (ph *PhotoPostgresRepo) AddUserId(ctx context.Context, userid string) *RepositoryResponse {

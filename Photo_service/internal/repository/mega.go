@@ -74,7 +74,7 @@ func (client *MegaClient) UploadFile(localfilepath string, photoid string, ext s
 		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
 	}
 	client.wg.Wait()
-	return &RepositoryResponse{Success: true, Data: map[string]any{"photo": &model.Photo{ID: photoid, ContentType: ext, Size: uploadedFile.GetSize(), CreatedAt: time.Now(), URL: link}}, Place: place}
+	return &RepositoryResponse{Success: true, Data: map[string]any{KeyPhoto: &model.Photo{ID: photoid, ContentType: ext, Size: uploadedFile.GetSize(), CreatedAt: time.Now(), URL: link}}, Place: place}
 }
 func (client *MegaClient) DeleteFile(id, ext string) *RepositoryResponse {
 	const place = DeleteFile
