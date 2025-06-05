@@ -38,15 +38,11 @@ func NewPhotoService(repo DBPhotoRepos, cloud CloudPhotoStorage, kafka LogProduc
 }
 
 const UseCase_LoadPhoto = "UseCase_LoadPhoto"
-const UseCase_DeletePhoto = "UseCase_DeletePhoto"
-const UseCase_GetPhotos = "UseCase_GetPhotos"
-const UseCase_GetPhoto = "UseCase_GetPhoto"
 const MaxFileSize = 2 << 20
 const PhotoUnloadAndSave = "PhotoUnloadAndSave"
 const DeletePhotoCloud = "DeletePhotoCloud"
 
 func (use *PhotoService) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) (*pb.DeletePhotoResponse, error) {
-	const place = UseCase_DeletePhoto
 	traceid := ctx.Value("traceID").(string)
 	bdresponse := use.repo.DeletePhoto(ctx, req.UserId, req.PhotoId)
 	if !bdresponse.Success && bdresponse.Errors != nil {
@@ -57,7 +53,7 @@ func (use *PhotoService) DeletePhoto(ctx context.Context, req *pb.DeletePhotoReq
 		use.kafkaProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors.Message)
 		return nil, status.Errorf(codes.InvalidArgument, bdresponse.Errors.Message)
 	}
-	ext := bdresponse.Data["content_type"].(string)
+	ext := bdresponse.Data[repository.KeyContentType].(string)
 	go use.deletePhotoCloud(traceid, req.PhotoId, ext)
 	return &pb.DeletePhotoResponse{Status: true, Message: "The photo was deleted successfully"}, nil
 }
@@ -84,11 +80,38 @@ func (use *PhotoService) LoadPhoto(ctx context.Context, req *pb.LoadPhotoRequest
 	go use.photoUnloadAndSave(ctx, req.FileData, photoid, ext, req.UserId)
 	return &pb.LoadPhotoResponse{Status: true, PhotoId: photoid, Message: "The photo was added successfully"}, nil
 }
-func (user *PhotoService) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.GetPhotoResponse, error) {
-
+func (use *PhotoService) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.GetPhotoResponse, error) {
+	traceid := ctx.Value("traceID").(string)
+	bdresponse := use.repo.GetPhoto(ctx, req.PhotoId)
+	if !bdresponse.Success && bdresponse.Errors != nil {
+		if bdresponse.Errors.Type == erro.ClientErrorType {
+			use.kafkaProducer.NewPhotoLog(kafka.LogLevelWarn, bdresponse.Place, traceid, bdresponse.Errors.Message)
+			return nil, status.Errorf(codes.InvalidArgument, bdresponse.Errors.Message)
+		}
+		use.kafkaProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors.Message)
+		return nil, status.Errorf(codes.InvalidArgument, bdresponse.Errors.Message)
+	}
+	photo := bdresponse.Data[repository.KeyPhoto].(*model.Photo)
+	return &pb.GetPhotoResponse{Status: true, Photo: &pb.Photo{PhotoId: photo.ID, Url: photo.URL, CreatedAt: photo.CreatedAt.String()}}, nil
 }
-func (user *PhotoService) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb.GetPhotosResponse, error) {
-
+func (use *PhotoService) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb.GetPhotosResponse, error) {
+	traceid := ctx.Value("traceID").(string)
+	bdresponse := use.repo.GetPhotos(ctx, req.UserId)
+	if !bdresponse.Success && bdresponse.Errors != nil {
+		if bdresponse.Errors.Type == erro.ClientErrorType {
+			use.kafkaProducer.NewPhotoLog(kafka.LogLevelWarn, bdresponse.Place, traceid, bdresponse.Errors.Message)
+			return nil, status.Errorf(codes.InvalidArgument, bdresponse.Errors.Message)
+		}
+		use.kafkaProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors.Message)
+		return nil, status.Errorf(codes.InvalidArgument, bdresponse.Errors.Message)
+	}
+	photos := bdresponse.Data[repository.KeyPhoto].([]*model.Photo)
+	grpcphotos := []*pb.Photo{}
+	for _, p := range photos {
+		grpcphoto := &pb.Photo{PhotoId: p.ID, Url: p.URL, CreatedAt: p.CreatedAt.String()}
+		grpcphotos = append(grpcphotos, grpcphoto)
+	}
+	return &pb.GetPhotosResponse{Status: true, Photos: grpcphotos}, nil
 }
 func (use *PhotoService) photoUnloadAndSave(ctx context.Context, file []byte, photoid string, ext string, userid string) {
 	const place = PhotoUnloadAndSave
@@ -110,7 +133,7 @@ func (use *PhotoService) photoUnloadAndSave(ctx context.Context, file []byte, ph
 	if !cloudresponse.Success && cloudresponse.Errors != nil {
 		use.kafkaProducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, cloudresponse.Errors.Message)
 	}
-	photo := cloudresponse.Data["photo"].(*model.Photo)
+	photo := cloudresponse.Data[repository.KeyPhoto].(*model.Photo)
 	photo.UserID = userid
 	bdresponse := use.repo.LoadPhoto(ctx, photo)
 	if !bdresponse.Success && bdresponse.Errors != nil {
