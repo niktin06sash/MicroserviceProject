@@ -3,11 +3,11 @@ package repository
 import (
 	"fmt"
 	"log"
-	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/model"
 	"github.com/t3rm1n4l/go-mega"
 )
@@ -50,53 +50,56 @@ func NewMegaClient(config configs.MegaConfig) (*MegaClient, error) {
 		mainfolder:   targetFolder,
 	}, nil
 }
-func (client *MegaClient) UploadFile(localfilepath string, id string) *model.Photo {
-	ext := filepath.Ext(localfilepath)
-	fileName := id + ext
+
+const UploadFile = "Repository-UploadFile"
+const DeleteFile = "Repository-DeleteFile"
+
+func (client *MegaClient) UploadFile(localfilepath string, photoid string, ext string) *RepositoryResponse {
+	const place = UploadFile
+	filename := photoid + ext
 	client.wg.Add(1)
 	go func() {
 		defer client.wg.Done()
 		for _ = range client.progressChan {
-
 		}
 	}()
-	uploadedFile, err := client.connect.UploadFile(localfilepath, client.mainfolder, fileName, &client.progressChan)
+	uploadedFile, err := client.connect.UploadFile(localfilepath, client.mainfolder, filename, &client.progressChan)
 	if err != nil {
-		log.Printf("File upload with name = %s error: %v", fileName, err)
-		return nil
+		fmterr := fmt.Sprintf("File upload with id = %s error: %v", photoid, err)
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
 	}
 	link, err := client.connect.Link(uploadedFile, true)
 	if err != nil {
-		log.Fatalf("Error getting a public link to file with name = %s: %v", fileName, err)
-		return nil
+		fmterr := fmt.Sprintf("Error getting a public link to file with id = %s: %v", photoid, err)
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
 	}
 	client.wg.Wait()
-	log.Printf("File upload with name = %s succesfully completed", fileName)
-	return &model.Photo{ID: id, Size: uploadedFile.GetSize(), ContentType: ext, CreatedAt: time.Now(), URL: link}
+	return &RepositoryResponse{Success: true, Data: map[string]any{"photo": &model.Photo{ID: photoid, ContentType: ext, Size: uploadedFile.GetSize(), CreatedAt: time.Now(), URL: link}}, Place: place}
 }
-func (client *MegaClient) DeleteFile(id, contenttype string) {
-	filename := id + contenttype
-	file := client.findFileByName(client.mainfolder, filename)
-	if file == nil {
-		return
-	}
-	err := client.connect.Delete(file, true)
+func (client *MegaClient) DeleteFile(id, ext string) *RepositoryResponse {
+	const place = DeleteFile
+	filename := id + ext
+	file, err := client.findFileByName(client.mainfolder, filename)
 	if err != nil {
-		log.Printf("File deleted with name = %s error: %v", filename, err)
-		return
+		fmterr := fmt.Sprintf("Error when receiving a file with id = %s: %v", id, err)
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
 	}
-	log.Printf("File deleted with name = %s succesfully completed", filename)
+	err = client.connect.Delete(file, true)
+	if err != nil {
+		fmterr := fmt.Sprintf("Error file deleted with id = %s: %v", id, err)
+		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
+	}
+	return &RepositoryResponse{Success: true}
 }
-func (client *MegaClient) findFileByName(node *mega.Node, name string) *mega.Node {
+func (client *MegaClient) findFileByName(node *mega.Node, name string) (*mega.Node, error) {
 	children, err := client.connect.FS.GetChildren(node)
 	if err != nil {
-		fmt.Printf("Error when receiving a file with name = %s: %v", name, err)
-		return nil
+		return nil, err
 	}
 	for _, child := range children {
 		if child.GetName() == name {
-			return child
+			return child, nil
 		}
 	}
-	return nil
+	return nil, err
 }
