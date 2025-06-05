@@ -12,13 +12,11 @@ service PhotoService {
 message LoadPhotoRequest {
   string user_id = 1;
   bytes file_data = 2;
-  string content_type = 3;
 }
 message LoadPhotoResponse {
   bool status = 1;
   string photo_id = 2;
-  string url = 3;
-  string message = 4; 
+  string message = 3; 
 }
 message DeletePhotoRequest {
   string photo_id = 1;
@@ -36,7 +34,6 @@ message Photo {
   string photo_id = 1;
   string url = 2;  
   string created_at = 3;
-  string content_type = 4;
 }
 
 message GetPhotosResponse {
@@ -49,5 +46,5 @@ message GetPhotoRequest {
 }
 message GetPhotoResponse {
   bool status = 1;
-  Photo photos = 2;
+  Photo photo = 2;
 }
