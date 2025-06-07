@@ -21,9 +21,12 @@ const UseCase_ValidateSession = "UseCase-ValidateSession"
 const UseCase_DeleteSession = "UseCase-DeleteSession"
 
 type ServiceResponse struct {
-	Success        bool
+	Success bool
+	Data    Data
+	Errors  map[string]string
+}
+type Data struct {
 	SessionID      string
 	UserID         string
 	ExpirationTime int64
-	Errors         map[string]string
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
-	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
@@ -25,34 +24,6 @@ type UserService struct {
 	KafkaProducer LogProducer
 	Validator     *validator.Validate
 	GrpcClient    SessionClient
-}
-type DBUserRepos interface {
-	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *repository.RepositoryResponse
-	AuthenticateUser(ctx context.Context, useremail, password string) *repository.RepositoryResponse
-	DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *repository.RepositoryResponse
-	UpdateUserData(ctx context.Context, tx *sql.Tx, userId uuid.UUID, updateType string, args ...interface{}) *repository.RepositoryResponse
-	GetMyProfile(ctx context.Context, userid uuid.UUID) *repository.RepositoryResponse
-	GetProfileById(ctx context.Context, getid uuid.UUID) *repository.RepositoryResponse
-}
-type DBTransactionManager interface {
-	BeginTx(ctx context.Context) (*sql.Tx, error)
-	RollbackTx(tx *sql.Tx) error
-	CommitTx(tx *sql.Tx) error
-}
-type CacheUserRepos interface {
-	AddProfileCache(ctx context.Context, id string, data map[string]any) *repository.RepositoryResponse
-	DeleteProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
-	GetProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
-}
-type EventProducer interface {
-	NewUserEvent(ctx context.Context, routingKey string, userid string, place string, traceid string) error
-}
-type LogProducer interface {
-	NewUserLog(level, place, traceid, msg string)
-}
-type SessionClient interface {
-	CreateSession(ctx context.Context, userID string) (*pb.CreateSessionResponse, error)
-	DeleteSession(ctx context.Context, sessionID string) (*pb.DeleteSessionResponse, error)
 }
 
 func NewUserService(dbrepo DBUserRepos, dbtxmanager DBTransactionManager, redisrepo CacheUserRepos, kafkaProd LogProducer, rabbitevents EventProducer, grpc SessionClient) *UserService {
@@ -114,7 +85,7 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 		return &ServiceResponse{Success: false, Errors: registrateMap, ErrorType: erro.ServerErrorType}
 	}
 	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
-	return &ServiceResponse{Success: true, Data: map[string]any{"userID": userID, "sessionID": grpcresponse.SessionID, "expiresession": time.Unix(grpcresponse.ExpiryTime, 0)}}
+	return &ServiceResponse{Success: true, Data: map[string]any{repository.KeyUserID: userID, KeyExpirySession: grpcresponse.SessionID, KeySessionID: time.Unix(grpcresponse.ExpiryTime, 0)}}
 }
 func (as *UserService) AuthenticateAndLogin(ctx context.Context, req *model.AuthenticationRequest) *ServiceResponse {
 	const place = AuthenticateAndLogin
@@ -136,7 +107,7 @@ func (as *UserService) AuthenticateAndLogin(ctx context.Context, req *model.Auth
 		return serviceresponse
 	}
 	as.KafkaProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "The session was created successfully and received")
-	return &ServiceResponse{Success: true, Data: map[string]any{"userID": userID, "sessionID": grpcresponse.SessionID, "expiresession": time.Unix(grpcresponse.ExpiryTime, 0)}}
+	return &ServiceResponse{Success: true, Data: map[string]any{repository.KeyUserID: userID, KeySessionID: grpcresponse.SessionID, KeyExpirySession: time.Unix(grpcresponse.ExpiryTime, 0)}}
 }
 func (as *UserService) DeleteAccount(ctx context.Context, req *model.DeletionRequest, sessionID string, useridstr string) *ServiceResponse {
 	const place = DeleteAccount

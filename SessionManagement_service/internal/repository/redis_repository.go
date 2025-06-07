@@ -20,8 +20,8 @@ func NewSessionRepos(client *RedisObject) *SessionRedis {
 func (redisrepo *SessionRedis) SetSession(ctx context.Context, session model.Session) *RepositoryResponse {
 	const place = SetSession
 	err := redisrepo.Client.RedisClient.HSet(ctx, session.SessionID, map[string]interface{}{
-		"UserID":         session.UserID,
-		"ExpirationTime": session.ExpirationTime.Format(time.RFC3339),
+		KeyUserId:    session.UserID,
+		KeySessionId: session.ExpirationTime.Format(time.RFC3339),
 	}).Err()
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmt.Sprintf("Hset session error: %v", err)}, Place: place}
