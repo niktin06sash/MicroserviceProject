@@ -13,6 +13,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/rabbitmq"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/handlers"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/server"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/service"
@@ -34,7 +35,8 @@ func main() {
 	if err != nil {
 		return
 	}
-	api := service.NewPhotoAPI(postgres, mega, kafkaProducer)
+	service := service.NewPhotoService(postgres, mega, kafkaProducer)
+	api := handlers.NewPhotoAPI(service, kafkaProducer)
 	srv := server.NewGrpcServer(api)
 	serverError := make(chan error, 1)
 	go func() {
