@@ -11,6 +11,7 @@ import (
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
 	"github.com/streadway/amqp"
 )
@@ -147,7 +148,7 @@ func (rc *RabbitConsumer) startConsuming() {
 			case "user.registration":
 				resp := rc.userrepo.AddUserId(ctx, newmsg.UserID)
 				if resp.Errors != nil {
-					rc.kafkaproducer.NewPhotoLog(kafka.LogLevelError, place, newmsg.Traceid, resp.Errors.Message)
+					rc.kafkaproducer.NewPhotoLog(kafka.LogLevelError, place, newmsg.Traceid, resp.Errors[erro.ErrorMessage])
 					continue
 				}
 				rc.kafkaproducer.NewPhotoLog(kafka.LogLevelInfo, place, newmsg.Traceid, fmt.Sprintf("Received user registration event for userID: %s", newmsg.UserID))
@@ -155,7 +156,7 @@ func (rc *RabbitConsumer) startConsuming() {
 			case "user.delete":
 				resp := rc.userrepo.DeleteUserData(ctx, newmsg.UserID)
 				if resp.Errors != nil {
-					rc.kafkaproducer.NewPhotoLog(kafka.LogLevelError, place, newmsg.Traceid, resp.Errors.Message)
+					rc.kafkaproducer.NewPhotoLog(kafka.LogLevelError, place, newmsg.Traceid, resp.Errors[erro.ErrorMessage])
 					continue
 				}
 				rc.kafkaproducer.NewPhotoLog(kafka.LogLevelInfo, place, newmsg.Traceid, fmt.Sprintf("Received user delete account event for userID: %s", newmsg.UserID))

@@ -66,12 +66,12 @@ func (client *MegaClient) UploadFile(localfilepath string, photoid string, ext s
 	uploadedFile, err := client.connect.UploadFile(localfilepath, client.mainfolder, filename, &client.progressChan)
 	if err != nil {
 		fmterr := fmt.Sprintf("File upload with id = %s error: %v", photoid, err)
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmterr}, Place: place}
 	}
 	link, err := client.connect.Link(uploadedFile, true)
 	if err != nil {
 		fmterr := fmt.Sprintf("Error getting a public link to file with id = %s: %v", photoid, err)
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmterr}, Place: place}
 	}
 	client.wg.Wait()
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyPhoto: &model.Photo{ID: photoid, ContentType: ext, Size: uploadedFile.GetSize(), CreatedAt: time.Now(), URL: link}}, Place: place}
@@ -82,12 +82,12 @@ func (client *MegaClient) DeleteFile(id, ext string) *RepositoryResponse {
 	file, err := client.findFileByName(client.mainfolder, filename)
 	if err != nil {
 		fmterr := fmt.Sprintf("Error when receiving a file with id = %s: %v", id, err)
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmterr}, Place: place}
 	}
 	err = client.connect.Delete(file, true)
 	if err != nil {
 		fmterr := fmt.Sprintf("Error file deleted with id = %s: %v", id, err)
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Type: erro.ServerErrorType, Message: fmterr}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmterr}, Place: place}
 	}
 	return &RepositoryResponse{Success: true}
 }
