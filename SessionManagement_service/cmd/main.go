@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/handlers"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/server"
@@ -25,8 +26,9 @@ func main() {
 	}
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
 	repository := repository.NewSessionRepos(redis)
-	service := service.NewSessionAPI(repository, kafkaProducer)
-	srv := server.NewGrpcServer(service)
+	service := service.NewSessionService(repository, kafkaProducer)
+	api := handlers.NewSessionAPI(service, kafkaProducer)
+	srv := server.NewGrpcServer(api)
 	serverError := make(chan error, 1)
 	go func() {
 		if err := srv.Run(config.Server.Port); err != nil {
