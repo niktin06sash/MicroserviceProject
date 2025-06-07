@@ -5,13 +5,13 @@ type RepositoryResponse struct {
 	Success        bool
 	SuccessMessage string
 	Data           map[string]any
-	Errors         error
+	Errors         map[string]string
 	Place          string
 }
 
 const KeySessionId = "sessionID"
 const KeyUserId = "userID"
-const ExpiryTime = "expirytime"
+const KeyExpiryTime = "expirytime"
 const SetSession = "Repository-SetSession"
 const GetSession = "Repository-GetSession"
 const DeleteSession = "Repository-DeleteSession"

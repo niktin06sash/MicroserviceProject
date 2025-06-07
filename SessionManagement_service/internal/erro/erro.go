@@ -1,7 +1,5 @@
 package erro
 
-import "errors"
-
 const SessionServiceUnavalaible = "Session-Service is unavailable"
 const RequestTimedOut = "Request timed out"
 const UserIdRequired = "UserID is required"
@@ -10,6 +8,10 @@ const SessionIdRequired = "SessionID is required"
 const SessionIdInvalid = "Invalid sessionID format"
 const SessionNotFound = "Session not found"
 const AlreadyAuthorized = "AlreadyAuthorized"
+const ClientErrorType = "ClientError"
+const ServerErrorType = "ServerError"
+const ErrorType = "type"
+const ErrorMessage = "message"
 const (
 	ErrorGetSessionConst               = "Error get session"
 	ErrorSetSessionConst               = "Error set session"
@@ -24,20 +26,5 @@ const (
 	ErrorRequiredTraceIDConst          = "TraceId is required"
 	ErrorRequiredUserIdConst           = "UserId is required"
 	ErrorRequiredSessionIdConst        = "SessionId is required"
-)
-
-var (
-	ErrorGetSession               = errors.New(ErrorGetSessionConst)
-	ErrorSetSession               = errors.New(ErrorSetSessionConst)
-	ErrorGetUserIdSession         = errors.New(ErrorGetUserIdSessionConst)
-	ErrorGetExpirationTimeSession = errors.New(ErrorGetExpirationTimeSessionConst)
-	ErrorSessionParse             = errors.New(ErrorSessionParseConst)
-	ErrorAuthorized               = errors.New(ErrorAuthorizedConst)
-	ErrorInvalidSessionID         = errors.New(ErrorInvalidSessionConst)
-	ErrorInternalServer           = errors.New(ErrorInternalServerConst)
-	ErrorContextTimeOut           = errors.New(ErrorContextTimeOutConst)
-	ErrorMissingMetadata          = errors.New(ErrorMissingMetadataConst)
-	ErrorRequiredUserId           = errors.New(ErrorRequiredUserIdConst)
-	ErrorRequiredTraceID          = errors.New(ErrorRequiredTraceIDConst)
-	ErrorRequiredSessionId        = errors.New(ErrorRequiredSessionIdConst)
+	ErrorInvalidSessionIdFormat        = "Invalid SessionId format"
 )

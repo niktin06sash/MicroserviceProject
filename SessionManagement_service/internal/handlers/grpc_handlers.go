@@ -1,4 +1,4 @@
-package service
+package handlers
 
 import (
 	"context"
@@ -17,42 +17,33 @@ type SessionAPI struct {
 	sessionService SessionAuthentication
 	kafkaProducer  LogProducer
 }
-type SessionAuthentication interface {
-	CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error)
-	ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error)
-	DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error)
-}
-type LogProducer interface {
-	NewSessionLog(level, place, traceid, msg string)
-}
 
-const API_CreateSession = "API-CreateSession"
-const API_ValidateSession = "API-ValidateSession"
-const API_DeleteSession = "API-DeleteSession"
-
-const UseCase_CreateSession = "UseCase-CreateSession"
-const UseCase_ValidateSession = "UseCase-ValidateSession"
-const UseCase_DeleteSession = "UseCase-DeleteSession"
-
-func NewSessionAPI(repos SessionRepos, kafka LogProducer) *SessionAPI {
+func NewSessionAPI(service SessionAuthentication, kafka LogProducer) *SessionAPI {
 	return &SessionAPI{
-		sessionService: NewSessionService(repos, kafka),
+		sessionService: service,
 		kafkaProducer:  kafka,
 	}
 }
 func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
 	const place = API_CreateSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
+	defer s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
-	resp, err := s.sessionService.CreateSession(ctx, req)
-	s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
-	return resp, err
+	resp := s.sessionService.CreateSession(ctx, req.UserID)
+	if resp.Errors == nil {
+		return &pb.CreateSessionResponse{Success: true, SessionID: resp.SessionID, ExpiryTime: resp.ExpirationTime}, nil
+	}
+	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
+		return nil, status.Error(codes.Internal, erro.SessionServiceUnavalaible)
+	}
+	return nil, status.Error(codes.InvalidArgument, resp.Errors[erro.ErrorMessage])
 }
 
 func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
 	const place = API_ValidateSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
+	defer s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	flag := s.getFlagValidate(ctx, place, traceID)
 	if flag == "" {
 		return &pb.ValidateSessionResponse{Success: false}, status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)
@@ -60,19 +51,30 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 	s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	ctx = context.WithValue(ctx, "flagvalidate", flag)
-	resp, err := s.sessionService.ValidateSession(ctx, req)
-	s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
-	return resp, err
+	resp := s.sessionService.ValidateSession(ctx, req.SessionID)
+	if resp.Errors == nil {
+		return &pb.ValidateSessionResponse{Success: true, UserID: resp.UserID}, nil
+	}
+	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
+		return nil, status.Error(codes.Internal, erro.SessionServiceUnavalaible)
+	}
+	return nil, status.Error(codes.InvalidArgument, resp.Errors[erro.ErrorMessage])
 }
 
 func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
 	const place = API_DeleteSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
+	defer s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
-	resp, err := s.sessionService.DeleteSession(ctx, req)
-	s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
-	return resp, err
+	resp := s.sessionService.DeleteSession(ctx, req.SessionID)
+	if resp.Errors == nil {
+		return &pb.DeleteSessionResponse{Success: true}, nil
+	}
+	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
+		return nil, status.Error(codes.Internal, erro.SessionServiceUnavalaible)
+	}
+	return nil, status.Error(codes.InvalidArgument, resp.Errors[erro.ErrorMessage])
 }
 func (s *SessionAPI) getTraceIdFromMetadata(ctx context.Context, place string) string {
 	md, ok := metadata.FromIncomingContext(ctx)
