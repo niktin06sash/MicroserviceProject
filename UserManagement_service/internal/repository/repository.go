@@ -14,14 +14,11 @@ const GetMyProfile = "Repository-GetMyProfile"
 const GetProfileById = "Repository-GetProfileById"
 const UpdateUserData = "Repository-UpdateUserData"
 const (
-	KeyFriendID         = "friendid"
-	KeyUserID           = "userid"
-	KeyUserEmail        = "useremail"
-	KeyUserName         = "username"
-	KeyUserPassword     = "userpassword"
-	KeyUserTable        = "users"
-	KeyFriendshipsTable = "friendships"
-	KeyFriends          = "friends"
+	KeyUserID       = "userid"
+	KeyUserEmail    = "useremail"
+	KeyUserName     = "username"
+	KeyUserPassword = "userpassword"
+	KeyUserTable    = "users"
 )
 
 type RepositoryResponse struct {

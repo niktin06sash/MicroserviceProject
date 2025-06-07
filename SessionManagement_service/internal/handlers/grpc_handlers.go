@@ -32,7 +32,7 @@ func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionReq
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	resp := s.sessionService.CreateSession(ctx, req.UserID)
 	if resp.Errors == nil {
-		return &pb.CreateSessionResponse{Success: true, SessionID: resp.SessionID, ExpiryTime: resp.ExpirationTime}, nil
+		return &pb.CreateSessionResponse{Success: true, SessionID: resp.Data.SessionID, ExpiryTime: resp.Data.ExpirationTime}, nil
 	}
 	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
 		return nil, status.Error(codes.Internal, erro.SessionServiceUnavalaible)
@@ -53,7 +53,7 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 	ctx = context.WithValue(ctx, "flagvalidate", flag)
 	resp := s.sessionService.ValidateSession(ctx, req.SessionID)
 	if resp.Errors == nil {
-		return &pb.ValidateSessionResponse{Success: true, UserID: resp.UserID}, nil
+		return &pb.ValidateSessionResponse{Success: true, UserID: resp.Data.UserID}, nil
 	}
 	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
 		return nil, status.Error(codes.Internal, erro.SessionServiceUnavalaible)

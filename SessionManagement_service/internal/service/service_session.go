@@ -94,11 +94,11 @@ func (s *SessionService) requestToDB(ctx context.Context, operation func(context
 	switch place {
 	case UseCase_CreateSession:
 		exp64 := response.Data[repository.KeyExpiryTime].(time.Time).Unix()
-		return &ServiceResponse{Success: true, SessionID: response.Data[repository.KeySessionId].(string), ExpirationTime: exp64}
+		return &ServiceResponse{Success: true, Data: Data{SessionID: response.Data[repository.KeySessionId].(string), ExpirationTime: exp64}}
 	case UseCase_DeleteSession:
 		return &ServiceResponse{Success: true}
 	case UseCase_ValidateSession:
-		return &ServiceResponse{Success: true, SessionID: response.Data[repository.KeyUserId].(string)}
+		return &ServiceResponse{Success: true, Data: Data{UserID: response.Data[repository.KeyUserId].(string)}}
 	}
 	return &ServiceResponse{Success: false}
 }
