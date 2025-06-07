@@ -6,8 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/service"
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -26,23 +24,6 @@ func NewPhotoAPI(service PhotoService, kafka LogProducer) *PhotoAPI {
 		photoService:  service,
 	}
 }
-
-type LogProducer interface {
-	NewPhotoLog(level, place, traceid, msg string)
-}
-
-const API_LoadPhoto = "API-LoadPhoto"
-const API_DeletePhoto = "API-DeletePhoto"
-const API_GetPhoto = "API-GetPhoto"
-const API_GetPhotos = "API-GetPhotos"
-
-type PhotoService interface {
-	DeletePhoto(ctx context.Context, userid string, photoid string) *service.ServiceResponse
-	LoadPhoto(ctx context.Context, userid string, filedata []byte) *service.ServiceResponse
-	GetPhoto(ctx context.Context, photoid string) *service.ServiceResponse
-	GetPhotos(ctx context.Context, userid string) *service.ServiceResponse
-}
-
 func (s *PhotoAPI) LoadPhoto(ctx context.Context, req *pb.LoadPhotoRequest) (*pb.LoadPhotoResponse, error) {
 	const place = API_LoadPhoto
 	traceID := s.getTraceIdFromMetadata(ctx, place)
@@ -51,12 +32,12 @@ func (s *PhotoAPI) LoadPhoto(ctx context.Context, req *pb.LoadPhotoRequest) (*pb
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.LoadPhoto(ctx, req.UserId, req.FileData)
 	if serviceresp.Errors == nil {
-		return &pb.LoadPhotoResponse{Status: true, PhotoId: serviceresp.Data[repository.KeyPhotoID].(string), Message: "You have successfully uploaded photo"}, nil
+		return &pb.LoadPhotoResponse{Status: true, PhotoId: serviceresp.Data.PhotoID, Message: "You have successfully uploaded photo"}, nil
 	}
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
 		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.PhotoServiceUnavalaible])
 }
 
 func (s *PhotoAPI) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) (*pb.DeletePhotoResponse, error) {
@@ -72,7 +53,7 @@ func (s *PhotoAPI) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) 
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
 		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.PhotoServiceUnavalaible])
 }
 
 func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.GetPhotoResponse, error) {
@@ -83,12 +64,12 @@ func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.G
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.GetPhoto(ctx, req.PhotoId)
 	if serviceresp.Errors == nil {
-		return &pb.GetPhotoResponse{Status: true, Photo: serviceresp.Data[repository.KeyPhoto].(*pb.Photo)}, nil
+		return &pb.GetPhotoResponse{Status: true, Photo: serviceresp.Data.Photo}, nil
 	}
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
 		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.PhotoServiceUnavalaible])
 }
 func (s *PhotoAPI) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb.GetPhotosResponse, error) {
 	const place = API_GetPhotos
@@ -98,12 +79,12 @@ func (s *PhotoAPI) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.GetPhotos(ctx, req.UserId)
 	if serviceresp.Errors == nil {
-		return &pb.GetPhotosResponse{Status: true, Photos: serviceresp.Data[repository.KeyPhoto].([]*pb.Photo)}, nil
+		return &pb.GetPhotosResponse{Status: true, Photos: serviceresp.Data.Photos}, nil
 	}
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
 		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.PhotoServiceUnavalaible])
 }
 func (s *PhotoAPI) getTraceIdFromMetadata(ctx context.Context, place string) string {
 	md, ok := metadata.FromIncomingContext(ctx)
