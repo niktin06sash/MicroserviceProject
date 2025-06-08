@@ -31,7 +31,7 @@ func main() {
 	}
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
 	postgres := repository.NewPhotoPostgresRepo(db)
-	rabbitconsumer, err := rabbitmq.NewRabbitConsumer(config.RabbitMQ, kafkaProducer, postgres)
+	rabbitconsumer, err := rabbitmq.NewRabbitConsumer(config.RabbitMQ, kafkaProducer, postgres, mega)
 	if err != nil {
 		return
 	}
