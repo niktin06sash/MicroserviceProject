@@ -57,11 +57,15 @@ const DeleteFile = "Repository-DeleteFile"
 func (client *MegaClient) UploadFile(localfilepath string, photoid string, ext string) *RepositoryResponse {
 	const place = UploadFile
 	filename := photoid + ext
+	datachan := make(chan int)
 	client.wg.Add(1)
 	go func() {
 		defer client.wg.Done()
-		for _ = range client.progressChan {
+		totalbytes := 0
+		for data := range client.progressChan {
+			totalbytes += data
 		}
+		datachan <- totalbytes
 	}()
 	uploadedFile, err := client.connect.UploadFile(localfilepath, client.mainfolder, filename, &client.progressChan)
 	if err != nil {
@@ -74,7 +78,12 @@ func (client *MegaClient) UploadFile(localfilepath string, photoid string, ext s
 		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmterr}, Place: place}
 	}
 	client.wg.Wait()
-	return &RepositoryResponse{Success: true, Data: map[string]any{KeyPhoto: &model.Photo{ID: photoid, ContentType: ext, Size: uploadedFile.GetSize(), CreatedAt: time.Now(), URL: link}}, Place: place}
+	tb := <-datachan
+	return &RepositoryResponse{Success: true,
+		Data:           map[string]any{KeyPhoto: &model.Photo{ID: photoid, ContentType: ext, Size: uploadedFile.GetSize(), CreatedAt: time.Now(), URL: link}},
+		Place:          place,
+		SuccessMessage: fmt.Sprintf("Photo was successfully uploaded to the cloud (%v bytes uploaded)", tb),
+	}
 }
 func (client *MegaClient) DeleteFile(id, ext string) *RepositoryResponse {
 	const place = DeleteFile
@@ -89,7 +98,7 @@ func (client *MegaClient) DeleteFile(id, ext string) *RepositoryResponse {
 		fmterr := fmt.Sprintf("Error file deleted with id = %s: %v", id, err)
 		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmterr}, Place: place}
 	}
-	return &RepositoryResponse{Success: true}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Photo was successfully deleted from cloud"}
 }
 func (client *MegaClient) findFileByName(node *mega.Node, name string) (*mega.Node, error) {
 	children, err := client.connect.FS.GetChildren(node)
