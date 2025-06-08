@@ -81,9 +81,20 @@ func (ph *PhotoPostgresRepo) GetPhoto(ctx context.Context, photoid string) *Repo
 }
 
 func (ph *PhotoPostgresRepo) AddUserId(ctx context.Context, userid string) *RepositoryResponse {
-	return &RepositoryResponse{}
+	const place = AddUserId
+	_, err := ph.Db.DB.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1) ON CONFLICT (%s) DO NOTHING", KeyUsersIdTable, KeyUserID, KeyUserID), userid)
+	if err != nil {
+		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyUsersIdTable, err)
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmterr}, Place: place}
+	}
+	return &RepositoryResponse{Success: true, Place: place, SuccessMessage: "Successful add userID to Photo-Service's database after registration"}
 }
-
 func (ph *PhotoPostgresRepo) DeleteUserData(ctx context.Context, userid string) *RepositoryResponse {
-	return &RepositoryResponse{}
+	const place = DeleteUserData
+	err := ph.Db.DB.QueryRowContext(ctx, fmt.Sprintf("DELETE FROM %s WHERE %s = $1", KeyUsersIdTable, KeyUserID), userid)
+	if err != nil {
+		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyUsersIdTable, err)
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmterr}, Place: place}
+	}
+	return &RepositoryResponse{Success: true, Place: place, SuccessMessage: "Successful delete userdata from Photo-Service's database after delete account"}
 }
