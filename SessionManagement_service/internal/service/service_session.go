@@ -49,7 +49,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, sessionid string) 
 	case "true":
 		if _, err := uuid.Parse(sessionid); err != nil {
 			validatemapa[erro.ErrorMessage] = erro.SessionIdInvalid
-			validatemapa[erro.ErrorType] = erro.ServerErrorType
+			validatemapa[erro.ErrorType] = erro.ClientErrorType
 			fmterr := fmt.Sprintf("UUID-Parse sessionID error: %v", err)
 			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, fmterr)
 			return &ServiceResponse{Success: false, Errors: validatemapa}
@@ -57,7 +57,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, sessionid string) 
 	case "false":
 		if _, err := uuid.Parse(sessionid); err != nil {
 			validatemapa[erro.ErrorMessage] = erro.ErrorInvalidSessionIdFormat
-			validatemapa[erro.ErrorType] = erro.ServerErrorType
+			validatemapa[erro.ErrorType] = erro.ClientErrorType
 			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Request for an unauthorized users with invalid sessionID format")
 			return &ServiceResponse{Success: false, Errors: validatemapa}
 		}
