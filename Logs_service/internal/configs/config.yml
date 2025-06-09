@@ -11,6 +11,9 @@ kafka:
     user_info_log: "user-info-log-topic"
     user_error_log: "user-error-log-topic"
     user_warn_log: "user-warn-log-topic"
+    photo_info_log: "photo-info-log-topic"
+    photo_warn_log: "photo-warn-log-topic"
+    photo_error_log: "photo-error-log-topic"
   enable_auto_commit: false 
   session_timeout: 60000
   heartbeat_interval: 20000    
@@ -25,6 +28,9 @@ logger:
     session_info: "internal/logs/session-service/info.log"
     session_warn: "internal/logs/session-service/warn.log"
     session_error: "internal/logs/session-service/error.log"
+    photo_info: "internal/logs/photo-service/info.log"
+    photo_warn: "internal/logs/photo-service/warn.log"
+    photo_error: "internal/logs/photo-service/error.log"
   rotation:
     max_size: 100       
     max_backups: 3         

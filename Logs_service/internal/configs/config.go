@@ -33,6 +33,10 @@ type KafkaTopics struct {
 	ISess string `mapstructure:"session_info_log"`
 	ESess string `mapstructure:"session_error_log"`
 	WSess string `mapstructure:"session_warn_log"`
+
+	IPhoto string `mapstructure:"photo_info_log"`
+	EPhoto string `mapstructure:"photo_error_log"`
+	WPhoto string `mapstructure:"photo_warn_log"`
 }
 
 func (c Config) GetAllTopics() []string {
@@ -46,6 +50,9 @@ func (c Config) GetAllTopics() []string {
 		c.Kafka.Topics.WSess,
 		c.Kafka.Topics.ISess,
 		c.Kafka.Topics.ESess,
+		c.Kafka.Topics.EPhoto,
+		c.Kafka.Topics.WPhoto,
+		c.Kafka.Topics.IPhoto,
 	}
 }
 
