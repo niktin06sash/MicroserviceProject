@@ -66,8 +66,8 @@ func main() {
 	log.Println("[DEBUG] [Photo-Service] Service has shutted down successfully")
 	defer func() {
 		db.Close()
-		rabbitconsumer.Close()
 		kafkaProducer.Close()
+		rabbitconsumer.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
 		log.Printf("[DEBUG] [Photo-Service] Active goroutines:\n%s", buf[:n])
