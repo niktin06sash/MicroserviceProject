@@ -8,8 +8,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/brokers/kafka"
 	configs "github.com/niktin06sash/MicroserviceProject/Logs_service/internal/configs"
-	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/logs"
 )
 

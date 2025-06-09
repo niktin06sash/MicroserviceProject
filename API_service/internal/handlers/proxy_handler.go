@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
-	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 )
 

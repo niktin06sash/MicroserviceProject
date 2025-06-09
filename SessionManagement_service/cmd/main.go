@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/handlers"
-	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/server"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/service"

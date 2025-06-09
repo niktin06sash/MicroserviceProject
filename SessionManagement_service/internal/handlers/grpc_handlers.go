@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

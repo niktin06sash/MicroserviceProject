@@ -10,13 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/middleware"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
-	"github.com/niktin06sash/MicroserviceProject/API_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/server"
 )
