@@ -78,6 +78,7 @@ func main() {
 	defer func() {
 		metrics.Stop()
 		kafkaProducer.Close()
+		rabbitproducer.Close()
 		db.Close()
 		grpcclient.Close()
 		buf := make([]byte, 10<<20)
