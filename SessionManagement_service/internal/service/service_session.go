@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 
