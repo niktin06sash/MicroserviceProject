@@ -14,77 +14,67 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 )
 
-func checkMethod(r *http.Request, w http.ResponseWriter, expectedMethod string, traceID string, place string, mapa map[string]string, kafkaproducer LogProducer) bool {
+func (h *Handler) checkMethod(r *http.Request, w http.ResponseWriter, expectedMethod string, traceID string, place string) bool {
 	if r.Method != expectedMethod {
 		fmterr := fmt.Sprintf("Invalid request method(expected %s but it was sent %v)", expectedMethod, r.Method)
-		kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
-		mapa[erro.ErrorType] = erro.ClientErrorType
-		mapa[erro.ErrorMessage] = erro.ErrorInvalidReqMethod
-		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: mapa}, http.StatusBadRequest, traceID, place, kafkaproducer)
+		h.LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
+		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidReqMethod}}, http.StatusBadRequest, traceID, place, h.LogProducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return false
 	}
 	return true
 }
-func getAllData[T any](r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, parser T, kafkaproducer LogProducer) bool {
+func getAllData[T any](r *http.Request, w http.ResponseWriter, traceID string, place string, parser T, logproducer LogProducer) bool {
 	datafromperson, err := io.ReadAll(r.Body)
 	if err != nil {
 		fmterr := fmt.Sprintf("ReadAll Error: %v", err)
-		kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
-		maparesponse[erro.ErrorType] = erro.ClientErrorType
-		maparesponse[erro.ErrorMessage] = erro.ErrorInvalidDataReq
-		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+		logproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
+		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidDataReq}}, http.StatusBadRequest, traceID, place, logproducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return false
 	}
 	err = json.Unmarshal(datafromperson, parser)
 	if err != nil {
 		fmterr := fmt.Sprintf("Unmarshal Error: %v", err)
-		kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
-		maparesponse[erro.ErrorType] = erro.ClientErrorType
-		maparesponse[erro.ErrorMessage] = erro.ErrorInvalidDataReq
-		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+		logproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
+		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidDataReq}}, http.StatusBadRequest, traceID, place, logproducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return false
 	}
 	return true
 }
-func getPersonality(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, personmapa map[string]string, kafkaproducer LogProducer) bool {
+func (h *Handler) getPersonality(r *http.Request, w http.ResponseWriter, traceID string, place string, personmapa map[string]string) bool {
 	sessionID, ok := r.Context().Value("sessionID").(string)
 	if !ok {
-		kafkaproducer.NewUserLog(kafka.LogLevelError, place, traceID, "Session ID not found in context")
-		maparesponse[erro.ErrorType] = erro.ServerErrorType
-		maparesponse[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, kafkaproducer)
+		h.LogProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Session ID not found in context")
+		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}, http.StatusInternalServerError, traceID, place, h.LogProducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return false
 	}
 	personmapa["sessionID"] = sessionID
 	userID, ok := r.Context().Value("userID").(string)
 	if !ok {
-		kafkaproducer.NewUserLog(kafka.LogLevelError, place, traceID, "User ID not found in context")
-		maparesponse[erro.ErrorType] = erro.ServerErrorType
-		maparesponse[erro.ErrorMessage] = erro.UserServiceUnavalaible
-		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusInternalServerError, traceID, place, kafkaproducer)
+		h.LogProducer.NewUserLog(kafka.LogLevelError, place, traceID, "User ID not found in context")
+		response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}, http.StatusInternalServerError, traceID, place, h.LogProducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return false
 	}
 	personmapa["userID"] = userID
 	return true
 }
-func serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.ResponseWriter, traceID string, place string, kafkaproducer LogProducer) bool {
+func (h *Handler) serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.ResponseWriter, traceID string, place string) bool {
 	if !resp.Success {
-		switch resp.ErrorType {
+		switch resp.Errors[erro.ErrorType] {
 		case erro.ClientErrorType:
-			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: resp.Errors}, http.StatusBadRequest, traceID, place, kafkaproducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: resp.Errors}, http.StatusBadRequest, traceID, place, h.LogProducer)
 		case erro.ServerErrorType:
-			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: resp.Errors}, http.StatusInternalServerError, traceID, place, kafkaproducer)
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: resp.Errors}, http.StatusInternalServerError, traceID, place, h.LogProducer)
 		}
 		return false
 	}
 	return true
 }
-func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, personmapa map[string]string, kafkaproducer LogProducer) bool {
+func (h *Handler) getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, place string, personmapa map[string]string) bool {
 	query := r.URL.Query()
 	switch place {
 	case Update:
@@ -92,10 +82,8 @@ func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, 
 		updatePassword := query.Get("password")
 		updateEmail := query.Get("email")
 		if (updateName != "" && updatePassword != "") || (updateName != "" && updateEmail != "") || (updatePassword != "" && updateEmail != "") {
-			kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "More than one parameter in a query-request")
-			maparesponse[erro.ErrorType] = erro.ClientErrorType
-			maparesponse[erro.ErrorMessage] = erro.ErrorInvalidCountQueryParameters
-			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+			h.LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "More than one parameter in a query-request")
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidCountQueryParameters}}, http.StatusBadRequest, traceID, place, h.LogProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return false
 		}
@@ -108,10 +96,8 @@ func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, 
 		case updateEmail == "1":
 			updateType = "email"
 		default:
-			kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "Invalid query parameter")
-			maparesponse[erro.ErrorType] = erro.ClientErrorType
-			maparesponse[erro.ErrorMessage] = erro.ErrorInvalidQueryParameter
-			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+			h.LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "Invalid query parameter")
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidQueryParameter}}, http.StatusBadRequest, traceID, place, h.LogProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return false
 		}
@@ -120,20 +106,18 @@ func getQueryParameters(r *http.Request, w http.ResponseWriter, traceID string, 
 	}
 	return false
 }
-func getDinamicParameters(r *http.Request, w http.ResponseWriter, traceID string, place string, maparesponse map[string]string, keys map[string]string, kafkaproducer LogProducer) bool {
+func (h *Handler) getDinamicParameters(r *http.Request, w http.ResponseWriter, traceID string, place string, personmapa map[string]string) bool {
 	vars := mux.Vars(r)
 	switch place {
 	case GetUserById:
 		userID, ok := vars["id"]
 		if !ok {
-			kafkaproducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "Invalid dinamic parameter")
-			maparesponse[erro.ErrorType] = erro.ClientErrorType
-			maparesponse[erro.ErrorMessage] = erro.ErrorInvalidDinamicParameter
-			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, http.StatusBadRequest, traceID, place, kafkaproducer)
+			h.LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "Invalid dinamic parameter")
+			response.SendResponse(r, w, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidDinamicParameter}}, http.StatusBadRequest, traceID, place, h.LogProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return false
 		}
-		keys["getID"] = userID
+		personmapa["getID"] = userID
 		return true
 	}
 	return false

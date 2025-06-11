@@ -50,5 +50,6 @@ const (
 	ErrorMissingUserIDConst           = "Error missing user ID"
 	ErrorMissingSessionIDConst        = "Error missing session ID"
 	ErrorMissingRequestIDConst        = "Error missing request ID"
+	ErrorInvalidUserIDFormat          = "Invalid userid format"
 	ErrorAllRetryFailedConst          = "All retry attempts failed"
 )

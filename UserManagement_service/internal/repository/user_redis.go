@@ -32,12 +32,12 @@ func (redisrepo *UserRedisRepo) AddProfileCache(ctx context.Context, id string, 
 	}).Err()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues("HSET").Inc()
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("Hset profiles-cache error: %v", err), Type: erro.ServerErrorType}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmt.Sprintf("Hset profiles-cache error: %v", err)}, Place: place}
 	}
 	err = redisrepo.Client.RedisClient.Expire(ctx, id, time.Until(time.Now().Add(1*time.Hour))).Err()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues("EXPIRE").Inc()
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("Expire profiles-cache error: %v", err), Type: erro.ServerErrorType}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmt.Sprintf("Expire profiles-cache error: %v", err)}, Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful add profile in cache", Place: place}
 }
@@ -48,7 +48,7 @@ func (redisrepo *UserRedisRepo) DeleteProfileCache(ctx context.Context, id strin
 	num, err := redisrepo.Client.RedisClient.Del(ctx, id).Result()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues("DEL").Inc()
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("Del profiles-cache error: %v", err), Type: erro.ServerErrorType}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmt.Sprintf("Del profiles-cache error: %v", err)}, Place: place}
 	}
 	if num == 0 {
 		return &RepositoryResponse{
@@ -64,7 +64,7 @@ func (redisrepo *UserRedisRepo) GetProfileCache(ctx context.Context, id string) 
 	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, id).Result()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues("HGETALL").Inc()
-		return &RepositoryResponse{Success: false, Errors: &ErrorResponse{Message: fmt.Sprintf("HGetAll profiles-cache error: %v", err), Type: erro.ServerErrorType}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmt.Sprintf("HGetAll profiles-cache error: %v", err)}, Place: place}
 	}
 	if len(result) == 0 {
 		return &RepositoryResponse{Success: false}

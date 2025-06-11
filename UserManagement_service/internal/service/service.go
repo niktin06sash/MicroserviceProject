@@ -23,10 +23,9 @@ const KeyExpirySession = "expirysession"
 const KeySessionID = "sessionid"
 
 type ServiceResponse struct {
-	Success   bool
-	Data      map[string]any
-	Errors    map[string]string
-	ErrorType string
+	Success bool
+	Data    map[string]any
+	Errors  map[string]string
 }
 type DBUserRepos interface {
 	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *repository.RepositoryResponse

@@ -9,9 +9,9 @@ import (
 )
 
 type Handler struct {
-	Services      UserService
-	Middlewares   MiddlewareService
-	KafkaProducer LogProducer
+	Services    UserService
+	Middlewares MiddlewareService
+	LogProducer LogProducer
 }
 
 const Registration = "API-Registration"
@@ -32,8 +32,8 @@ type LogProducer interface {
 	NewUserLog(level, place, traceid, msg string)
 }
 
-func NewHandler(services UserService, middleware MiddlewareService, kafka LogProducer) *Handler {
-	return &Handler{Services: services, Middlewares: middleware, KafkaProducer: kafka}
+func NewHandler(services UserService, middleware MiddlewareService, logproducer LogProducer) *Handler {
+	return &Handler{Services: services, Middlewares: middleware, LogProducer: logproducer}
 }
 func (h *Handler) InitRoutes() *mux.Router {
 	m := mux.NewRouter()
