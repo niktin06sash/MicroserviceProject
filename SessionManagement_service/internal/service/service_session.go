@@ -26,7 +26,7 @@ func (s *SessionService) CreateSession(ctx context.Context, userid string) *Serv
 	traceID := ctx.Value("traceID").(string)
 	createsessionmapa := make(map[string]string)
 	if userid == "" {
-		createsessionmapa[erro.ErrorMessage] = erro.UserIdRequired
+		createsessionmapa[erro.ErrorMessage] = erro.SessionServiceUnavalaible
 		createsessionmapa[erro.ErrorType] = erro.ServerErrorType
 		s.kafkaProducer.NewSessionLog(kafka.LogLevelError, place, traceID, erro.UserIdRequired)
 		return &ServiceResponse{Success: false, Errors: createsessionmapa}
@@ -56,7 +56,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, sessionid string) 
 		}
 	case "false":
 		if _, err := uuid.Parse(sessionid); err != nil {
-			validatemapa[erro.ErrorMessage] = erro.ErrorInvalidSessionIdFormat
+			validatemapa[erro.ErrorMessage] = erro.SessionIdInvalid
 			validatemapa[erro.ErrorType] = erro.ClientErrorType
 			s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Request for an unauthorized users with invalid sessionID format")
 			return &ServiceResponse{Success: false, Errors: validatemapa}
@@ -83,6 +83,7 @@ func (s *SessionService) requestToDB(ctx context.Context, operation func(context
 		typ := response.Errors[erro.ErrorType]
 		switch typ {
 		case erro.ServerErrorType:
+			response.Errors[erro.ErrorMessage] = erro.SessionServiceUnavalaible
 			s.kafkaProducer.NewSessionLog(kafka.LogLevelError, response.Place, traceid, response.Errors[erro.ErrorMessage])
 			return &ServiceResponse{Success: false, Errors: response.Errors}
 		case erro.ClientErrorType:
