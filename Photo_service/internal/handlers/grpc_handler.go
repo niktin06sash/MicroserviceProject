@@ -37,7 +37,7 @@ func (s *PhotoAPI) LoadPhoto(ctx context.Context, req *pb.LoadPhotoRequest) (*pb
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
 		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.PhotoServiceUnavalaible])
+	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
 }
 
 func (s *PhotoAPI) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) (*pb.DeletePhotoResponse, error) {
@@ -53,7 +53,7 @@ func (s *PhotoAPI) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) 
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
 		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.PhotoServiceUnavalaible])
+	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
 }
 
 func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.GetPhotoResponse, error) {
@@ -69,7 +69,7 @@ func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.G
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
 		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.PhotoServiceUnavalaible])
+	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
 }
 func (s *PhotoAPI) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb.GetPhotosResponse, error) {
 	const place = API_GetPhotos
@@ -84,7 +84,7 @@ func (s *PhotoAPI) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
 		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.PhotoServiceUnavalaible])
+	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
 }
 func (s *PhotoAPI) getTraceIdFromMetadata(ctx context.Context, place string) string {
 	md, ok := metadata.FromIncomingContext(ctx)
