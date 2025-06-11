@@ -35,7 +35,7 @@ func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionReq
 		return &pb.CreateSessionResponse{Success: true, SessionID: resp.Data.SessionID, ExpiryTime: resp.Data.ExpirationTime}, nil
 	}
 	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
-		return nil, status.Error(codes.Internal, erro.SessionServiceUnavalaible)
+		return nil, status.Error(codes.Internal, resp.Errors[erro.ErrorMessage])
 	}
 	return nil, status.Error(codes.InvalidArgument, resp.Errors[erro.ErrorMessage])
 }
@@ -56,7 +56,7 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 		return &pb.ValidateSessionResponse{Success: true, UserID: resp.Data.UserID}, nil
 	}
 	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
-		return nil, status.Error(codes.Internal, erro.SessionServiceUnavalaible)
+		return nil, status.Error(codes.Internal, resp.Errors[erro.ErrorMessage])
 	}
 	return nil, status.Error(codes.InvalidArgument, resp.Errors[erro.ErrorMessage])
 }
@@ -72,7 +72,7 @@ func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionReq
 		return &pb.DeleteSessionResponse{Success: true}, nil
 	}
 	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
-		return nil, status.Error(codes.Internal, erro.SessionServiceUnavalaible)
+		return nil, status.Error(codes.Internal, resp.Errors[erro.ErrorMessage])
 	}
 	return nil, status.Error(codes.InvalidArgument, resp.Errors[erro.ErrorMessage])
 }
