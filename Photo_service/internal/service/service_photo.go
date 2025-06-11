@@ -38,6 +38,7 @@ func (use *PhotoService) DeletePhoto(ctx context.Context, userid string, photoid
 		}
 		use.kafkaProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])
 		delmapa[erro.ErrorType] = erro.ServerErrorType
+		delmapa[erro.ErrorMessage] = erro.PhotoServiceUnavalaible
 		return &ServiceResponse{Success: false, Errors: delmapa}
 	}
 	use.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, bdresponse.Place, traceid, bdresponse.SuccessMessage)
@@ -86,6 +87,7 @@ func (use *PhotoService) GetPhoto(ctx context.Context, photoid string) *ServiceR
 		}
 		use.kafkaProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])
 		getphotomapa[erro.ErrorType] = erro.ServerErrorType
+		getphotomapa[erro.ErrorMessage] = erro.PhotoServiceUnavalaible
 		return &ServiceResponse{Success: false, Errors: getphotomapa}
 	}
 	use.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, bdresponse.Place, traceid, bdresponse.SuccessMessage)
@@ -106,6 +108,7 @@ func (use *PhotoService) GetPhotos(ctx context.Context, userid string) *ServiceR
 		}
 		use.kafkaProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])
 		getphotosmapa[erro.ErrorType] = erro.ServerErrorType
+		getphotosmapa[erro.ErrorMessage] = erro.PhotoServiceUnavalaible
 		return &ServiceResponse{Success: false, Errors: getphotosmapa}
 	}
 	use.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, bdresponse.Place, traceid, bdresponse.SuccessMessage)
