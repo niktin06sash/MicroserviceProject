@@ -1,15 +1,15 @@
 package middleware
 
 type Middleware struct {
-	KafkaProducer LogProducer
+	LogProducer LogProducer
 }
 
 const Authority = "Middleware-Authority"
 const Not_Authority = "Middleware-Not-Authority"
 const Logging = "Middleware-Logging"
 
-func NewMiddleware(kafka LogProducer) *Middleware {
-	return &Middleware{KafkaProducer: kafka}
+func NewMiddleware(logproducer LogProducer) *Middleware {
+	return &Middleware{LogProducer: logproducer}
 }
 
 type LogProducer interface {

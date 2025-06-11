@@ -26,9 +26,5 @@ type RepositoryResponse struct {
 	SuccessMessage string
 	Place          string
 	Data           map[string]any
-	Errors         *ErrorResponse
-}
-type ErrorResponse struct {
-	Message string
-	Type    string
+	Errors         map[string]string
 }

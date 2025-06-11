@@ -20,13 +20,13 @@ type LogProducer interface {
 	NewUserLog(level, place, traceid, msg string)
 }
 
-func SendResponse(r *http.Request, w http.ResponseWriter, resp HTTPResponse, status int, traceid string, place string, kafkaprod LogProducer) {
+func SendResponse(r *http.Request, w http.ResponseWriter, resp HTTPResponse, status int, traceid string, place string, logproducer LogProducer) {
 	ctx := r.Context()
 	start := ctx.Value("starttime").(time.Time)
 	w.Header().Set("Content-Type", "application/json")
 	if ctx.Err() != nil {
 		fmterr := fmt.Sprintf("Context error: %v", ctx.Err())
-		kafkaprod.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+		logproducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		w.WriteHeader(http.StatusInternalServerError)
 		badresp := HTTPResponse{
 			Success: false,
@@ -42,7 +42,7 @@ func SendResponse(r *http.Request, w http.ResponseWriter, resp HTTPResponse, sta
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		fmterr := fmt.Sprintf("Failed to encode response: %v", err)
-		kafkaprod.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
+		logproducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		w.WriteHeader(http.StatusInternalServerError)
 		badreq := HTTPResponse{
 			Success: false,
@@ -54,7 +54,7 @@ func SendResponse(r *http.Request, w http.ResponseWriter, resp HTTPResponse, sta
 		metrics.UserBadRequestDuration.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Observe(duration)
 		metrics.UserTotalBadRequests.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Inc()
 	}
-	kafkaprod.NewUserLog(kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
+	logproducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
 	duration := time.Since(start).Seconds()
 	if status == http.StatusOK {
 		metrics.UserSuccessfulRequestDuration.WithLabelValues(place, metrics.NormalizePath(r.URL.Path)).Observe(duration)

@@ -19,7 +19,7 @@ func (m *Middleware) Logging(next http.Handler) http.Handler {
 		const place = Logging
 		traceID := r.Header.Get("X-Trace-ID")
 		if traceID == "" {
-			m.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "Required Trace-ID")
+			m.LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceID, "Required Trace-ID")
 			traceID = uuid.New().String()
 		}
 		ctx = context.WithValue(ctx, "traceID", traceID)
@@ -28,7 +28,7 @@ func (m *Middleware) Logging(next http.Handler) http.Handler {
 		deadline, err := time.Parse(time.RFC3339, deadlinectx)
 		if err != nil {
 			fmterr := fmt.Sprintf("Failed to parse X-Deadline: %v", err)
-			m.KafkaProducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
+			m.LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
 			deadline = time.Now().Add(15 * time.Second)
 		}
 		ctx, cancel := context.WithDeadline(ctx, deadline)
