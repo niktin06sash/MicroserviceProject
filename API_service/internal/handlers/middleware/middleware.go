@@ -13,12 +13,12 @@ type RateLimiterEntry struct {
 	LastUsed time.Time
 }
 type Middleware struct {
-	grpcClient    SessionClient
-	KafkaProducer LogProducerService
-	rateLimiters  sync.Map
-	stopclean     chan (struct{})
+	grpcClient   SessionClient
+	logproducer  LogProducer
+	rateLimiters sync.Map
+	stopclean    chan (struct{})
 }
-type LogProducerService interface {
+type LogProducer interface {
 	NewAPILog(c *http.Request, level, place, traceid, msg string)
 }
 
@@ -26,12 +26,12 @@ const RateLimiter = "Middleware-RateLimiter"
 const Not_Authority = "Middleware-Not-Authority"
 const Authority = "Middleware-Authority"
 
-func NewMiddleware(grpcClient SessionClient, kafkaProducer LogProducerService) *Middleware {
+func NewMiddleware(grpcClient SessionClient, logproducer LogProducer) *Middleware {
 	m := &Middleware{
-		grpcClient:    grpcClient,
-		KafkaProducer: kafkaProducer,
-		rateLimiters:  sync.Map{},
-		stopclean:     make(chan struct{}),
+		grpcClient:   grpcClient,
+		logproducer:  logproducer,
+		rateLimiters: sync.Map{},
+		stopclean:    make(chan struct{}),
 	}
 	go cleanLimit(m)
 	return m

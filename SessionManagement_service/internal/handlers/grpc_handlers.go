@@ -15,20 +15,20 @@ import (
 type SessionAPI struct {
 	pb.UnimplementedSessionServiceServer
 	sessionService SessionAuthentication
-	kafkaProducer  LogProducer
+	logproducer    LogProducer
 }
 
-func NewSessionAPI(service SessionAuthentication, kafka LogProducer) *SessionAPI {
+func NewSessionAPI(service SessionAuthentication, logproducer LogProducer) *SessionAPI {
 	return &SessionAPI{
 		sessionService: service,
-		kafkaProducer:  kafka,
+		logproducer:    logproducer,
 	}
 }
 func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
 	const place = API_CreateSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
-	defer s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
-	s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
+	defer s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
+	s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	resp := s.sessionService.CreateSession(ctx, req.UserID)
 	if resp.Errors == nil {
@@ -43,12 +43,12 @@ func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionReq
 func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
 	const place = API_ValidateSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
-	defer s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
+	defer s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	flag := s.getFlagValidate(ctx, place, traceID)
 	if flag == "" {
 		return &pb.ValidateSessionResponse{Success: false}, status.Errorf(codes.Internal, erro.SessionServiceUnavalaible)
 	}
-	s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
+	s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	ctx = context.WithValue(ctx, "flagvalidate", flag)
 	resp := s.sessionService.ValidateSession(ctx, req.SessionID)
@@ -64,8 +64,8 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
 	const place = API_DeleteSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
-	defer s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
-	s.kafkaProducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
+	defer s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
+	s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	resp := s.sessionService.DeleteSession(ctx, req.SessionID)
 	if resp.Errors == nil {
@@ -79,13 +79,13 @@ func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionReq
 func (s *SessionAPI) getTraceIdFromMetadata(ctx context.Context, place string) string {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, "", "Metadata not found in context")
+		s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, "", "Metadata not found in context")
 		newtrace := uuid.New()
 		return newtrace.String()
 	}
 	traceIDs := md.Get("traceID")
 	if len(traceIDs) == 0 || traceIDs[0] == "" {
-		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, "", "Trace ID not found in context")
+		s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, "", "Trace ID not found in context")
 		newtrace := uuid.New()
 		return newtrace.String()
 	}
@@ -94,12 +94,12 @@ func (s *SessionAPI) getTraceIdFromMetadata(ctx context.Context, place string) s
 func (s *SessionAPI) getFlagValidate(ctx context.Context, place string, traceID string) string {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Metadata not found in context")
+		s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Metadata not found in context")
 		return ""
 	}
 	flagvalidates := md.Get("flagvalidate")
 	if len(flagvalidates) == 0 || flagvalidates[0] == "" {
-		s.kafkaProducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "FlagValidate not found in context")
+		s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "FlagValidate not found in context")
 		return ""
 	}
 	return flagvalidates[0]
