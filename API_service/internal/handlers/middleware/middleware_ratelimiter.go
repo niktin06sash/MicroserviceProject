@@ -15,16 +15,13 @@ import (
 
 func (m *Middleware) RateLimiter() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		maparesponse := make(map[string]string)
 		const place = RateLimiter
 		traceID := c.MustGet("traceID").(string)
 		ip := c.Request.RemoteAddr
 		limiter := getLimit(m, ip)
 		if !limiter.Allow() {
 			m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Too many requests")
-			maparesponse[erro.ErrorType] = erro.ClientErrorType
-			maparesponse[erro.ErrorMessage] = erro.TooManyRequests
-			response.SendResponse(c, http.StatusTooManyRequests, response.HTTPResponse{Success: false, Data: nil, Errors: maparesponse}, traceID, place, m.KafkaProducer)
+			response.SendResponse(c, http.StatusTooManyRequests, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.TooManyRequests}}, traceID, place, m.KafkaProducer)
 			c.Abort()
 			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			metrics.APIRateLimitExceededTotal.WithLabelValues(metrics.NormalizePath(c.Request.URL.Path)).Inc()

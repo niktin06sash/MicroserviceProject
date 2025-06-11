@@ -12,8 +12,3 @@ const (
 	ClientErrorType = "ClientError"
 	ServerErrorType = "ServerError"
 )
-
-type CustomError struct {
-	Message string
-	Type    string
-}

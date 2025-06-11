@@ -19,32 +19,25 @@ type SessionClient interface {
 func (m *Middleware) Authorized() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		const place = Authority
-		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
 		sessionID, err := c.Cookie("session")
 		if err != nil {
 			m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Required session in cookie")
-			maparesponse[erro.ErrorType] = erro.ClientErrorType
-			maparesponse[erro.ErrorMessage] = erro.RequiredSession
-			response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, m.KafkaProducer)
+			response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.RequiredSession}}, traceID, place, m.KafkaProducer)
 			c.Abort()
 			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return
 		}
-		grpcresponse, errv := retryAuthorized(c, m, sessionID, traceID, place)
-		if errv != nil {
-			switch errv.Type {
+		grpcresponse, errmap := retryAuthorized(c, m, sessionID, traceID, place)
+		if errmap != nil {
+			switch errmap[erro.ErrorType] {
 			case erro.ClientErrorType:
-				maparesponse[erro.ErrorType] = erro.ClientErrorType
-				maparesponse[erro.ErrorMessage] = errv.Message
-				response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, m.KafkaProducer)
+				response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.KafkaProducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				maparesponse[erro.ErrorType] = erro.ServerErrorType
-				maparesponse[erro.ErrorMessage] = errv.Message
-				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, m.KafkaProducer)
+				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.KafkaProducer)
 				c.Abort()
 				return
 			}
@@ -59,7 +52,6 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		const place = Not_Authority
-		maparesponse := make(map[string]string)
 		traceID := c.MustGet("traceID").(string)
 		sessionID, err := c.Cookie("session")
 		if err != nil || sessionID == "" {
@@ -67,20 +59,16 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		_, errv := retryAuthorized_Not(c, m, sessionID, traceID, place)
-		if errv != nil {
-			switch errv.Type {
+		_, errmap := retryAuthorized_Not(c, m, sessionID, traceID, place)
+		if errmap != nil {
+			switch errmap[erro.ErrorType] {
 			case erro.ClientErrorType:
-				maparesponse[erro.ErrorType] = erro.ClientErrorType
-				maparesponse[erro.ErrorMessage] = errv.Message
-				response.SendResponse(c, http.StatusForbidden, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, m.KafkaProducer)
+				response.SendResponse(c, http.StatusForbidden, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.KafkaProducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				maparesponse[erro.ErrorType] = erro.ServerErrorType
-				maparesponse[erro.ErrorMessage] = errv.Message
-				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, m.KafkaProducer)
+				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.KafkaProducer)
 				c.Abort()
 				return
 			}
