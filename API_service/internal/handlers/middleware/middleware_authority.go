@@ -22,8 +22,8 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		traceID := c.MustGet("traceID").(string)
 		sessionID, err := c.Cookie("session")
 		if err != nil {
-			m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Required session in cookie")
-			response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.RequiredSession}}, traceID, place, m.KafkaProducer)
+			m.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Required session in cookie")
+			response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.RequiredSession}}, traceID, place, m.logproducer)
 			c.Abort()
 			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return
@@ -32,17 +32,17 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		if errmap != nil {
 			switch errmap[erro.ErrorType] {
 			case erro.ClientErrorType:
-				response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.KafkaProducer)
+				response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.logproducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.KafkaProducer)
+				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.logproducer)
 				c.Abort()
 				return
 			}
 		}
-		m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Successful authorization verification")
+		m.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Successful authorization verification")
 		c.Set("userID", grpcresponse.UserID)
 		c.Set("sessionID", sessionID)
 		c.Next()
@@ -55,7 +55,7 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		traceID := c.MustGet("traceID").(string)
 		sessionID, err := c.Cookie("session")
 		if err != nil || sessionID == "" {
-			m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Successful unauthorization verification")
+			m.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Successful unauthorization verification")
 			c.Next()
 			return
 		}
@@ -63,17 +63,17 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		if errmap != nil {
 			switch errmap[erro.ErrorType] {
 			case erro.ClientErrorType:
-				response.SendResponse(c, http.StatusForbidden, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.KafkaProducer)
+				response.SendResponse(c, http.StatusForbidden, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.logproducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.KafkaProducer)
+				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.logproducer)
 				c.Abort()
 				return
 			}
 		}
-		m.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Successful unauthorization verification")
+		m.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Successful unauthorization verification")
 		c.Next()
 	}
 }

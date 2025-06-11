@@ -188,12 +188,13 @@ func (as *UserService) requestToDB(response *repository.RepositoryResponse, trac
 		case erro.ServerErrorType:
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			as.LogProducer.NewUserLog(kafka.LogLevelError, response.Place, traceid, response.Errors[erro.ErrorMessage])
-			return response, &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
+			response.Errors[erro.ErrorMessage] = erro.SessionServiceUnavalaible
+			return response, &ServiceResponse{Success: false, Errors: response.Errors}
 
 		case erro.ClientErrorType:
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			as.LogProducer.NewUserLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors[erro.ErrorMessage])
-			return response, &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: response.Errors[erro.ErrorMessage]}}
+			return response, &ServiceResponse{Success: false, Errors: response.Errors}
 		}
 	}
 

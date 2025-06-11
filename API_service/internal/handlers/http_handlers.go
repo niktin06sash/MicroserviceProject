@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/docs"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -9,9 +11,9 @@ import (
 )
 
 type Handler struct {
-	Middleware    Middleware
-	Routes        map[string]string
-	KafkaProducer LogProducer
+	Middleware  Middleware
+	Routes      map[string]string
+	logproducer LogProducer
 }
 type Middleware interface {
 	RateLimiter() gin.HandlerFunc
@@ -19,14 +21,17 @@ type Middleware interface {
 	Authorized() gin.HandlerFunc
 	AuthorizedNot() gin.HandlerFunc
 }
+type LogProducer interface {
+	NewAPILog(c *http.Request, level, place, traceid, msg string)
+}
 
 const ProxyHTTP = "API-ProxyHTTP"
 
-func NewHandler(middleware Middleware, kafkaproducer LogProducer, routes map[string]string) *Handler {
+func NewHandler(middleware Middleware, logproducer LogProducer, routes map[string]string) *Handler {
 	return &Handler{
-		Middleware:    middleware,
-		Routes:        routes,
-		KafkaProducer: kafkaproducer,
+		Middleware:  middleware,
+		Routes:      routes,
+		logproducer: logproducer,
 	}
 }
 func (h *Handler) InitRoutes() *gin.Engine {
