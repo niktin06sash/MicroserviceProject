@@ -26,6 +26,7 @@ const UseCase_LoadPhoto = "UseCase_LoadPhoto"
 const MaxFileSize = 10 << 20
 const PhotoUnloadAndSave = "PhotoUnloadAndSave"
 const DeletePhotoCloud = "DeletePhotoCloud"
+const UseCase_GetPhotos = "UseCase_GetPhotos"
 
 type ServiceResponse struct {
 	Success bool

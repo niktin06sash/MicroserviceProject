@@ -14,21 +14,21 @@ import (
 
 type PhotoAPI struct {
 	pb.UnimplementedPhotoServiceServer
-	photoService  PhotoService
-	kafkaProducer LogProducer
+	photoService PhotoService
+	logproducer  LogProducer
 }
 
-func NewPhotoAPI(service PhotoService, kafka LogProducer) *PhotoAPI {
+func NewPhotoAPI(service PhotoService, logProducer LogProducer) *PhotoAPI {
 	return &PhotoAPI{
-		kafkaProducer: kafka,
-		photoService:  service,
+		logproducer:  logProducer,
+		photoService: service,
 	}
 }
 func (s *PhotoAPI) LoadPhoto(ctx context.Context, req *pb.LoadPhotoRequest) (*pb.LoadPhotoResponse, error) {
 	const place = API_LoadPhoto
 	traceID := s.getTraceIdFromMetadata(ctx, place)
-	defer s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
-	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
+	defer s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
+	s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.LoadPhoto(ctx, req.UserId, req.FileData)
 	if serviceresp.Errors == nil {
@@ -43,8 +43,8 @@ func (s *PhotoAPI) LoadPhoto(ctx context.Context, req *pb.LoadPhotoRequest) (*pb
 func (s *PhotoAPI) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) (*pb.DeletePhotoResponse, error) {
 	const place = API_DeletePhoto
 	traceID := s.getTraceIdFromMetadata(ctx, place)
-	defer s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
-	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
+	defer s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
+	s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.DeletePhoto(ctx, req.UserId, req.PhotoId)
 	if serviceresp.Errors == nil {
@@ -59,8 +59,8 @@ func (s *PhotoAPI) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) 
 func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.GetPhotoResponse, error) {
 	const place = API_GetPhoto
 	traceID := s.getTraceIdFromMetadata(ctx, place)
-	defer s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
-	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
+	defer s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
+	s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.GetPhoto(ctx, req.PhotoId)
 	if serviceresp.Errors == nil {
@@ -74,8 +74,8 @@ func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.G
 func (s *PhotoAPI) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb.GetPhotosResponse, error) {
 	const place = API_GetPhotos
 	traceID := s.getTraceIdFromMetadata(ctx, place)
-	defer s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
-	s.kafkaProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
+	defer s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
+	s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.GetPhotos(ctx, req.UserId)
 	if serviceresp.Errors == nil {
@@ -89,13 +89,13 @@ func (s *PhotoAPI) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb
 func (s *PhotoAPI) getTraceIdFromMetadata(ctx context.Context, place string) string {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		s.kafkaProducer.NewPhotoLog(kafka.LogLevelWarn, place, "", "Metadata not found in context")
+		s.logproducer.NewPhotoLog(kafka.LogLevelWarn, place, "", "Metadata not found in context")
 		newtrace := uuid.New()
 		return newtrace.String()
 	}
 	traceIDs := md.Get("traceID")
 	if len(traceIDs) == 0 || traceIDs[0] == "" {
-		s.kafkaProducer.NewPhotoLog(kafka.LogLevelWarn, place, "", "Trace ID not found in context")
+		s.logproducer.NewPhotoLog(kafka.LogLevelWarn, place, "", "Trace ID not found in context")
 		newtrace := uuid.New()
 		return newtrace.String()
 	}
