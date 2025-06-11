@@ -22,14 +22,11 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	const place = ProxyHTTP
 	traceID := c.MustGet("traceID").(string)
 	start := c.MustGet("starttime").(time.Time)
-	maparesponse := make(map[string]string)
 	reqpath := c.Request.URL.Path
 	normalizedPath := metrics.NormalizePath(reqpath)
 	targetURL, ok := h.Routes[normalizedPath]
 	if !ok {
-		maparesponse[erro.ErrorType] = erro.ClientErrorType
-		maparesponse[erro.ErrorMessage] = erro.PageNotFound
-		response.SendResponse(c, http.StatusBadRequest, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, h.KafkaProducer)
+		response.SendResponse(c, http.StatusBadRequest, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.PageNotFound}}, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return
 	}
@@ -37,9 +34,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	if err != nil {
 		strerr := fmt.Sprintf("URL-Parse Error: %s", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		maparesponse[erro.ErrorType] = erro.ServerErrorType
-		maparesponse[erro.ErrorMessage] = erro.APIServiceUnavalaible
-		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, h.KafkaProducer)
+		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.APIServiceUnavalaible}}, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
 	}
@@ -47,9 +42,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	if err != nil {
 		fmterr := fmt.Sprintf("Context error: %v", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
-		maparesponse[erro.ErrorType] = erro.ServerErrorType
-		maparesponse[erro.ErrorMessage] = erro.RequestTimedOut
-		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, h.KafkaProducer)
+		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.RequestTimedOut}}, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
 	}
@@ -83,9 +76,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		traceID := c.MustGet("traceID").(string)
 		strerr := fmt.Sprintf("Proxy error: %s", err)
 		h.KafkaProducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		maparesponse[erro.ErrorType] = erro.ServerErrorType
-		maparesponse[erro.ErrorMessage] = erro.APIServiceUnavalaible
-		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: maparesponse}, traceID, place, h.KafkaProducer)
+		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.APIServiceUnavalaible}}, traceID, place, h.KafkaProducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 	}
 	resp := fmt.Sprintf("Successful HTTP-request to %s", targetURL)
