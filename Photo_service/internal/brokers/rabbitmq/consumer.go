@@ -24,18 +24,18 @@ type PhotoCloudRepos interface {
 	DeleteFile(id, ext string) *repository.RepositoryResponse
 }
 type RabbitConsumer struct {
-	conn          *amqp.Connection
-	channel       *amqp.Channel
-	queue         amqp.Queue
-	userrepo      DBUserRepos
-	kafkaproducer LogProducer
-	photocloud    PhotoCloudRepos
-	wg            *sync.WaitGroup
-	ctx           context.Context
-	cancel        context.CancelFunc
+	conn        *amqp.Connection
+	channel     *amqp.Channel
+	queue       amqp.Queue
+	userrepo    DBUserRepos
+	logproducer LogProducer
+	photocloud  PhotoCloudRepos
+	wg          *sync.WaitGroup
+	ctx         context.Context
+	cancel      context.CancelFunc
 }
 
-func NewRabbitConsumer(config configs.RabbitMQConfig, kafkaprod LogProducer, dbrepo DBUserRepos, photocloud PhotoCloudRepos) (*RabbitConsumer, error) {
+func NewRabbitConsumer(config configs.RabbitMQConfig, logproducer LogProducer, dbrepo DBUserRepos, photocloud PhotoCloudRepos) (*RabbitConsumer, error) {
 	connstr := fmt.Sprintf("amqp://%s:%s@%s:%s/", config.Name, config.Password, config.Host, strconv.Itoa(config.Port))
 	conn, err := amqp.Dial(connstr)
 	if err != nil {
@@ -88,14 +88,14 @@ func NewRabbitConsumer(config configs.RabbitMQConfig, kafkaprod LogProducer, dbr
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	rc := &RabbitConsumer{
-		conn:          conn,
-		channel:       channel,
-		queue:         queue,
-		userrepo:      dbrepo,
-		ctx:           ctx,
-		cancel:        cancel,
-		wg:            &sync.WaitGroup{},
-		kafkaproducer: kafkaprod,
+		conn:        conn,
+		channel:     channel,
+		queue:       queue,
+		userrepo:    dbrepo,
+		ctx:         ctx,
+		cancel:      cancel,
+		wg:          &sync.WaitGroup{},
+		logproducer: logproducer,
 	}
 	rc.wg.Add(1)
 	go rc.readEvent()
