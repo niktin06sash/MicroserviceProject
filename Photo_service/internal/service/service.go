@@ -12,7 +12,7 @@ type DBPhotoRepos interface {
 	LoadPhoto(ctx context.Context, photo *model.Photo) *repository.RepositoryResponse
 	DeletePhoto(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
 	GetPhotos(ctx context.Context, userid string) *repository.RepositoryResponse
-	GetPhoto(ctx context.Context, photoid string) *repository.RepositoryResponse
+	GetPhoto(ctx context.Context, photoid string, userid string) *repository.RepositoryResponse
 }
 type CloudPhotoStorage interface {
 	UploadFile(localfilepath string, photoid string, ext string) *repository.RepositoryResponse
@@ -27,6 +27,7 @@ const MaxFileSize = 10 << 20
 const PhotoUnloadAndSave = "PhotoUnloadAndSave"
 const DeletePhotoCloud = "DeletePhotoCloud"
 const UseCase_GetPhotos = "UseCase_GetPhotos"
+const UseCase_GetPhoto = "UseCase_GetPhoto"
 
 type ServiceResponse struct {
 	Success bool

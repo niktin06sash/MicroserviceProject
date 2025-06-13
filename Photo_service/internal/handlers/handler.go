@@ -18,6 +18,6 @@ const API_GetPhotos = "API-GetPhotos"
 type PhotoService interface {
 	DeletePhoto(ctx context.Context, userid string, photoid string) *service.ServiceResponse
 	LoadPhoto(ctx context.Context, userid string, filedata []byte) *service.ServiceResponse
-	GetPhoto(ctx context.Context, photoid string) *service.ServiceResponse
+	GetPhoto(ctx context.Context, photoid string, userid string) *service.ServiceResponse
 	GetPhotos(ctx context.Context, userid string) *service.ServiceResponse
 }
