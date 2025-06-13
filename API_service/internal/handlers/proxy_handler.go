@@ -22,7 +22,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	normalizedPath := metrics.NormalizePath(reqpath)
 	targetURL, ok := h.Routes[normalizedPath]
 	if !ok {
-		response.SendResponse(c, http.StatusBadRequest, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.PageNotFound}}, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusBadRequest, erro.PageNotFound, traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return
 	}
@@ -30,7 +30,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	if err != nil {
 		strerr := fmt.Sprintf("URL-Parse Error: %s", err)
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.APIServiceUnavalaible}}, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.APIServiceUnavalaible, traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
 	}
@@ -38,7 +38,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	if err != nil {
 		fmterr := fmt.Sprintf("Context error: %v", err)
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
-		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.RequestTimedOut}}, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
 	}
@@ -72,7 +72,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		traceID := c.MustGet("traceID").(string)
 		strerr := fmt.Sprintf("Proxy error: %s", err)
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.APIServiceUnavalaible}}, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.APIServiceUnavalaible, traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 	}
 	resp := fmt.Sprintf("Successful HTTP-request to %s", targetURL)

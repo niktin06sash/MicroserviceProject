@@ -21,7 +21,7 @@ func (m *Middleware) RateLimiter() gin.HandlerFunc {
 		limiter := getLimit(m, ip)
 		if !limiter.Allow() {
 			m.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Too many requests")
-			response.SendResponse(c, http.StatusTooManyRequests, response.HTTPResponse{Success: false, Data: nil, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.TooManyRequests}}, traceID, place, m.logproducer)
+			response.BadResponse(c, http.StatusTooManyRequests, erro.TooManyRequests, traceID, place, m.logproducer)
 			c.Abort()
 			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			metrics.APIRateLimitExceededTotal.WithLabelValues(metrics.NormalizePath(c.Request.URL.Path)).Inc()

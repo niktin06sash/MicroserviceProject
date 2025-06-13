@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	"google.golang.org/grpc/codes"
@@ -188,7 +189,7 @@ func (as *UserService) requestToDB(response *repository.RepositoryResponse, trac
 		case erro.ServerErrorType:
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			as.LogProducer.NewUserLog(kafka.LogLevelError, response.Place, traceid, response.Errors[erro.ErrorMessage])
-			response.Errors[erro.ErrorMessage] = erro.SessionServiceUnavalaible
+			response.Errors[erro.ErrorMessage] = erro.UserServiceUnavalaible
 			return response, &ServiceResponse{Success: false, Errors: response.Errors}
 
 		case erro.ClientErrorType:
@@ -229,5 +230,5 @@ func (as *UserService) updateAndCommit(ctx context.Context, tx *sql.Tx, userid u
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and profile's data updates")
 	msg := fmt.Sprintf("You have successfully updated your %v!", updateType)
-	return &ServiceResponse{Success: bdresponse.Success, Data: map[string]any{"message": msg}}
+	return &ServiceResponse{Success: bdresponse.Success, Data: map[string]any{response.KeyMessage: msg}}
 }
