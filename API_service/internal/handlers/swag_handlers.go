@@ -16,7 +16,7 @@ import (
 // @Failure 403 {object} response.HTTPResponse "Forbidden"
 // @Failure 429 {object} response.HTTPResponse "Too many requests"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
-// @Router /api/reg [post]
+// @Router /api/auth/register [post]
 func (h *Handler) Registration(c *gin.Context) {
 	h.ProxyHTTP(c)
 }
@@ -32,8 +32,8 @@ func (h *Handler) Registration(c *gin.Context) {
 // @Failure 403 {object} response.HTTPResponse "Forbidden"
 // @Failure 429 {object} response.HTTPResponse "Too many requests"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
-// @Router /api/auth [post]
-func (h *Handler) Authentication(c *gin.Context) {
+// @Router /api/auth/login [post]
+func (h *Handler) Login(c *gin.Context) {
 	h.ProxyHTTP(c)
 }
 
@@ -48,7 +48,7 @@ func (h *Handler) Authentication(c *gin.Context) {
 // @Failure 401 {object} response.HTTPResponse "Unauthorized"
 // @Failure 429 {object} response.HTTPResponse "Too many requests"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
-// @Router /api/del [delete]
+// @Router /api/users/del [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
 	h.ProxyHTTP(c)
 }
@@ -61,7 +61,7 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 // @Failure 401 {object} response.HTTPResponse "Unauthorized"
 // @Failure 429 {object} response.HTTPResponse "Too many requests"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
-// @Router /api/logout [delete]
+// @Router /api/users/logout [delete]
 func (h *Handler) Logout(c *gin.Context) {
 	h.ProxyHTTP(c)
 }
@@ -95,7 +95,7 @@ func (h *Handler) Update(c *gin.Context) {
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/me [get]
 func (h *Handler) MyProfile(c *gin.Context) {
-	h.ProxyHTTP(c)
+
 }
 
 // @Summary Find user by ID in path parameters
@@ -110,5 +110,16 @@ func (h *Handler) MyProfile(c *gin.Context) {
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/users/id/{id} [get]
 func (h *Handler) GetUserById(c *gin.Context) {
-	h.ProxyHTTP(c)
+
+}
+
+func (h *Handler) GetPhotoById(c *gin.Context) {
+}
+
+func (h *Handler) DeletePhoto(c *gin.Context) {
+}
+
+func (h *Handler) LoadPhoto(c *gin.Context) {
+}
+func (h *Handler) GetMyPhotoById(c *gin.Context) {
 }

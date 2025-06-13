@@ -52,12 +52,17 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.Use(h.Middleware.Logging())
 	r.Use(h.Middleware.RateLimiter())
-	r.POST("/api/reg", h.Middleware.AuthorizedNot(), h.Registration)
-	r.POST("/api/auth", h.Middleware.AuthorizedNot(), h.Authentication)
-	r.DELETE("/api/del", h.Middleware.Authorized(), h.DeleteUser)
-	r.DELETE("/api/logout", h.Middleware.Authorized(), h.Logout)
+	r.POST("/api/auth/register", h.Middleware.AuthorizedNot(), h.Registration)
+	r.POST("/api/auth/login", h.Middleware.AuthorizedNot(), h.Login)
+	r.DELETE("/api/users/del", h.Middleware.Authorized(), h.DeleteUser)
+	r.DELETE("/api/users/logout", h.Middleware.Authorized(), h.Logout)
 	r.PATCH("/api/me/update", h.Middleware.Authorized(), h.Update)
+
 	r.GET("/api/me", h.Middleware.Authorized(), h.MyProfile)
-	r.GET("/api/users/id/:id", h.Middleware.Authorized(), h.GetUserById)
+	r.GET("/api/users/:id", h.Middleware.Authorized(), h.GetUserById)
+	r.POST("/api/me/photos", h.Middleware.Authorized(), h.LoadPhoto)
+	r.DELETE("/api/me/photos/:photo_id", h.Middleware.Authorized(), h.DeletePhoto)
+	r.GET("/api/me/photos/:photo_id", h.Middleware.Authorized(), h.GetMyPhotoById)
+	r.GET("/api/users/:id/photos/:photo_id", h.Middleware.Authorized(), h.GetPhotoById)
 	return r
 }
