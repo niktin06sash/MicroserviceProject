@@ -43,6 +43,7 @@ message GetPhotosResponse {
 
 message GetPhotoRequest {
   string photo_id = 1;
+  string user_id = 2;
 }
 message GetPhotoResponse {
   bool status = 1;

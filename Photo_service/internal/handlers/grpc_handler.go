@@ -62,7 +62,7 @@ func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.G
 	defer s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
-	serviceresp := s.photoService.GetPhoto(ctx, req.PhotoId)
+	serviceresp := s.photoService.GetPhoto(ctx, req.PhotoId, req.UserId)
 	if serviceresp.Errors == nil {
 		return &pb.GetPhotoResponse{Status: true, Photo: serviceresp.Data.Photo}, nil
 	}

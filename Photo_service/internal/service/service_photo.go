@@ -70,9 +70,16 @@ func (use *PhotoService) LoadPhoto(ctx context.Context, userid string, filedata 
 	go use.photoUnloadAndSave(ctx, filedata, photoid, ext, userid)
 	return &ServiceResponse{Success: true, Data: Data{PhotoID: photoid}}
 }
-func (use *PhotoService) GetPhoto(ctx context.Context, photoid string) *ServiceResponse {
+func (use *PhotoService) GetPhoto(ctx context.Context, photoid string, userid string) *ServiceResponse {
 	traceid := ctx.Value("traceID").(string)
-	bdresponse := use.repo.GetPhoto(ctx, photoid)
+	const place = UseCase_GetPhoto
+	_, err := uuid.Parse(userid)
+	if err != nil {
+		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
+		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
+		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.InvalidUserIDFormat}}
+	}
+	bdresponse := use.repo.GetPhoto(ctx, photoid, userid)
 	if !bdresponse.Success && bdresponse.Errors != nil {
 		if bdresponse.Errors[erro.ErrorType] == erro.ClientErrorType {
 			use.logProducer.NewPhotoLog(kafka.LogLevelWarn, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])

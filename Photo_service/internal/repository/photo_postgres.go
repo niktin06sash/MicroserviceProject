@@ -66,13 +66,13 @@ func (ph *PhotoPostgresRepo) GetPhotos(ctx context.Context, userid string) *Repo
 	}
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyPhoto: photoslice}, Place: place, SuccessMessage: "Successful get photos metadata from database"}
 }
-func (ph *PhotoPostgresRepo) GetPhoto(ctx context.Context, photoid string) *RepositoryResponse {
+func (ph *PhotoPostgresRepo) GetPhoto(ctx context.Context, photoid string, userid string) *RepositoryResponse {
 	const place = GetPhoto
 	var photo model.Photo
-	err := ph.Db.DB.QueryRowContext(ctx, fmt.Sprintf("SELECT %s, %s, %s, %s FROM %s WHERE %s = $1", KeyPhotoID, KeyPhotoURL, KeyContentType, KeyCreatedTime, KeyPhotoTable, KeyPhotoID), photoid).Scan(&photo.ID, &photo.URL, &photo.ContentType, &photo.CreatedAt)
+	err := ph.Db.DB.QueryRowContext(ctx, fmt.Sprintf("SELECT %s, %s, %s, %s FROM %s WHERE %s = $1 AND %s = $2", KeyPhotoID, KeyPhotoURL, KeyContentType, KeyCreatedTime, KeyPhotoTable, KeyPhotoID, KeyUserID), photoid, userid).Scan(&photo.ID, &photo.URL, &photo.ContentType, &photo.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "A non-existent photoid has been entered"}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "A non-existent data has been entered"}, Place: place}
 		}
 		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyPhotoTable, err)
 		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmterr}, Place: place}
