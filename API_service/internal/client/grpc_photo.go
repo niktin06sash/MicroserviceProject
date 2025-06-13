@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/configs"
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -29,15 +30,23 @@ func (g *GrpcPhotoClient) Close() {
 	g.conn.Close()
 	log.Println("[DEBUG] [API-Service] Successful close GRPC-Photo Client")
 }
-func (g *GrpcPhotoClient) LoadPhoto(ctx context.Context, in *pb.LoadPhotoRequest, opts ...grpc.CallOption) (*pb.LoadPhotoResponse, error) {
-	return &pb.LoadPhotoResponse{}, nil
+func (g *GrpcPhotoClient) LoadPhoto(ctx context.Context, userid string, filedata []byte) (*pb.LoadPhotoResponse, error) {
+	req := &pb.LoadPhotoRequest{UserId: userid, FileData: filedata}
+	metrics.APIBackendRequestsTotal.WithLabelValues("Photo-Service").Inc()
+	return g.client.LoadPhoto(ctx, req)
 }
-func (g *GrpcPhotoClient) GetPhoto(ctx context.Context, in *pb.GetPhotoRequest, opts ...grpc.CallOption) (*pb.GetPhotoResponse, error) {
-	return &pb.GetPhotoResponse{}, nil
+func (g *GrpcPhotoClient) GetPhoto(ctx context.Context, userid string, photoid string) (*pb.GetPhotoResponse, error) {
+	req := &pb.GetPhotoRequest{UserId: userid, PhotoId: photoid}
+	metrics.APIBackendRequestsTotal.WithLabelValues("Photo-Service").Inc()
+	return g.client.GetPhoto(ctx, req)
 }
-func (g *GrpcPhotoClient) GetPhotos(ctx context.Context, in *pb.GetPhotosRequest, opts ...grpc.CallOption) (*pb.GetPhotosResponse, error) {
-	return &pb.GetPhotosResponse{}, nil
+func (g *GrpcPhotoClient) GetPhotos(ctx context.Context, userid string) (*pb.GetPhotosResponse, error) {
+	req := &pb.GetPhotosRequest{UserId: userid}
+	metrics.APIBackendRequestsTotal.WithLabelValues("Photo-Service").Inc()
+	return g.client.GetPhotos(ctx, req)
 }
-func (g *GrpcPhotoClient) DeletePhoto(ctx context.Context, in *pb.DeletePhotoRequest, opts ...grpc.CallOption) (*pb.DeletePhotoResponse, error) {
-	return &pb.DeletePhotoResponse{}, nil
+func (g *GrpcPhotoClient) DeletePhoto(ctx context.Context, userid string, photoid string) (*pb.DeletePhotoResponse, error) {
+	req := &pb.DeletePhotoRequest{UserId: userid, PhotoId: photoid}
+	metrics.APIBackendRequestsTotal.WithLabelValues("Photo-Service").Inc()
+	return g.client.DeletePhoto(ctx, req)
 }

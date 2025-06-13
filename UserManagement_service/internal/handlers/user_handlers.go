@@ -43,7 +43,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	response.AddSessionCookie(w, sessionID, expiresession)
 	msg := fmt.Sprintf("Person with id %v has successfully registered", userID)
 	h.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r, w, response.HTTPResponse{Success: true, Data: map[string]any{"message": "You have successfully registered!"}}, http.StatusOK, traceID, place, h.LogProducer)
+	response.OkResponse(r, w, http.StatusOK, map[string]any{response.KeyMessage: "You have successfully registered!"}, traceID, place, h.LogProducer)
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +67,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	response.AddSessionCookie(w, sessionID, expiresession)
 	msg := fmt.Sprintf("Person with id %v has successfully authenticated", userID)
 	h.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r, w, response.HTTPResponse{Success: true, Data: map[string]any{"message": "You have successfully authenticated!"}}, http.StatusOK, traceID, place, h.LogProducer)
+	response.OkResponse(r, w, http.StatusOK, map[string]any{response.KeyMessage: "You have successfully authenticated!"}, traceID, place, h.LogProducer)
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +93,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	response.DeleteSessionCookie(w)
 	msg := fmt.Sprintf("Person with id %v has successfully deleted account", persondata["userID"])
 	h.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r, w, response.HTTPResponse{Success: true, Data: map[string]any{"message": "You have successfully delete account!"}}, http.StatusOK, traceID, place, h.LogProducer)
+	response.OkResponse(r, w, http.StatusOK, map[string]any{response.KeyMessage: "You have successfully deleted account!"}, traceID, place, h.LogProducer)
 }
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	const place = Logout
@@ -113,7 +113,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	response.DeleteSessionCookie(w)
 	msg := fmt.Sprintf("Person with id %v has successfully logout", persondata["userID"])
 	h.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r, w, response.HTTPResponse{Success: true, Data: map[string]any{"message": "You have successfully logout!"}}, http.StatusOK, traceID, place, h.LogProducer)
+	response.OkResponse(r, w, http.StatusOK, map[string]any{response.KeyMessage: "You have successfully logout!"}, traceID, place, h.LogProducer)
 }
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	const place = Update
@@ -139,7 +139,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	msg := fmt.Sprintf("Person with id %v has successfully update his %s", persondata["userID"], persondata["update_type"])
 	h.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r, w, response.HTTPResponse{Success: true, Data: updateresponse.Data}, http.StatusOK, traceID, place, h.LogProducer)
+	response.OkResponse(r, w, http.StatusOK, updateresponse.Data, traceID, place, h.LogProducer)
 }
 func (h *Handler) MyProfile(w http.ResponseWriter, r *http.Request) {
 	const place = MyProfile
@@ -158,7 +158,7 @@ func (h *Handler) MyProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	msg := fmt.Sprintf("Person with id %v has successfully received his account data", persondata["userID"])
 	h.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r, w, response.HTTPResponse{Success: true, Data: myprofileresponse.Data}, http.StatusOK, traceID, place, h.LogProducer)
+	response.OkResponse(r, w, http.StatusOK, myprofileresponse.Data, traceID, place, h.LogProducer)
 }
 func (h *Handler) GetUserById(w http.ResponseWriter, r *http.Request) {
 	const place = GetUserById
@@ -180,5 +180,5 @@ func (h *Handler) GetUserById(w http.ResponseWriter, r *http.Request) {
 	}
 	msg := fmt.Sprintf("Person with id %v has successfully received data of person with id %v", persondata["userID"], persondata["getID"])
 	h.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
-	response.SendResponse(r, w, response.HTTPResponse{Success: true, Data: getprofileresponse.Data}, http.StatusOK, traceID, place, h.LogProducer)
+	response.OkResponse(r, w, http.StatusOK, getprofileresponse.Data, traceID, place, h.LogProducer)
 }

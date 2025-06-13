@@ -10,7 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"google.golang.org/grpc"
 )
 
 type Middleware interface {
@@ -23,13 +22,14 @@ type LogProducer interface {
 	NewAPILog(c *http.Request, level, place, traceid, msg string)
 }
 type PhotoClient interface {
-	LoadPhoto(ctx context.Context, in *pb.LoadPhotoRequest, opts ...grpc.CallOption) (*pb.LoadPhotoResponse, error)
-	DeletePhoto(ctx context.Context, in *pb.DeletePhotoRequest, opts ...grpc.CallOption) (*pb.DeletePhotoResponse, error)
-	GetPhotos(ctx context.Context, in *pb.GetPhotosRequest, opts ...grpc.CallOption) (*pb.GetPhotosResponse, error)
-	GetPhoto(ctx context.Context, in *pb.GetPhotoRequest, opts ...grpc.CallOption) (*pb.GetPhotoResponse, error)
+	LoadPhoto(ctx context.Context, userid string, photodata []byte) (*pb.LoadPhotoResponse, error)
+	DeletePhoto(ctx context.Context, userid string, photoid string) (*pb.DeletePhotoResponse, error)
+	GetPhotos(ctx context.Context, userid string) (*pb.GetPhotosResponse, error)
+	GetPhoto(ctx context.Context, userid string, photoid string) (*pb.GetPhotoResponse, error)
 }
 
 const ProxyHTTP = "API-ProxyHTTP"
+const LoadPhoto = "API-LoadPhoto"
 
 type Handler struct {
 	Middleware  Middleware
@@ -59,7 +59,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	r.PATCH("/api/me/update", h.Middleware.Authorized(), h.Update)
 
 	r.GET("/api/me", h.Middleware.Authorized(), h.MyProfile)
-	r.GET("/api/users/:id", h.Middleware.Authorized(), h.GetUserById)
+	r.GET("/api/users/:id", h.Middleware.Authorized(), h.GetUserProfileById)
 	r.POST("/api/me/photos", h.Middleware.Authorized(), h.LoadPhoto)
 	r.DELETE("/api/me/photos/:photo_id", h.Middleware.Authorized(), h.DeletePhoto)
 	r.GET("/api/me/photos/:photo_id", h.Middleware.Authorized(), h.GetMyPhotoById)

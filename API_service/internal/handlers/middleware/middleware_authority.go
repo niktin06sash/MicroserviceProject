@@ -23,7 +23,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		sessionID, err := c.Cookie("session")
 		if err != nil {
 			m.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Required session in cookie")
-			response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.RequiredSession}}, traceID, place, m.logproducer)
+			response.BadResponse(c, http.StatusUnauthorized, erro.RequiredSession, traceID, place, m.logproducer)
 			c.Abort()
 			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return
@@ -32,12 +32,12 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		if errmap != nil {
 			switch errmap[erro.ErrorType] {
 			case erro.ClientErrorType:
-				response.SendResponse(c, http.StatusUnauthorized, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusUnauthorized, errmap[erro.ErrorMessage], traceID, place, m.logproducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusInternalServerError, errmap[erro.ErrorMessage], traceID, place, m.logproducer)
 				c.Abort()
 				return
 			}
@@ -63,12 +63,12 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		if errmap != nil {
 			switch errmap[erro.ErrorType] {
 			case erro.ClientErrorType:
-				response.SendResponse(c, http.StatusForbidden, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusForbidden, errmap[erro.ErrorMessage], traceID, place, m.logproducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				response.SendResponse(c, http.StatusInternalServerError, response.HTTPResponse{Success: false, Errors: errmap}, traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusInternalServerError, errmap[erro.ErrorMessage], traceID, place, m.logproducer)
 				c.Abort()
 				return
 			}

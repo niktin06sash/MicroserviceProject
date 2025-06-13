@@ -20,7 +20,20 @@ type LogProducer interface {
 	NewUserLog(level, place, traceid, msg string)
 }
 
-func SendResponse(r *http.Request, w http.ResponseWriter, resp HTTPResponse, status int, traceid string, place string, logproducer LogProducer) {
+const KeyPhotoID = "photoid"
+const KeyMessage = "message"
+
+func OkResponse(r *http.Request, w http.ResponseWriter, status int, data map[string]any, traceid, place string, logproducer LogProducer) {
+	sendResponse(r, w, status, HTTPResponse{Data: data, Success: true}, traceid, place, logproducer)
+}
+func BadResponse(r *http.Request, w http.ResponseWriter, status int, errormessage string, traceid string, place string, logproducer LogProducer) {
+	if status >= 400 && status < 500 {
+		sendResponse(r, w, status, HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: errormessage}}, traceid, place, logproducer)
+	} else if status >= 500 {
+		sendResponse(r, w, status, HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: errormessage}}, traceid, place, logproducer)
+	}
+}
+func sendResponse(r *http.Request, w http.ResponseWriter, status int, resp HTTPResponse, traceid string, place string, logproducer LogProducer) {
 	ctx := r.Context()
 	start := ctx.Value("starttime").(time.Time)
 	w.Header().Set("Content-Type", "application/json")
