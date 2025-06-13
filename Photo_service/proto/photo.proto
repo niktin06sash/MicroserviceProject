@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package photo;
+option go_package = "github.com/niktin06sash/MicroserviceProject/Photo_service/proto";
+service PhotoService {
+  rpc LoadPhoto (LoadPhotoRequest) returns (LoadPhotoResponse) {};
+  rpc DeletePhoto (DeletePhotoRequest) returns (DeletePhotoResponse) {};
+  rpc GetPhotos (GetPhotosRequest) returns (GetPhotosResponse) {};
+  rpc GetPhoto (GetPhotoRequest) returns (GetPhotoResponse) {};
+}
+
+message LoadPhotoRequest {
+  string user_id = 1;
+  bytes file_data = 2;
+}
+message LoadPhotoResponse {
+  bool status = 1;
+  string photo_id = 2;
+  string message = 3; 
+}
+message DeletePhotoRequest {
+  string photo_id = 1;
+  string user_id = 2;
+}
+message DeletePhotoResponse {
+  bool status = 1;
+  string message = 2;
+}
+
+message GetPhotosRequest {
+  string user_id = 1;
+}
+message Photo {
+  string photo_id = 1;
+  string url = 2;  
+  string created_at = 3;
+}
+
+message GetPhotosResponse {
+  bool status = 1;
+  repeated Photo photos = 2;
+}
+
+message GetPhotoRequest {
+  string photo_id = 1;
+}
+message GetPhotoResponse {
+  bool status = 1;
+  Photo photo = 2;
+}

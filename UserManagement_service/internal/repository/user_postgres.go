@@ -40,7 +40,7 @@ func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "INSERT").Inc()
-			return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "Already registered email has been entered"}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorUniqueEmailConst}, Place: place}
 		}
 		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err)
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "INSERT").Inc()
@@ -59,7 +59,7 @@ func (repoap *UserPostgresRepo) AuthenticateUser(ctx context.Context, useremail,
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
-			return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "Unregistered email has been entered"}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorEmailNotRegisterConst}, Place: place}
 		}
 		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err)
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
@@ -69,7 +69,7 @@ func (repoap *UserPostgresRepo) AuthenticateUser(ctx context.Context, useremail,
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
-		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "Incorrect password has been entered"}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorIncorrectPassword}, Place: place}
 	}
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userId.String()}, SuccessMessage: "Successful authenticate user", Place: place}
 }
@@ -89,7 +89,7 @@ func (repoap *UserPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
-		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "Incorrect password has been entered"}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorIncorrectPassword}, Place: place}
 	}
 	_, err = tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s where %s = $1", KeyUserTable, KeyUserID), userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("DELETE").Inc()
@@ -98,7 +98,7 @@ func (repoap *UserPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "DELETE").Inc()
 		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmterr}, Place: place}
 	}
-	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete user", Place: place}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete user from db", Place: place}
 }
 func (repoap *UserPostgresRepo) GetMyProfile(ctx context.Context, userid uuid.UUID) *RepositoryResponse {
 	const place = GetMyProfile
@@ -126,7 +126,7 @@ func (repoap *UserPostgresRepo) GetProfileById(ctx context.Context, getid uuid.U
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
-			return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "Unregistered id has been entered"}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorIDNotRegisterConst}, Place: place}
 		}
 		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err)
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
@@ -149,7 +149,7 @@ func (repoap *UserPostgresRepo) UpdateUserData(ctx context.Context, tx *sql.Tx, 
 		newpassword := args[1].(string)
 		return repoap.updateUserPassword(ctx, tx, userId, lastpassword, newpassword)
 	}
-	return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "Invalid dinamic parameter"}, Place: place}
+	return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidDinamicParameter}, Place: place}
 }
 func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, userId uuid.UUID, name string) *RepositoryResponse {
 	const place = UpdateName
@@ -179,7 +179,7 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
-		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "Incorrect password has been entered"}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorIncorrectPassword}, Place: place}
 	}
 	var count int
 	err = tx.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s = $1", KeyUserTable, KeyUserEmail), email).Scan(&count)
@@ -190,7 +190,7 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 	}
 	if count > 0 {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
-		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "Already registered email has been entered"}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorUniqueEmailConst}, Place: place}
 	}
 	_, err = tx.ExecContext(ctx, fmt.Sprintf("UPDATE %s SET %s = $1 where %s = $2", KeyUserTable, KeyUserEmail, KeyUserID), email, userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
@@ -217,7 +217,7 @@ func (repoap *UserPostgresRepo) updateUserPassword(ctx context.Context, tx *sql.
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
-		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "Incorrect password has been entered"}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorIncorrectPassword}, Place: place}
 	}
 	hashnewpass, err := bcrypt.GenerateFromPassword([]byte(newpassword), bcrypt.DefaultCost)
 	metrics.UserDBQueriesTotal.WithLabelValues("GenerateHashPassword").Inc()

@@ -1,0 +1,33 @@
+server:
+  port: "50053"
+database:
+  driver: postgres
+  host: localhost
+  port: 5432
+  user: postgres
+  password: my_password
+  name:  photos
+  sslmode: disable     
+redis:  
+  host: localhost
+  port: 6381      
+  password: ""      
+  db: 0
+rabbitmq:
+  host: localhost     
+  port: 5672                
+  name: guest         
+  password: guest       
+  queue: photo-queue
+  exchange: user-events-exchange
+  consumer_tag: photo-consumer
+kafka:
+  bootstrap_servers: localhost:9092 
+  retry_backoff_ms: 500
+  batch_size: 16384
+  acks: "all" 
+  topics:
+    info_log: "photo-info-log-topic"
+    error_log: "photo-error-log-topic"
+    warn_log: "photo-warn-log-topic"
+              
