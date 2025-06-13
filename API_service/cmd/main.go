@@ -32,12 +32,16 @@ func main() {
 	config := configs.LoadConfig()
 	metrics.Start()
 	kafkaprod := kafka.NewKafkaProducer(config.Kafka)
-	grpcclient, err := client.NewGrpcClient(config.SessionService)
+	sessionclient, err := client.NewGrpcSessionClient(config.SessionService)
 	if err != nil {
 		return
 	}
-	middleware := middleware.NewMiddleware(grpcclient, kafkaprod)
-	handler := handlers.NewHandler(middleware, kafkaprod, config.Routes)
+	photoclient, err := client.NewGrpcPhotoClient(config.PhotoService)
+	if err != nil {
+		return
+	}
+	middleware := middleware.NewMiddleware(sessionclient, kafkaprod)
+	handler := handlers.NewHandler(middleware, photoclient, kafkaprod, config.Routes)
 	srv := &server.Server{}
 	serverError := make(chan error, 1)
 	go func() {
@@ -68,7 +72,7 @@ func main() {
 	defer func() {
 		metrics.Stop()
 		middleware.Stop()
-		grpcclient.Close()
+		sessionclient.Close()
 		kafkaprod.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)

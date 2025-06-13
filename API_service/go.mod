@@ -6,14 +6,15 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/niktin06sash/MicroserviceProject/SessionManagement_service v0.0.0-00010101000000-000000000000
+	github.com/niktin06sash/MicroserviceProject/Photo_service v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.22.0
-	github.com/segmentio/kafka-go v0.4.47
+	github.com/segmentio/kafka-go v0.4.48
 	github.com/spf13/viper v1.20.1
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.4
 	golang.org/x/time v0.11.0
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.73.0
 )
 
 require (
@@ -65,9 +66,11 @@ require (
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace github.com/niktin06sash/MicroserviceProject/SessionManagement_service => ../SessionManagement_service
+
+replace github.com/niktin06sash/MicroserviceProject/Photo_service => ../Photo_service
