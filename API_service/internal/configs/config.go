@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Server         ServerConfig         `mapstructure:"server"`
 	SessionService SessionServiceConfig `mapstructure:"session_service"`
+	PhotoService   PhotoServiceConfig   `mapstructure:"photo_service"`
 	Kafka          KafkaConfig          `mapstructure:"kafka"`
 	Routes         map[string]string    `mapstructure:"routes"`
 	SSL            SSLConfig            `mapstructure:"ssl"`
@@ -20,6 +21,9 @@ type ServerConfig struct {
 	Port string `mapstructure:"port"`
 }
 type SessionServiceConfig struct {
+	GrpcAddress string `mapstructure:"grpc_address"`
+}
+type PhotoServiceConfig struct {
 	GrpcAddress string `mapstructure:"grpc_address"`
 }
 type SSLConfig struct {
@@ -66,10 +70,12 @@ func LoadConfig() Config {
 	return config
 }
 func LoadDockerConfig(config *Config) {
-	grpcaddr := os.Getenv("SESSION_SERVICE_GRPC_ADDRESS")
+	sessionaddr := os.Getenv("SESSION_SERVICE_GRPC_ADDRESS")
+	photoaddr := os.Getenv("PHOTO_SERVICE_GRPC_ADDRESS")
 	userservice := os.Getenv("USER_SERVICE_HOST")
 	kafka := os.Getenv("KAFKA_BOOTSTRAP_SERVERS")
-	config.SessionService.GrpcAddress = grpcaddr
+	config.SessionService.GrpcAddress = sessionaddr
+	config.PhotoService.GrpcAddress = photoaddr
 	config.Kafka.BootstrapServers = kafka
 	config.Routes = UpdateRoutes(config.Routes, userservice)
 }
