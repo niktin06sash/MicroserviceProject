@@ -46,7 +46,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	response.SendResponse(r, w, response.HTTPResponse{Success: true, Data: map[string]any{"message": "You have successfully registered!"}}, http.StatusOK, traceID, place, h.LogProducer)
 }
 
-func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	const place = Authentication
 	defer r.Body.Close()
 	traceID := r.Context().Value("traceID").(string)
