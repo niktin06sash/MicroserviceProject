@@ -36,6 +36,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 	}
 	err = response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
+		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)

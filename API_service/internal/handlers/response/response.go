@@ -80,7 +80,6 @@ func CheckContext(c *gin.Context, place string, traceID string, logproducer LogP
 	case <-c.Request.Context().Done():
 		err := c.Request.Context().Err()
 		logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmt.Sprintf("Context's error: %v", err))
-		BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return err
 	default:
