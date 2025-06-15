@@ -34,6 +34,7 @@ const DeletePhoto = "API-DeletePhoto"
 const GetMyPhotoById = "API-GetMyPhotoById"
 const GetPhotoById = "API-GetPhotoById"
 const GetUserProfileById = "API-GetUserProfileById"
+const GetMyProfile = "API-GetMyProfile"
 
 type Handler struct {
 	Middleware  Middleware
@@ -62,7 +63,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	r.DELETE("/api/users/logout", h.Middleware.Authorized(), h.Logout)
 	r.PATCH("/api/me/update", h.Middleware.Authorized(), h.Update)
 
-	r.GET("/api/me", h.Middleware.Authorized(), h.MyProfile)
+	r.GET("/api/me", h.Middleware.Authorized(), h.GetMyProfile)
 	r.GET("/api/users/:id", h.Middleware.Authorized(), h.GetUserProfileById)
 	r.POST("/api/me/photos", h.Middleware.Authorized(), h.LoadPhoto)
 	r.DELETE("/api/me/photos/:photo_id", h.Middleware.Authorized(), h.DeletePhoto)

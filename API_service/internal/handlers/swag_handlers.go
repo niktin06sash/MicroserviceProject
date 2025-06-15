@@ -1,11 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/brokers/kafka"
@@ -13,11 +12,10 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 // @Summary Register a new user
@@ -109,8 +107,46 @@ func (h *Handler) Update(c *gin.Context) {
 // @Failure 429 {object} response.HTTPResponse "Too many requests"
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/me [get]
-func (h *Handler) MyProfile(c *gin.Context) {
-
+func (h *Handler) GetMyProfile(c *gin.Context) {
+	const place = GetMyProfile
+	traceID := c.MustGet("traceID").(string)
+	userid := c.MustGet("userID").(string)
+	md := metadata.Pairs("traceID", traceID)
+	ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
+	target, ok := h.Routes[c.Request.URL.Path]
+	if !ok {
+		response.BadResponse(c, http.StatusBadRequest, erro.PageNotFound, traceID, place, h.logproducer)
+		metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+		return
+	}
+	err := response.CheckContext(c, place, traceID, h.logproducer)
+	if err != nil {
+		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
+		return
+	}
+	g, ctx := errgroup.WithContext(ctx)
+	httpresponseChan := make(chan response.HTTPResponse, 1)
+	protoresponseChan := make(chan *pb.GetPhotosResponse, 1)
+	defer close(httpresponseChan)
+	defer close(protoresponseChan)
+	g.Go(func() error { return h.asynchttpRequest(c, target, place, httpresponseChan) })
+	g.Go(func() error {
+		return asyncGrpcRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
+			return h.photoclient.GetPhotos(ctx, userid)
+		}, traceID, place, protoresponseChan, h.logproducer)
+	})
+	if err := g.Wait(); err != nil {
+		h.asyncBadResponse(c, traceID, place, err)
+		return
+	}
+	userresponse := <-httpresponseChan
+	photoresp := <-protoresponseChan
+	if h.badHttpResponse(c, traceID, place, userresponse) {
+		return
+	}
+	totalresp := userresponse.Data
+	totalresp[response.KeyPhotos] = photoresp.Photos
+	response.OkResponse(c, http.StatusOK, totalresp, traceID, place, h.logproducer)
 }
 
 // @Summary Find userprofile by ID in path parameters
@@ -127,13 +163,6 @@ func (h *Handler) MyProfile(c *gin.Context) {
 func (h *Handler) GetUserProfileById(c *gin.Context) {
 	const place = GetUserProfileById
 	traceID := c.MustGet("traceID").(string)
-	userid := c.MustGet("userID").(string)
-	sessionid := c.MustGet("sessionID").(string)
-	deadline, ok := c.Request.Context().Deadline()
-	if !ok {
-		h.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Failed to get deadline from context")
-		deadline = time.Now().Add(15 * time.Second)
-	}
 	md := metadata.Pairs("traceID", traceID)
 	ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 	normalizedPath := metrics.NormalizePath(c.Request.URL.Path)
@@ -155,71 +184,19 @@ func (h *Handler) GetUserProfileById(c *gin.Context) {
 	protoresponseChan := make(chan *pb.GetPhotosResponse, 1)
 	defer close(httpresponseChan)
 	defer close(protoresponseChan)
+	g.Go(func() error { return h.asynchttpRequest(c, targetid, place, httpresponseChan) })
 	g.Go(func() error {
-		httprequest, err := http.NewRequest(http.MethodGet, targetid, c.Request.Body)
-		if err != nil {
-			h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmt.Sprintf("New http-request create error: %v"))
-			metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-			return fmt.Errorf(erro.APIServiceUnavalaible)
-		}
-		httprequest.Header.Set("X-Deadline", deadline.Format(time.RFC3339))
-		httprequest.Header.Set("X-User-ID", userid)
-		httprequest.Header.Set("X-Trace-ID", traceID)
-		httprequest.Header.Set("X-Session-ID", sessionid)
-		httpresponse, err := http.DefaultClient.Do(httprequest)
-		if err != nil {
-			h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmt.Sprintf("Http-request error: %v"))
-			metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-			return fmt.Errorf(erro.UserServiceUnavalaible)
-		}
-		defer httpresponse.Body.Close()
-		data, err := io.ReadAll(httpresponse.Body)
-		if err != nil {
-			h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmt.Sprintf("ReadAll http-response data error: %v"))
-			metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-			return fmt.Errorf(erro.APIServiceUnavalaible)
-		}
-		var userresponse response.HTTPResponse
-		err = json.Unmarshal(data, &userresponse)
-		if err != nil {
-			h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmt.Sprintf("Unmarshal http-response data error: %v"))
-			metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-			return fmt.Errorf(erro.APIServiceUnavalaible)
-		}
-		httpresponseChan <- userresponse
-		return nil
-	})
-	g.Go(func() error {
-		protoresponse, err := h.photoclient.GetPhotos(ctx, paramuserid)
-		if err != nil {
-			st, _ := status.FromError(err)
-			switch st.Code() {
-			case codes.Canceled, codes.Unavailable:
-				return fmt.Errorf(erro.PhotoServiceUnavalaible)
-			default:
-				return err
-			}
-		}
-		protoresponseChan <- protoresponse
-		return nil
+		return asyncGrpcRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
+			return h.photoclient.GetPhotos(ctx, paramuserid)
+		}, traceID, place, protoresponseChan, h.logproducer)
 	})
 	if err := g.Wait(); err != nil {
-		if _, ok := status.FromError(err); ok {
-			h.badGrpcResponse(c, traceID, place, err)
-			return
-		}
-		response.BadResponse(c, http.StatusInternalServerError, err.Error(), traceID, place, h.logproducer)
+		h.asyncBadResponse(c, traceID, place, err)
 		return
 	}
 	userresponse := <-httpresponseChan
 	photoresp := <-protoresponseChan
-	if !userresponse.Success {
-		typ := userresponse.Errors[erro.ErrorType]
-		if typ == erro.ServerErrorType {
-			response.BadResponse(c, http.StatusInternalServerError, userresponse.Errors[erro.ErrorMessage], traceID, place, h.logproducer)
-		} else {
-			response.BadResponse(c, http.StatusBadRequest, userresponse.Errors[erro.ErrorMessage], traceID, place, h.logproducer)
-		}
+	if h.badHttpResponse(c, traceID, place, userresponse) {
 		return
 	}
 	totalresp := userresponse.Data
@@ -366,19 +343,4 @@ func (h *Handler) GetMyPhotoById(c *gin.Context) {
 		return
 	}
 	h.badGrpcResponse(c, traceID, place, err)
-}
-
-func (h *Handler) badGrpcResponse(c *gin.Context, traceID, place string, err error) {
-	st, _ := status.FromError(err)
-	switch st.Code() {
-	case codes.Canceled, codes.Unavailable:
-		response.BadResponse(c, http.StatusInternalServerError, erro.PhotoServiceUnavalaible, traceID, place, h.logproducer)
-		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-	case codes.Internal:
-		response.BadResponse(c, http.StatusInternalServerError, st.Message(), traceID, place, h.logproducer)
-		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-	default:
-		response.BadResponse(c, http.StatusBadRequest, st.Message(), traceID, place, h.logproducer)
-		metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
-	}
 }
