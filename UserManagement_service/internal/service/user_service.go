@@ -89,7 +89,7 @@ func (as *UserService) AuthenticateAndLogin(ctx context.Context, req *model.Auth
 	if errorvalidate != nil {
 		return &ServiceResponse{Success: false, Errors: errorvalidate}
 	}
-	bdresponse, serviceresponse := as.requestToDB(as.Dbrepo.AuthenticateUser(ctx, req.Email, req.Password), traceid)
+	bdresponse, serviceresponse := as.requestToDB(as.Dbrepo.GetUser(ctx, req.Email, req.Password), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -206,7 +206,7 @@ func (as *UserService) GetMyProfile(ctx context.Context, useridstr string) *Serv
 	if redisresponse.Success {
 		return &ServiceResponse{Success: redisresponse.Success, Data: redisresponse.Data}
 	}
-	bdresponse, serviceresponse := as.requestToDB(as.Dbrepo.GetMyProfile(ctx, userid), traceid)
+	bdresponse, serviceresponse := as.requestToDB(as.Dbrepo.GetProfileById(ctx, userid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}

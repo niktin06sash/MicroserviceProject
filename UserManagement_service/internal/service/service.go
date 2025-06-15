@@ -29,11 +29,10 @@ type ServiceResponse struct {
 }
 type DBUserRepos interface {
 	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *repository.RepositoryResponse
-	AuthenticateUser(ctx context.Context, useremail, password string) *repository.RepositoryResponse
+	GetUser(ctx context.Context, useremail, password string) *repository.RepositoryResponse
 	DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *repository.RepositoryResponse
 	UpdateUserData(ctx context.Context, tx *sql.Tx, userId uuid.UUID, updateType string, args ...interface{}) *repository.RepositoryResponse
-	GetMyProfile(ctx context.Context, userid uuid.UUID) *repository.RepositoryResponse
-	GetProfileById(ctx context.Context, getid uuid.UUID) *repository.RepositoryResponse
+	GetProfileById(ctx context.Context, userid uuid.UUID) *repository.RepositoryResponse
 }
 type DBTransactionManager interface {
 	BeginTx(ctx context.Context) (*sql.Tx, error)

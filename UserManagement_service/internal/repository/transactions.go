@@ -6,15 +6,15 @@ import (
 )
 
 type TxManagerRepo struct {
-	Db *DBObject
+	db *DBObject
 }
 
 func NewTxManagerRepo(db *DBObject) *TxManagerRepo {
-	return &TxManagerRepo{Db: db}
+	return &TxManagerRepo{db: db}
 }
 
 func (r *TxManagerRepo) BeginTx(ctx context.Context) (*sql.Tx, error) {
-	return r.Db.DB.BeginTx(ctx, nil)
+	return r.db.connect.BeginTx(ctx, nil)
 }
 
 func (r *TxManagerRepo) RollbackTx(tx *sql.Tx) error {
