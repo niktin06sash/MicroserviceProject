@@ -28,26 +28,46 @@ func NewDatabaseConnection(cfg configs.DatabaseConfig) (*DBObject, error) {
 }
 
 type DBObject struct {
-	DB *sql.DB
+	connect *sql.DB
+	mapstmt map[string]*sql.Stmt
 }
 
-func (d *DBObject) Open(driverName, connectionString string) error {
+func (db *DBObject) Open(driverName, connectionString string) error {
 	var err error
-	d.DB, err = sql.Open(driverName, connectionString)
+	db.connect, err = sql.Open(driverName, connectionString)
 	if err != nil {
 		log.Printf("[DEBUG] [Photo-Service] Postgre-Client-Open error: %v", err)
 		return err
 	}
+	db.mapstmt = make(map[string]*sql.Stmt)
+	queries := map[string]string{
+		insertUserQuery:   "Prepare insert userid",
+		deletePhotoQuery:  "Prepare delete photo",
+		insertPhotoQuery:  "Prepare insert photo",
+		deleteUserQuery:   "Prepare delete userid",
+		selectPhotoQuery:  "Prepare select photo",
+		selectPhotosQuery: "Prepare select photos",
+	}
+	for query, errv := range queries {
+		stmt, err := db.connect.Prepare(query)
+		if err != nil {
+			return fmt.Errorf("%s: %w", errv, err)
+		}
+		db.mapstmt[query] = stmt
+	}
 	return nil
 }
 
-func (d *DBObject) Close() {
-	d.DB.Close()
+func (db *DBObject) Close() {
+	for _, smtp := range db.mapstmt {
+		smtp.Close()
+	}
+	db.connect.Close()
 	log.Println("[DEBUG] [Photo-Service] Successful close Postgre-Client")
 }
 
-func (d *DBObject) Ping() error {
-	err := d.DB.Ping()
+func (db *DBObject) Ping() error {
+	err := db.connect.Ping()
 	if err != nil {
 		log.Printf("[DEBUG] [Photo-Service] Postgre-Client-Ping error: %v", err)
 		return err
