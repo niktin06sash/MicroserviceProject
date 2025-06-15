@@ -29,16 +29,8 @@ func NewDatabaseConnection(cfg configs.DatabaseConfig) (*DBObject, error) {
 }
 
 type DBObject struct {
-	connect         *sql.DB
-	insertUserStmt  *sql.Stmt
-	selectUserAStmt *sql.Stmt
-	selectUserDStmt *sql.Stmt
-	selectUserPStmt *sql.Stmt
-	selectUserEStmt *sql.Stmt
-	deleteUserStmt  *sql.Stmt
-	updateUserNStmt *sql.Stmt
-	updateUserEStmt *sql.Stmt
-	updateUserPStmt *sql.Stmt
+	connect *sql.DB
+	mapstmt map[string]*sql.Stmt
 }
 
 func (db *DBObject) Open(driverName, connectionString string) error {
@@ -48,64 +40,32 @@ func (db *DBObject) Open(driverName, connectionString string) error {
 		log.Printf("[DEBUG] [User-Service] Postgre-Client-Open error: %v", err)
 		return err
 	}
-	insertStmt, err := db.connect.Prepare(insertUserQuery)
-	if err != nil {
-		return fmt.Errorf("Prepare insert user: %w", err)
+	db.mapstmt = make(map[string]*sql.Stmt)
+	queries := map[string]string{
+		insertUserQuery:         "Prepare insert user",
+		selectUserGetQuery:      "Prepare selectA user",
+		selectUserPasswordQuery: "Prepare selectD user",
+		deleteUserQuery:         "Prepare delete user",
+		selectUserGetProfile:    "Prepare selectP user",
+		updateUserName:          "Prepare updateN user",
+		updateUserEmail:         "Prepare updateE user",
+		updateUserPassword:      "Prepare updateP user",
+		selectEmailCount:        "Prepare selectE user",
 	}
-	selectAStmt, err := db.connect.Prepare(selectUserAuthenticateQuery)
-	if err != nil {
-		return fmt.Errorf("Prepare selectA user: %w", err)
+	for query, errv := range queries {
+		stmt, err := db.connect.Prepare(query)
+		if err != nil {
+			return fmt.Errorf("%s: %w", errv, err)
+		}
+		db.mapstmt[query] = stmt
 	}
-	selectDStmt, err := db.connect.Prepare(selectUserPasswordQuery)
-	if err != nil {
-		return fmt.Errorf("Prepare selectD user: %w", err)
-	}
-	deleteStmt, err := db.connect.Prepare(deleteUserQuery)
-	if err != nil {
-		return fmt.Errorf("Prepare delete user: %w", err)
-	}
-	selectPStmt, err := db.connect.Prepare(selectUserGetProfile)
-	if err != nil {
-		return fmt.Errorf("Prepare selectP user: %w", err)
-	}
-	updateNStmt, err := db.connect.Prepare(updateUserName)
-	if err != nil {
-		return fmt.Errorf("Prepare updateN user: %w", err)
-	}
-	updateEStmt, err := db.connect.Prepare(updateUserEmail)
-	if err != nil {
-		return fmt.Errorf("Prepare updateE user: %w", err)
-	}
-	updatePStmt, err := db.connect.Prepare(updateUserPassword)
-	if err != nil {
-		return fmt.Errorf("Prepare updateP user: %w", err)
-	}
-	selectEStmt, err := db.connect.Prepare(selectEmailCount)
-	if err != nil {
-		return fmt.Errorf("Prepare selectE user: %w", err)
-	}
-	db.insertUserStmt = insertStmt
-	db.selectUserAStmt = selectAStmt
-	db.selectUserDStmt = selectDStmt
-	db.deleteUserStmt = deleteStmt
-	db.selectUserPStmt = selectPStmt
-	db.updateUserNStmt = updateNStmt
-	db.updateUserEStmt = updateEStmt
-	db.selectUserEStmt = selectEStmt
-	db.updateUserPStmt = updatePStmt
 	return nil
 }
 
 func (db *DBObject) Close() {
-	db.insertUserStmt.Close()
-	db.selectUserAStmt.Close()
-	db.selectUserDStmt.Close()
-	db.deleteUserStmt.Close()
-	db.selectUserPStmt.Close()
-	db.updateUserNStmt.Close()
-	db.updateUserEStmt.Close()
-	db.selectUserEStmt.Close()
-	db.updateUserPStmt.Close()
+	for _, smtp := range db.mapstmt {
+		smtp.Close()
+	}
 	db.connect.Close()
 	log.Println("[DEBUG] [User-Service] Successful close Postgre-Client")
 }
