@@ -147,6 +147,7 @@ func (h *Handler) GetUserProfileById(c *gin.Context) {
 	targetid := target + "/" + paramuserid
 	err := response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
+		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
 		return
 	}
 	g, ctx := errgroup.WithContext(ctx)
@@ -247,6 +248,7 @@ func (h *Handler) GetPhotoById(c *gin.Context) {
 	ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 	err := response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
+		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
 		return
 	}
 	protoresponse, err := h.photoclient.GetPhoto(ctx, userid, photoid)
@@ -277,6 +279,7 @@ func (h *Handler) DeletePhoto(c *gin.Context) {
 	ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 	err := response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
+		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
 		return
 	}
 	protoresponse, err := h.photoclient.DeletePhoto(ctx, userid, photoid)
@@ -323,6 +326,7 @@ func (h *Handler) LoadPhoto(c *gin.Context) {
 	}
 	err = response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
+		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
 		return
 	}
 	protoresponse, err := h.photoclient.LoadPhoto(ctx, userid, bytes)
@@ -353,6 +357,7 @@ func (h *Handler) GetMyPhotoById(c *gin.Context) {
 	ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 	err := response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
+		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
 		return
 	}
 	protoresponse, err := h.photoclient.GetPhoto(ctx, userid, photoid)
