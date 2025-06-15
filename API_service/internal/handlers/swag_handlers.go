@@ -31,7 +31,7 @@ import (
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/auth/register [post]
 func (h *Handler) Registration(c *gin.Context) {
-	h.ProxyHTTP(c)
+	h.ProxyHTTP(c, Registration)
 }
 
 // @Summary Authenticate a user
@@ -47,7 +47,7 @@ func (h *Handler) Registration(c *gin.Context) {
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
-	h.ProxyHTTP(c)
+	h.ProxyHTTP(c, Login)
 }
 
 // @Summary Delete a user
@@ -63,7 +63,7 @@ func (h *Handler) Login(c *gin.Context) {
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/users/del [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
-	h.ProxyHTTP(c)
+	h.ProxyHTTP(c, DeleteUser)
 }
 
 // @Summary Logout a user
@@ -76,7 +76,7 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/users/logout [delete]
 func (h *Handler) Logout(c *gin.Context) {
-	h.ProxyHTTP(c)
+	h.ProxyHTTP(c, Logout)
 }
 
 // @Summary Update a user's profile
@@ -95,7 +95,7 @@ func (h *Handler) Logout(c *gin.Context) {
 // @Failure 500 {object} response.HTTPResponse "Internal server error"
 // @Router /api/me/update [patch]
 func (h *Handler) Update(c *gin.Context) {
-	h.ProxyHTTP(c)
+	h.ProxyHTTP(c, Update)
 }
 
 // @Summary Received a user's profile data
@@ -289,7 +289,6 @@ func (h *Handler) LoadPhoto(c *gin.Context) {
 	if err != nil {
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, erro.RequiredFormPhoto)
 		response.BadResponse(c, http.StatusBadRequest, erro.RequiredFormPhoto, traceID, place, h.logproducer)
-		c.Abort()
 		metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return
 	}
@@ -297,7 +296,6 @@ func (h *Handler) LoadPhoto(c *gin.Context) {
 	if err != nil {
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmt.Sprintf("Failed readAll: %v", err))
 		response.BadResponse(c, http.StatusBadRequest, erro.APIServiceUnavalaible, traceID, place, h.logproducer)
-		c.Abort()
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
 	}
