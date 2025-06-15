@@ -22,7 +22,7 @@ func NewSessionService(repo SessionRepos, logproducer LogProducer) *SessionServi
 	return &SessionService{repo: repo, logproducer: logproducer}
 }
 func (s *SessionService) CreateSession(ctx context.Context, userid string) *ServiceResponse {
-	const place = UseCase_CreateSession
+	const place = CreateSession
 	traceID := ctx.Value("traceID").(string)
 	if userid == "" {
 		s.logproducer.NewSessionLog(kafka.LogLevelError, place, traceID, erro.UserIdRequired)
@@ -38,7 +38,7 @@ func (s *SessionService) CreateSession(ctx context.Context, userid string) *Serv
 	return s.requestToDB(ctx, func(ctx context.Context) *repository.RepositoryResponse { return s.repo.SetSession(ctx, newsession) }, traceID, place)
 }
 func (s *SessionService) ValidateSession(ctx context.Context, sessionid string) *ServiceResponse {
-	const place = UseCase_ValidateSession
+	const place = ValidateSession
 	traceID := ctx.Value("traceID").(string)
 	flag := ctx.Value("flagvalidate").(string)
 	switch flag {
@@ -57,7 +57,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, sessionid string) 
 	return s.requestToDB(ctx, func(ctx context.Context) *repository.RepositoryResponse { return s.repo.GetSession(ctx, sessionid) }, traceID, place)
 }
 func (s *SessionService) DeleteSession(ctx context.Context, sessionid string) *ServiceResponse {
-	const place = UseCase_DeleteSession
+	const place = DeleteSession
 	traceID := ctx.Value("traceID").(string)
 	if _, err := uuid.Parse(sessionid); err != nil {
 		fmterr := fmt.Sprintf("UUID-Parse sessionID error: %v", err)
@@ -82,12 +82,12 @@ func (s *SessionService) requestToDB(ctx context.Context, operation func(context
 	}
 	s.logproducer.NewSessionLog(kafka.LogLevelInfo, response.Place, traceid, response.SuccessMessage)
 	switch place {
-	case UseCase_CreateSession:
+	case CreateSession:
 		exp64 := response.Data[repository.KeyExpiryTime].(time.Time).Unix()
 		return &ServiceResponse{Success: true, Data: Data{SessionID: response.Data[repository.KeySessionId].(string), ExpirationTime: exp64}}
-	case UseCase_DeleteSession:
+	case DeleteSession:
 		return &ServiceResponse{Success: true}
-	case UseCase_ValidateSession:
+	case ValidateSession:
 		return &ServiceResponse{Success: true, Data: Data{UserID: response.Data[repository.KeyUserId].(string)}}
 	}
 	return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.SessionServiceUnavalaible}}
