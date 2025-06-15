@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -16,17 +15,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, map[string]string) {
+func (middleware *Middleware) retryAuthorized(c *gin.Context, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, map[string]string) {
 	var err error
 	var protoresponse *proto.ValidateSessionResponse
 	for i := 1; i <= 3; i++ {
-		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
 		md := metadata.Pairs("traceID", traceID, "flagvalidate", "true")
-		ctx = metadata.NewOutgoingContext(ctx, md)
-		if err = response.CheckContext(ctx, traceID, place); err != nil {
-			fmterr := fmt.Sprintf("Context error: %v", err)
-			middleware.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
-			metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
+		if err = response.CheckContext(c, place, traceID, middleware.logproducer); err != nil {
 			return nil, map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.RequestTimedOut}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
@@ -53,17 +48,13 @@ func retryAuthorized(c *gin.Context, middleware *Middleware, sessionID string, t
 	middleware.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
 	return nil, map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.SessionServiceUnavalaible}
 }
-func retryAuthorized_Not(c *gin.Context, middleware *Middleware, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, map[string]string) {
+func (middleware *Middleware) retryAuthorized_Not(c *gin.Context, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, map[string]string) {
 	var err error
 	var protoresponse *proto.ValidateSessionResponse
 	for i := 1; i <= 3; i++ {
-		ctx := context.WithValue(c.Request.Context(), "traceID", traceID)
 		md := metadata.Pairs("traceID", traceID, "flagvalidate", "false")
-		ctx = metadata.NewOutgoingContext(ctx, md)
-		if err = response.CheckContext(ctx, traceID, place); err != nil {
-			fmterr := fmt.Sprintf("Context error: %v", err)
-			middleware.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
-			metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+		ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
+		if err = response.CheckContext(c, place, traceID, middleware.logproducer); err != nil {
 			return nil, map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.RequestTimedOut}
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)

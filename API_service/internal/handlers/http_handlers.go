@@ -30,6 +30,10 @@ type PhotoClient interface {
 
 const ProxyHTTP = "API-ProxyHTTP"
 const LoadPhoto = "API-LoadPhoto"
+const DeletePhoto = "API-DeletePhoto"
+const GetMyPhotoById = "API-GetMyPhotoById"
+const GetPhotoById = "API-GetPhotoById"
+const GetUserProfileById = "API-GetUserProfileById"
 
 type Handler struct {
 	Middleware  Middleware

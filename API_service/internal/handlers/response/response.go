@@ -1,7 +1,7 @@
 package response
 
 import (
-	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -49,6 +49,8 @@ type LogProducer interface {
 
 const KeyPhotoID = "photoid"
 const KeyMessage = "message"
+const KeyPhoto = "photo"
+const KeyPhotos = "photos"
 
 func OkResponse(c *gin.Context, status int, data map[string]any, traceid, place string, logproducer LogProducer) {
 	sendResponse(c, status, HTTPResponse{Data: data, Success: true}, traceid, place, logproducer)
@@ -61,17 +63,25 @@ func BadResponse(c *gin.Context, status int, errormessage string, traceid string
 	}
 }
 func sendResponse(c *gin.Context, status int, response HTTPResponse, traceid string, place string, logproducer LogProducer) {
-	start := c.MustGet("starttime").(time.Time)
 	c.JSON(status, response)
-	logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
+	start := c.MustGet("starttime").(time.Time)
 	duration := time.Since(start).Seconds()
-	metrics.APITotalBadRequests.WithLabelValues(place, metrics.NormalizePath((c.Request.URL.Path))).Inc()
-	metrics.APIBadRequestDuration.WithLabelValues(place, metrics.NormalizePath((c.Request.URL.Path))).Observe(duration)
+	if response.Success {
+		metrics.APITotalSuccessfulRequests.WithLabelValues(place, metrics.NormalizePath((c.Request.URL.Path))).Inc()
+		metrics.APISuccessfulRequestDuration.WithLabelValues(place, metrics.NormalizePath((c.Request.URL.Path))).Observe(duration)
+	} else {
+		metrics.APITotalBadRequests.WithLabelValues(place, metrics.NormalizePath((c.Request.URL.Path))).Inc()
+		metrics.APIBadRequestDuration.WithLabelValues(place, metrics.NormalizePath((c.Request.URL.Path))).Observe(duration)
+	}
+	logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceid, "Succesfull send response to client")
 }
-func CheckContext(ctx context.Context, traceID string, place string) error {
+func CheckContext(c *gin.Context, place string, traceID string, logproducer LogProducer) error {
 	select {
-	case <-ctx.Done():
-		err := ctx.Err()
+	case <-c.Request.Context().Done():
+		err := c.Request.Context().Err()
+		logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmt.Sprintf("Context's error: %v", err))
+		BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, logproducer)
+		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return err
 	default:
 		return nil

@@ -34,12 +34,8 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
 	}
-	err = response.CheckContext(c.Request.Context(), traceID, place)
+	err = response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
-		fmterr := fmt.Sprintf("Context error: %v", err)
-		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmterr)
-		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
-		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
@@ -53,11 +49,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context) {
 		req.Host = target.Host
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
-		if userID := c.Param("id"); userID != "" {
-			req.URL.Path = fmt.Sprintf("%s/%s", target.Path, userID)
-		} else {
-			req.URL.Path = target.Path
-		}
+		req.URL.Path = target.Path
 		req.URL.RawQuery = c.Request.URL.RawQuery
 		if userID, exists := c.Get("userID"); exists {
 			req.Header.Set("X-User-ID", userID.(string))
