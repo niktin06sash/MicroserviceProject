@@ -15,6 +15,6 @@ type LogProducer interface {
 	NewSessionLog(level, place, traceid, msg string)
 }
 
-const API_CreateSession = "API-CreateSession"
-const API_ValidateSession = "API-ValidateSession"
-const API_DeleteSession = "API-DeleteSession"
+const CreateSession = "API-CreateSession"
+const ValidateSession = "API-ValidateSession"
+const DeleteSession = "API-DeleteSession"

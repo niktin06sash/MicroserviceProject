@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 	"google.golang.org/grpc/codes"
@@ -229,6 +228,5 @@ func (as *UserService) updateAndCommit(ctx context.Context, tx *sql.Tx, userid u
 		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and profile's data updates")
-	msg := fmt.Sprintf("You have successfully updated your %v!", updateType)
-	return &ServiceResponse{Success: bdresponse.Success, Data: map[string]any{response.KeyMessage: msg}}
+	return &ServiceResponse{Success: bdresponse.Success}
 }

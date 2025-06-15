@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/brokers/kafka"
@@ -25,13 +26,14 @@ func NewSessionAPI(service SessionAuthentication, logproducer LogProducer) *Sess
 	}
 }
 func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
-	const place = API_CreateSession
+	const place = CreateSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	defer s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	resp := s.sessionService.CreateSession(ctx, req.UserID)
 	if resp.Errors == nil {
+		s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("For person with id %s has successfully created session", req.UserID))
 		return &pb.CreateSessionResponse{Success: true, SessionID: resp.Data.SessionID, ExpiryTime: resp.Data.ExpirationTime}, nil
 	}
 	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
@@ -41,7 +43,7 @@ func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionReq
 }
 
 func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
-	const place = API_ValidateSession
+	const place = ValidateSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	defer s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	flag := s.getFlagValidate(ctx, place, traceID)
@@ -53,6 +55,7 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 	ctx = context.WithValue(ctx, "flagvalidate", flag)
 	resp := s.sessionService.ValidateSession(ctx, req.SessionID)
 	if resp.Errors == nil {
+		s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("For person with id %s has successfully validated session", resp.Data.UserID))
 		return &pb.ValidateSessionResponse{Success: true, UserID: resp.Data.UserID}, nil
 	}
 	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
@@ -60,15 +63,15 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 	}
 	return nil, status.Error(codes.InvalidArgument, resp.Errors[erro.ErrorMessage])
 }
-
 func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
-	const place = API_DeleteSession
+	const place = DeleteSession
 	traceID := s.getTraceIdFromMetadata(ctx, place)
 	defer s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "Succesfull send response to client")
 	s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	resp := s.sessionService.DeleteSession(ctx, req.SessionID)
 	if resp.Errors == nil {
+		s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Session with id %v has successfully deleted", req.SessionID))
 		return &pb.DeleteSessionResponse{Success: true}, nil
 	}
 	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {

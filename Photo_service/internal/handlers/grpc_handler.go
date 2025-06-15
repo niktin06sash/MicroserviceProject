@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
@@ -32,6 +33,7 @@ func (s *PhotoAPI) LoadPhoto(ctx context.Context, req *pb.LoadPhotoRequest) (*pb
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.LoadPhoto(ctx, req.UserId, req.FileData)
 	if serviceresp.Errors == nil {
+		s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Person with id %s has successfully uploaded photo", req.UserId))
 		return &pb.LoadPhotoResponse{Status: true, PhotoId: serviceresp.Data.PhotoID, Message: "You have successfully uploaded photo"}, nil
 	}
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
@@ -48,6 +50,7 @@ func (s *PhotoAPI) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) 
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.DeletePhoto(ctx, req.UserId, req.PhotoId)
 	if serviceresp.Errors == nil {
+		s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Person with id %s has successfully deleted photo with id %s", req.UserId, req.PhotoId))
 		return &pb.DeletePhotoResponse{Status: true, Message: "You have successfully deleted photo"}, nil
 	}
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
@@ -64,6 +67,7 @@ func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.G
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.GetPhoto(ctx, req.PhotoId, req.UserId)
 	if serviceresp.Errors == nil {
+		s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Person with id %s has successfully get photo with id %s", req.UserId, req.PhotoId))
 		return &pb.GetPhotoResponse{Status: true, Photo: serviceresp.Data.Photo}, nil
 	}
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
@@ -79,6 +83,7 @@ func (s *PhotoAPI) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb
 	ctx = context.WithValue(ctx, "traceID", traceID)
 	serviceresp := s.photoService.GetPhotos(ctx, req.UserId)
 	if serviceresp.Errors == nil {
+		s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Successfully get person's with id %s photos", req.UserId))
 		return &pb.GetPhotosResponse{Status: true, Photos: serviceresp.Data.Photos}, nil
 	}
 	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {

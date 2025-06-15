@@ -16,9 +16,9 @@ type LogProducer interface {
 	NewSessionLog(level, place, traceid, msg string)
 }
 
-const UseCase_CreateSession = "UseCase-CreateSession"
-const UseCase_ValidateSession = "UseCase-ValidateSession"
-const UseCase_DeleteSession = "UseCase-DeleteSession"
+const CreateSession = "UseCase-CreateSession"
+const ValidateSession = "UseCase-ValidateSession"
+const DeleteSession = "UseCase-DeleteSession"
 
 type ServiceResponse struct {
 	Success bool
