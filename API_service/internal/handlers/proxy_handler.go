@@ -14,8 +14,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 )
 
-func (h *Handler) ProxyHTTP(c *gin.Context) {
-	const place = ProxyHTTP
+func (h *Handler) ProxyHTTP(c *gin.Context, place string) {
 	traceID := c.MustGet("traceID").(string)
 	start := c.MustGet("starttime").(time.Time)
 	reqpath := c.Request.URL.Path

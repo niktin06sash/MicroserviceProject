@@ -28,7 +28,11 @@ type PhotoClient interface {
 	GetPhoto(ctx context.Context, userid string, photoid string) (*pb.GetPhotoResponse, error)
 }
 
-const ProxyHTTP = "API-ProxyHTTP"
+const Logout = "API-Logout"
+const DeleteUser = "API-DeleteUser"
+const Login = "API-Login"
+const Registration = "API-Registration"
+const Update = "API-Update"
 const LoadPhoto = "API-LoadPhoto"
 const DeletePhoto = "API-DeletePhoto"
 const GetMyPhotoById = "API-GetMyPhotoById"
