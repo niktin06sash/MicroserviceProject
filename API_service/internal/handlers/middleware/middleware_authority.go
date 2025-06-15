@@ -28,7 +28,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return
 		}
-		grpcresponse, errmap := retryAuthorized(c, m, sessionID, traceID, place)
+		grpcresponse, errmap := m.retryAuthorized(c, sessionID, traceID, place)
 		if errmap != nil {
 			switch errmap[erro.ErrorType] {
 			case erro.ClientErrorType:
@@ -59,7 +59,7 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		_, errmap := retryAuthorized_Not(c, m, sessionID, traceID, place)
+		_, errmap := m.retryAuthorized_Not(c, sessionID, traceID, place)
 		if errmap != nil {
 			switch errmap[erro.ErrorType] {
 			case erro.ClientErrorType:
