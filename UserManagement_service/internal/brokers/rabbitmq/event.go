@@ -17,6 +17,11 @@ type UserEvent struct {
 	Traceid string `json:"traceid"`
 }
 
+const (
+	UserRegistrationKey = "user.registration"
+	UserDeleteKey       = "user.delete"
+)
+
 func (rp *RabbitProducer) NewUserEvent(ctx context.Context, routingKey string, userid string, place string, traceid string) error {
 	_ = rp.channel.Confirm(false)
 	confirms := rp.channel.NotifyPublish(make(chan amqp.Confirmation, 1))
