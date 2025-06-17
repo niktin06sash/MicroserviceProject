@@ -82,6 +82,14 @@ var UserKafkaProducerBufferSize = promauto.NewGauge(prometheus.GaugeOpts{
 	Name: "user_service_kafka_producer_queue_size",
 	Help: "Current size of the Kafka producer message queue in User-Service",
 })
+var UserRabbitProducerEventsSent = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "user_service_rabbit_producer_events_sent_total",
+	Help: "Total number of events sent to RabbitMQ by User-Service",
+}, []string{"routing_key"})
+var UserRabbitProducerErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "user_service_rabbit_producer_events_errors_total",
+	Help: "Total number of events sent to RabbitMQ by User-Service",
+}, []string{"routing_key"})
 
 func NormalizePath(path string) string {
 	re := regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)

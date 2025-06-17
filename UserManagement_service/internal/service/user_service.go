@@ -65,7 +65,6 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	err = as.EventProducer.NewUserEvent(ctx, "user.registration", userID, place, traceid)
 	if err != nil {
 		as.rollbackTransaction(tx, traceid, place)
-		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
 	}
 	err = as.commitTransaction(tx, traceid, place)
@@ -139,7 +138,6 @@ func (as *UserService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 	err = as.EventProducer.NewUserEvent(ctx, "user.delete", useridstr, place, traceid)
 	if err != nil {
 		as.rollbackTransaction(tx, traceid, place)
-		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
 	}
 	err = as.commitTransaction(tx, traceid, place)
