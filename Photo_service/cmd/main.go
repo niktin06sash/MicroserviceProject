@@ -66,6 +66,7 @@ func main() {
 	log.Println("[DEBUG] [Photo-Service] Service has shutted down successfully")
 	defer func() {
 		db.Close()
+		service.WaitGoroutines()
 		kafkaProducer.Close()
 		rabbitconsumer.Close()
 		buf := make([]byte, 10<<20)
