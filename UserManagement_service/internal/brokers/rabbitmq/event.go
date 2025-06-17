@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/streadway/amqp"
 )
 
@@ -28,6 +30,9 @@ func (rp *RabbitProducer) NewUserEvent(ctx context.Context, routingKey string, u
 		case <-rp.context.Done():
 			rp.logProducer.NewUserLog(kafka.LogLevelError, place, traceid, "RabbitProducer's context was canceled")
 			return err
+		case <-ctx.Done():
+			rp.logProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Request context was canceled")
+			return ctx.Err()
 		default:
 			err = rp.channel.Publish(
 				rp.config.Exchange,
@@ -40,18 +45,22 @@ func (rp *RabbitProducer) NewUserEvent(ctx context.Context, routingKey string, u
 				},
 			)
 			if err == nil {
-				rp.logProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, fmt.Sprintf("User Event with routing key: %s was published on attempt %d", routingKey, attempt))
-				return nil
+				select {
+				case <-confirms:
+					rp.logProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, fmt.Sprintf("User Event with routing key: %s was published on attempt %d", routingKey, attempt))
+					metrics.UserRabbitProducerEventsSent.WithLabelValues(routingKey)
+					return nil
+				case <-ctx.Done():
+					rp.logProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Request context was canceled")
+					return ctx.Err()
+				}
 			}
 			rp.logProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("Attempt %d failed to User Event: %v", attempt, err))
+			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+			metrics.UserRabbitProducerErrorsTotal.WithLabelValues(routingKey)
 			time.Sleep(time.Second)
 		}
 	}
-	select {
-	case <-confirms:
-		return nil
-	case <-ctx.Done():
-		rp.logProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Request context was canceled")
-		return err
-	}
+	rp.logProducer.NewUserLog(kafka.LogLevelError, place, traceid, "All attempts failed to User Event")
+	return err
 }
