@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/rabbitmq"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
@@ -62,7 +63,7 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 		as.rollbackTransaction(tx, traceid, place)
 		return serviceresponse
 	}
-	err = as.EventProducer.NewUserEvent(ctx, "user.registration", userID, place, traceid)
+	err = as.EventProducer.NewUserEvent(ctx, rabbitmq.UserRegistrationKey, userID, place, traceid)
 	if err != nil {
 		as.rollbackTransaction(tx, traceid, place)
 		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
@@ -135,7 +136,7 @@ func (as *UserService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 		as.rollbackTransaction(tx, traceid, place)
 		return serviceresponse
 	}
-	err = as.EventProducer.NewUserEvent(ctx, "user.delete", useridstr, place, traceid)
+	err = as.EventProducer.NewUserEvent(ctx, rabbitmq.UserDeleteKey, useridstr, place, traceid)
 	if err != nil {
 		as.rollbackTransaction(tx, traceid, place)
 		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}

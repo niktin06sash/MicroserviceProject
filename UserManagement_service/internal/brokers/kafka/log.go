@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/segmentio/kafka-go"
 )
@@ -33,7 +34,7 @@ func (kf *KafkaProducer) NewUserLog(level, place, traceid, msg string) {
 	case kf.logchan <- newlog:
 		metrics.UserKafkaProducerBufferSize.Set(float64(len(kf.logchan)))
 	default:
-		log.Printf("[WARN] [User-Service]  Log channel is full, dropping log: %+v", newlog)
+		log.Printf("[WARN] [User-Service] Log channel is full, dropping log: %+v", newlog)
 	}
 }
 func (kf *KafkaProducer) sendLogs(num int) {
@@ -79,7 +80,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			if err != nil {
 				log.Printf("[ERROR] [User-Service] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
 				metrics.UserKafkaProducerErrorsTotal.WithLabelValues(topic).Inc()
-				metrics.UserErrorsTotal.WithLabelValues("InternalServerError").Inc()
+				metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			}
 		}
 	}

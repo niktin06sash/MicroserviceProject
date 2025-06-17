@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/metrics"
 	"github.com/segmentio/kafka-go"
 )
@@ -90,7 +91,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			if err != nil {
 				log.Printf("[ERROR] [API-Service] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
 				metrics.APIKafkaProducerErrorsTotal.WithLabelValues(topic).Inc()
-				metrics.APIErrorsTotal.WithLabelValues("InternalServerError").Inc()
+				metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			}
 		}
 	}
