@@ -27,16 +27,10 @@ func NewPhotoService(repo DBPhotoRepos, cloud CloudPhotoStorage, logproducer Log
 
 func (use *PhotoService) DeletePhoto(ctx context.Context, userid string, photoid string) *ServiceResponse {
 	traceid := ctx.Value("traceID").(string)
-	bdresponse := use.repo.DeletePhoto(ctx, userid, photoid)
-	if bdresponse.Errors != nil {
-		if bdresponse.Errors[erro.ErrorType] == erro.ClientErrorType {
-			use.logProducer.NewPhotoLog(kafka.LogLevelWarn, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])
-			return &ServiceResponse{Success: false, Errors: bdresponse.Errors}
-		}
-		use.logProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.PhotoServiceUnavalaible}}
+	bdresponse, serviceresponse := use.requestToDB(use.repo.DeletePhoto(ctx, userid, photoid), traceid)
+	if serviceresponse != nil {
+		return serviceresponse
 	}
-	use.logProducer.NewPhotoLog(kafka.LogLevelInfo, bdresponse.Place, traceid, bdresponse.SuccessMessage)
 	ext := bdresponse.Data[repository.KeyContentType].(string)
 	go use.deletePhotoCloud(ctx, photoid, ext)
 	return &ServiceResponse{Success: true}
@@ -67,7 +61,7 @@ func (use *PhotoService) LoadPhoto(ctx context.Context, userid string, filedata 
 	case "image/png":
 		ext = ".png"
 	}
-	go use.photoUnloadAndSave(ctx, filedata, photoid, ext, userid)
+	go use.unloadPhotoCloud(ctx, filedata, photoid, ext, userid)
 	return &ServiceResponse{Success: true, Data: Data{PhotoID: photoid}}
 }
 func (use *PhotoService) GetPhoto(ctx context.Context, photoid string, userid string) *ServiceResponse {
@@ -79,16 +73,10 @@ func (use *PhotoService) GetPhoto(ctx context.Context, photoid string, userid st
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
 		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.InvalidUserIDFormat}}
 	}
-	bdresponse := use.repo.GetPhoto(ctx, photoid, userid)
-	if !bdresponse.Success && bdresponse.Errors != nil {
-		if bdresponse.Errors[erro.ErrorType] == erro.ClientErrorType {
-			use.logProducer.NewPhotoLog(kafka.LogLevelWarn, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])
-			return &ServiceResponse{Success: false, Errors: bdresponse.Errors}
-		}
-		use.logProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.PhotoServiceUnavalaible}}
+	bdresponse, serviceresponse := use.requestToDB(use.repo.GetPhoto(ctx, userid, photoid), traceid)
+	if serviceresponse != nil {
+		return serviceresponse
 	}
-	use.logProducer.NewPhotoLog(kafka.LogLevelInfo, bdresponse.Place, traceid, bdresponse.SuccessMessage)
 	photo := bdresponse.Data[repository.KeyPhoto].(*model.Photo)
 	grpcphoto := &pb.Photo{PhotoId: photo.ID, Url: photo.URL, CreatedAt: photo.CreatedAt.String()}
 	return &ServiceResponse{Success: true, Data: Data{Photo: grpcphoto}}
@@ -102,16 +90,10 @@ func (use *PhotoService) GetPhotos(ctx context.Context, userid string) *ServiceR
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
 		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.InvalidUserIDFormat}}
 	}
-	bdresponse := use.repo.GetPhotos(ctx, userid)
-	if !bdresponse.Success && bdresponse.Errors != nil {
-		if bdresponse.Errors[erro.ErrorType] == erro.ClientErrorType {
-			use.logProducer.NewPhotoLog(kafka.LogLevelWarn, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])
-			return &ServiceResponse{Success: false, Errors: bdresponse.Errors}
-		}
-		use.logProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.PhotoServiceUnavalaible}}
+	bdresponse, serviceresponse := use.requestToDB(use.repo.GetPhotos(ctx, userid), traceid)
+	if serviceresponse != nil {
+		return serviceresponse
 	}
-	use.logProducer.NewPhotoLog(kafka.LogLevelInfo, bdresponse.Place, traceid, bdresponse.SuccessMessage)
 	photos := bdresponse.Data[repository.KeyPhoto].([]*model.Photo)
 	grpcphotos := []*pb.Photo{}
 	for _, p := range photos {
@@ -120,8 +102,24 @@ func (use *PhotoService) GetPhotos(ctx context.Context, userid string) *ServiceR
 	}
 	return &ServiceResponse{Success: true, Data: Data{Photos: grpcphotos}}
 }
-func (use *PhotoService) photoUnloadAndSave(ctx context.Context, file []byte, photoid string, ext string, userid string) {
-	const place = PhotoUnloadAndSave
+func (use *PhotoService) requestToDB(response *repository.RepositoryResponse, traceid string) (*repository.RepositoryResponse, *ServiceResponse) {
+	if !response.Success && response.Errors != nil {
+		switch response.Errors[erro.ErrorType] {
+		case erro.ServerErrorType:
+			use.logProducer.NewPhotoLog(kafka.LogLevelError, response.Place, traceid, response.Errors[erro.ErrorMessage])
+			response.Errors[erro.ErrorMessage] = erro.PhotoServiceUnavalaible
+			return response, &ServiceResponse{Success: false, Errors: response.Errors}
+
+		case erro.ClientErrorType:
+			use.logProducer.NewPhotoLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors[erro.ErrorMessage])
+			return response, &ServiceResponse{Success: false, Errors: response.Errors}
+		}
+	}
+	use.logProducer.NewPhotoLog(kafka.LogLevelInfo, response.Place, traceid, response.SuccessMessage)
+	return response, nil
+}
+func (use *PhotoService) unloadPhotoCloud(ctx context.Context, file []byte, photoid string, ext string, userid string) {
+	const place = UnloadPhotoCloud
 	traceid := ctx.Value("traceID").(string)
 	filename := photoid + ext
 	tmpDir := os.TempDir()
