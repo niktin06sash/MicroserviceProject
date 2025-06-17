@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,19 +8,17 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 )
 
-type UserService interface {
-	RegistrateAndLogin(ctx context.Context, req *model.RegistrationRequest) *service.ServiceResponse
-	AuthenticateAndLogin(ctx context.Context, req *model.AuthenticationRequest) *service.ServiceResponse
-	DeleteAccount(ctx context.Context, req *model.DeletionRequest, sessionID string, useridstr string) *service.ServiceResponse
-	Logout(ctx context.Context, sessionID string) *service.ServiceResponse
-	UpdateAccount(ctx context.Context, req *model.UpdateRequest, useridstr string, updateType string) *service.ServiceResponse
-	GetMyProfile(ctx context.Context, useridstr string) *service.ServiceResponse
-	GetProfileById(ctx context.Context, useridstr string, findidstr string) *service.ServiceResponse
+type Handler struct {
+	Services    UserService
+	Middlewares MiddlewareService
+	LogProducer LogProducer
 }
 
+func NewHandler(services UserService, middleware MiddlewareService, logproducer LogProducer) *Handler {
+	return &Handler{Services: services, Middlewares: middleware, LogProducer: logproducer}
+}
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	const place = Registration
 	defer r.Body.Close()

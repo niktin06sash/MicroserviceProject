@@ -1,18 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/gorilla/mux"
 )
-
-type Handler struct {
-	Services    UserService
-	Middlewares MiddlewareService
-	LogProducer LogProducer
-}
 
 const Registration = "API-Registration"
 const Authentication = "API-Authentication"
@@ -31,10 +28,16 @@ type MiddlewareService interface {
 type LogProducer interface {
 	NewUserLog(level, place, traceid, msg string)
 }
-
-func NewHandler(services UserService, middleware MiddlewareService, logproducer LogProducer) *Handler {
-	return &Handler{Services: services, Middlewares: middleware, LogProducer: logproducer}
+type UserService interface {
+	RegistrateAndLogin(ctx context.Context, req *model.RegistrationRequest) *service.ServiceResponse
+	AuthenticateAndLogin(ctx context.Context, req *model.AuthenticationRequest) *service.ServiceResponse
+	DeleteAccount(ctx context.Context, req *model.DeletionRequest, sessionID string, useridstr string) *service.ServiceResponse
+	Logout(ctx context.Context, sessionID string) *service.ServiceResponse
+	UpdateAccount(ctx context.Context, req *model.UpdateRequest, useridstr string, updateType string) *service.ServiceResponse
+	GetMyProfile(ctx context.Context, useridstr string) *service.ServiceResponse
+	GetProfileById(ctx context.Context, useridstr string, findidstr string) *service.ServiceResponse
 }
+
 func (h *Handler) InitRoutes() *mux.Router {
 	m := mux.NewRouter()
 	m.Handle("/metrics", promhttp.Handler())
