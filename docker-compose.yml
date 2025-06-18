@@ -75,7 +75,7 @@ services:
       ports:
         - "6379:6379"
     
-    profiledb:
+    profilecache:
       networks:
         - data_net
       image: redis:7
@@ -84,7 +84,7 @@ services:
       volumes:
       - profile_data:/data
       ports:
-        - "6380:6379"
+        - "6380:6380"
   
     photocache:
       networks:
@@ -95,7 +95,7 @@ services:
       volumes:
       - photocache_data:/data
       ports:
-        - "6381:6379"
+        - "6381:6381"
     
     userdb:
       image: postgres:latest
