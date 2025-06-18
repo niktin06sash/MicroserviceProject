@@ -48,6 +48,7 @@ func NewRabbitProducer(config configs.RabbitMQConfig, kafkaprod LogProducer) (*R
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+	log.Println("[DEBUG] [User-Service] Successful connect to Rabbit-Producer")
 	return &RabbitProducer{conn: conn, channel: channel, config: config, logProducer: kafkaprod, context: ctx, cancel: cancel}, nil
 }
 func (rp *RabbitProducer) Close() {

@@ -30,20 +30,20 @@ func (logg *Logger) Sync() {
 	logg.File.Close()
 	log.Printf("[DEBUG] [Logs-Service] [Logger: %s] Successful sync and close Logger", logg.Topic)
 }
-func NewLogger(config configs.LoggerConfig, topic string) *Logger {
+func NewLogger(config configs.LoggerConfig, topic string) (*Logger, error) {
 	parts := strings.Split(topic, "-")
 	service := parts[0]
 	level := parts[1]
 	fn := config.Files[service+"_"+level]
 	zapLevel, err := zapcore.ParseLevel(strings.ToUpper(level))
 	if err != nil {
-		log.Fatalf("[DEBUG] [Logs-Service] Error getting the logging level: %v", err)
-		return nil
+		log.Printf("[DEBUG] [Logs-Service] Error getting the logging level: %v", err)
+		return nil, err
 	}
 	file, err := os.OpenFile(fn, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		println("[DEBUG] [Logs-Service] Error opening log file:", err)
-		return nil
+		log.Printf("[DEBUG] [Logs-Service] Error opening log file: %v", err)
+		return nil, err
 	}
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
@@ -67,5 +67,5 @@ func NewLogger(config configs.LoggerConfig, topic string) *Logger {
 		File:      file,
 		Level:     level,
 		Topic:     topic,
-	}
+	}, nil
 }

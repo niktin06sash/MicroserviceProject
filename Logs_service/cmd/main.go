@@ -23,7 +23,10 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			logger := logs.NewLogger(config.Logger, topic)
+			logger, err := logs.NewLogger(config.Logger, topic)
+			if err != nil {
+				return
+			}
 			consumer := kafka.NewKafkaConsumer(config.Kafka, logger, topic)
 			mux.Lock()
 			consumers = append(consumers, consumer)

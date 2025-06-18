@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"mongodb"`
+	Database DatabaseConfig `mapstructure:"database"`
 	Redis    RedisConfig    `mapstructure:"redis"`
 	RabbitMQ RabbitMQConfig `mapstructure:"rabbitmq"`
 	Kafka    KafkaConfig    `mapstructure:"kafka"`
@@ -77,6 +77,11 @@ func LoadConfig() Config {
 			log.Fatalf("[DEBUG] [Photo-Service] Error reading config file: %s", err)
 		}
 	}
+	var config Config
+	err = viper.Unmarshal(&config)
+	if err != nil {
+		log.Fatalf("[DEBUG] [Photo-Service] Unable to decode into struct, %v", err)
+	}
 	viper.SetConfigName("mega")
 	viper.SetConfigType("yml")
 	viper.AddConfigPath("internal/configs")
@@ -88,7 +93,6 @@ func LoadConfig() Config {
 			log.Fatalf("[DEBUG] [Photo-Service] Error reading mega file: %s", err)
 		}
 	}
-	var config Config
 	err = viper.Unmarshal(&config)
 	if err != nil {
 		log.Fatalf("[DEBUG] [Photo-Service] Unable to decode into struct, %v", err)

@@ -71,6 +71,7 @@ func (rc *RabbitConsumer) readEvent() {
 				rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, newmsg.Traceid, fmt.Sprintf("Received user delete account event for userID: %s", newmsg.UserID))
 				rc.wg.Add(1)
 				go func() {
+					defer rc.wg.Done()
 					rc.deleteAllUserData(ctx, newmsg.UserID, newmsg.Traceid)
 				}()
 			}
@@ -82,7 +83,6 @@ func (rc *RabbitConsumer) readEvent() {
 	}
 }
 func (rc *RabbitConsumer) deleteAllUserData(ctx context.Context, userid string, traceid string) {
-	defer rc.wg.Done()
 	const place = "RabbitConsumer-DeleteAllUserData"
 	getresp := rc.userrepo.GetPhotos(ctx, userid)
 	if getresp.Errors != nil {
@@ -93,7 +93,7 @@ func (rc *RabbitConsumer) deleteAllUserData(ctx context.Context, userid string, 
 	photos := getresp.Data[repository.KeyPhoto].([]*model.Photo)
 	delresp := rc.userrepo.DeleteUserData(ctx, userid)
 	if delresp.Errors != nil {
-		rc.logproducer.NewPhotoLog(kafka.LogLevelError, getresp.Place, traceid, getresp.Errors[erro.ErrorMessage])
+		rc.logproducer.NewPhotoLog(kafka.LogLevelError, delresp.Place, traceid, delresp.Errors[erro.ErrorMessage])
 		return
 	}
 	rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, delresp.Place, traceid, delresp.SuccessMessage)

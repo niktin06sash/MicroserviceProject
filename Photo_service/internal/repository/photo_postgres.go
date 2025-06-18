@@ -24,7 +24,7 @@ const (
 	selectPhotosQuery = `SELECT photoid, url, content_type, created_at FROM photos WHERE userid = $1`
 	selectPhotoQuery  = `SELECT photoid, url, content_type, created_at FROM photos WHERE userid = $1 AND photoid = $2`
 	insertUserQuery   = "INSERT INTO usersid (userid) VALUES ($1) ON CONFLICT (userid) DO NOTHING"
-	deleteUserQuery   = "DELETE FROM usersid WHERE usersid = $1"
+	deleteUserQuery   = "DELETE FROM usersid WHERE userid = $1"
 )
 
 func (ph *PhotoPostgresRepo) LoadPhoto(ctx context.Context, photo *model.Photo) *RepositoryResponse {

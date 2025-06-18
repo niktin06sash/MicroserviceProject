@@ -73,6 +73,7 @@ func main() {
 		metrics.Stop()
 		middleware.Stop()
 		sessionclient.Close()
+		photoclient.Close()
 		kafkaprod.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)

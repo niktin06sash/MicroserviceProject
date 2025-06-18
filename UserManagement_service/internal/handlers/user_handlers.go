@@ -8,6 +8,8 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/response"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 )
 
 type Handler struct {
@@ -34,9 +36,9 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if !h.serviceResponse(regresponse, r, w, traceID, place) {
 		return
 	}
-	userID := regresponse.Data["userID"].(string)
-	sessionID := regresponse.Data["sessionID"].(string)
-	expiresession := regresponse.Data["expiresession"].(time.Time)
+	userID := regresponse.Data[repository.KeyUserID].(string)
+	sessionID := regresponse.Data[service.KeySessionID].(string)
+	expiresession := regresponse.Data[service.KeyExpirySession].(time.Time)
 	response.AddSessionCookie(w, sessionID, expiresession)
 	msg := fmt.Sprintf("Person with id %v has successfully registered", userID)
 	h.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
@@ -58,9 +60,9 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	if !h.serviceResponse(auresponse, r, w, traceID, place) {
 		return
 	}
-	userID := auresponse.Data["userID"].(string)
-	sessionID := auresponse.Data["sessionID"].(string)
-	expiresession := auresponse.Data["expiresession"].(time.Time)
+	userID := auresponse.Data[repository.KeyUserID].(string)
+	sessionID := auresponse.Data[service.KeySessionID].(string)
+	expiresession := auresponse.Data[service.KeyExpirySession].(time.Time)
 	response.AddSessionCookie(w, sessionID, expiresession)
 	msg := fmt.Sprintf("Person with id %v has successfully login", userID)
 	h.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, msg)
