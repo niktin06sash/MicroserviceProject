@@ -69,6 +69,7 @@ func main() {
 		service.WaitGoroutines()
 		kafkaProducer.Close()
 		rabbitconsumer.Close()
+		mega.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
 		log.Printf("[DEBUG] [Photo-Service] Active goroutines:\n%s", buf[:n])

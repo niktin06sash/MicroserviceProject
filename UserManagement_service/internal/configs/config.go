@@ -84,7 +84,7 @@ func LoadConfig() Config {
 		log.Println("[DEBUG] [User-Service] Successful Load Config (docker)")
 		return config
 	}
-	log.Println("[DEBUG] [User-Service] Successful Load Config")
+	log.Println("[DEBUG] [User-Service] Successful Load Config (localhost)")
 	return config
 }
 func LoadDockerConfig(config *Config) {

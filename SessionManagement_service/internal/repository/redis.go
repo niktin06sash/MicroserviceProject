@@ -10,12 +10,6 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type RedisInterface interface {
-	Open(host string, port int, password string, db int) error
-	Ping() error
-	Close()
-}
-
 type RedisObject struct {
 	RedisClient *redis.Client
 }

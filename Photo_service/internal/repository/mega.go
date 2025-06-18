@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"log"
 	"sync"
 
@@ -16,6 +17,8 @@ type MegaClient struct {
 	mainfolder   *mega.Node
 	wg           *sync.WaitGroup
 	progressChan chan int
+	ctx          context.Context
+	cancel       context.CancelFunc
 }
 
 func NewMegaClient(config configs.MegaConfig) (*MegaClient, error) {
@@ -42,10 +45,18 @@ func NewMegaClient(config configs.MegaConfig) (*MegaClient, error) {
 		log.Printf("[DEBUG] [Photo-Service] Failed to get the main directory: %v", err)
 		return nil, err
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	return &MegaClient{
 		connect:      client,
 		progressChan: make(chan int),
 		wg:           &sync.WaitGroup{},
 		mainfolder:   targetFolder,
+		ctx:          ctx,
+		cancel:       cancel,
 	}, nil
+}
+func (m *MegaClient) Close() {
+	m.cancel()
+	m.wg.Wait()
+	close(m.progressChan)
 }

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -22,31 +21,29 @@ import (
 func validateData[T any](val *validator.Validate, data T, traceid string, place string, LogProducer LogProducer) map[string]string {
 	err := val.Struct(data)
 	if err != nil {
-		var count = 0
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if ok {
 			erors := make(map[string]string)
 			for _, err := range validationErrors {
-				count++
 				switch err.Tag() {
 				case "email":
 					LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Invalid email format")
-					erors[erro.ErrorType] = erro.ClientErrorType + "_" + strconv.Itoa(count)
+					erors[erro.ErrorType] = erro.ClientErrorType
 					erors[erro.ErrorMessage] = erro.ErrorNotEmailConst
 				case "min":
 					fmterr := fmt.Sprintf("%s is too short", err.Field())
 					LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
-					erors[erro.ErrorType] = erro.ClientErrorType + "_" + strconv.Itoa(count)
+					erors[erro.ErrorType] = erro.ClientErrorType
 					erors[erro.ErrorMessage] = fmterr
 				case "required":
 					fmterr := fmt.Sprintf("%s is Null", err.Field())
 					LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
-					erors[erro.ErrorType] = erro.ClientErrorType + "_" + strconv.Itoa(count)
+					erors[erro.ErrorType] = erro.ClientErrorType
 					erors[erro.ErrorMessage] = fmterr
 				case "max":
 					fmterr := fmt.Sprintf("%s is too long", err.Field())
 					LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
-					erors[erro.ErrorType] = erro.ClientErrorType + "_" + strconv.Itoa(count)
+					erors[erro.ErrorType] = erro.ClientErrorType
 					erors[erro.ErrorMessage] = fmterr
 				}
 				metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
