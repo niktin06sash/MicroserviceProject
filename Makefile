@@ -2,6 +2,7 @@ API_Service_DIR := API_service
 Session_Service_DIR := SessionManagement_service
 User_Service_DIR := UserManagement_service
 Logs_Service_DIR := Logs_service
+Photo_Service_DIR := Photo_service
 Swagger_DIR := $(API_Service_DIR)/docs
 
 .PHONY: all start tests stop clean swagger redis kafka run shutdown dockerstart dockerstop dockerrun dockershutdown
@@ -41,7 +42,7 @@ redis:
 	@echo "Starting Redis CLI..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'wsl redis-cli'"
 start:
-	@echo "Starting Kafka Service..."
+	@echo "Starting Logs Service..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(Logs_Service_DIR); go run cmd/main.go'"
 	@echo "Starting API-Service..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(API_Service_DIR); go run cmd/main.go'"
@@ -49,6 +50,8 @@ start:
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(Session_Service_DIR); go run cmd/main.go'"
 	@echo "Starting User-Service..."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(User_Service_DIR); go run cmd/main.go'"
+	@echo "Starting Photo-Service..."
+	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(Photo_Service_DIR); go run cmd/main.go'"
 	@echo "All services started."
 
 stop:

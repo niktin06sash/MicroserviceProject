@@ -27,7 +27,7 @@ services:
         - kafka_data:/var/lib/kafka/data
       environment:
         KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
         KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
         KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
         KAFKA_CREATE_TOPICS: >
@@ -84,7 +84,7 @@ services:
       volumes:
       - profile_data:/data
       ports:
-        - "6380:6380"
+        - "6380:6379"
   
     photocache:
       networks:
@@ -95,15 +95,20 @@ services:
       volumes:
       - photocache_data:/data
       ports:
-        - "6381:6381"
+        - "6381:6379"
     
     userdb:
       image: postgres:latest
       container_name: userdb
       ports:
-        - "5432:5432"
+        - "5434:5432"
       volumes:
         - userdb_data:/var/lib/postgresql/data
+      environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: my_password
+        POSTGRES_DB: users
+        POSTGRES_HOST_AUTH_METHOD: trust
       networks:
         - data_net
       restart: always
@@ -117,9 +122,14 @@ services:
       image: postgres:latest
       container_name: photodb
       ports:
-        - "5433:5433"
+        - "5433:5432"
       volumes:
         - photodb_data:/var/lib/postgresql/data
+      environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: my_password
+        POSTGRES_DB: photos
+        POSTGRES_HOST_AUTH_METHOD: trust
       networks:
         - data_net
       restart: always
@@ -139,104 +149,104 @@ services:
       volumes:
         - ./prometheus.yml:/etc/prometheus/prometheus.yml
         - prometheus_data:/prometheus
-      depends_on:
-        - user_service
-        - api_service
+      # depends_on:
+      #   - user_service
+      #   - api_service
     
-    session_service:
-      networks:
-        - backend_net 
-        - data_net
-      build:
-        context: ./SessionManagement_service
-        dockerfile: Dockerfile
-      container_name: session_service
-      environment:
-        DOCKER: "TRUE"
-        REDIS_HOST: sessiondb
-        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      ports:
-        - "50052:50052"
-      depends_on:
-        - sessiondb
-        - kafka
+    # session_service:
+    #   networks:
+    #     - backend_net 
+    #     - data_net
+    #   build:
+    #     context: ./SessionManagement_service
+    #     dockerfile: Dockerfile
+    #   container_name: session_service
+    #   environment:
+    #     DOCKER: "TRUE"
+    #     REDIS_HOST: sessiondb
+    #     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    #   ports:
+    #     - "50052:50052"
+    #   depends_on:
+    #     - sessiondb
+    #     - kafka
     
-    user_service:
-      networks:
-        - backend_net 
-        - data_net
-      build:
-        context: .
-        dockerfile: UserManagement_service/Dockerfile
-      environment:
-        DOCKER: "TRUE"
-        DB_HOST: userdb
-        REDIS_HOST: profiledb
-        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-        SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
-      container_name: user_service
-      ports:
-        - "8082:8082"
-      depends_on:
-        - userdb
-        - kafka
-        - session_service
-        - profiledb
-        - rabbitmq
+    # user_service:
+    #   networks:
+    #     - backend_net 
+    #     - data_net
+    #   build:
+    #     context: .
+    #     dockerfile: UserManagement_service/Dockerfile
+    #   environment:
+    #     DOCKER: "TRUE"
+    #     DB_HOST: userdb
+    #     REDIS_HOST: profiledb
+    #     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    #     SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
+    #   container_name: user_service
+    #   ports:
+    #     - "8082:8082"
+    #   depends_on:
+    #     - userdb
+    #     - kafka
+    #     - session_service
+    #     - profiledb
+    #     - rabbitmq
     
-    logs_service:
-      networks:
-        - backend_net 
-      build:
-        context: ./Logs_service
-        dockerfile: Dockerfile
-      environment:
-        DOCKER: "TRUE"
-        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      container_name: logs_service
-      volumes:
-        - logs_data:/root/logs_service/internal/logs 
-      depends_on:
-        - kafka
+    # logs_service:
+    #   networks:
+    #     - backend_net 
+    #   build:
+    #     context: ./Logs_service
+    #     dockerfile: Dockerfile
+    #   environment:
+    #     DOCKER: "TRUE"
+    #     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    #   container_name: logs_service
+    #   volumes:
+    #     - logs_data:/root/logs_service/internal/logs 
+    #   depends_on:
+    #     - kafka
     
-    photo_service:
-      networks:
-        - frontend_net
-        - backend_net
-      build:
-        context: .
-        dockerfile: Photo_service/Dockerfile
-      environment:
-        DOCKER: "TRUE"
-        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-        DB_HOST: photodb
-        RABBITMQ_HOST: rabbitmq
-        REDIS_HOST: photocache
-      container_name: photo_service
-      ports:
-        - "50053:50053"
-      depends_on:
-        - kafka
-        - rabbitmq
+    # photo_service:
+    #   networks:
+    #     - frontend_net
+    #     - backend_net
+    #   build:
+    #     context: .
+    #     dockerfile: Photo_service/Dockerfile
+    #   environment:
+    #     DOCKER: "TRUE"
+    #     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    #     DB_HOST: photodb
+    #     RABBITMQ_HOST: rabbitmq
+    #     REDIS_HOST: photocache
+    #   container_name: photo_service
+    #   ports:
+    #     - "50053:50053"
+    #   depends_on:
+    #     - kafka
+    #     - rabbitmq
     
-    api_service:
-      networks:
-        - frontend_net
-        - backend_net 
-      build:
-        context: .
-        dockerfile: API_service/Dockerfile
-      environment:
-        DOCKER: "TRUE"
-        SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
-        PHOTO_SERVICE_GRPC_ADDRESS: photo_service:50053
-        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-        USER_SERVICE_HOST: user_service:8082
-      container_name: api_service
-      ports:
-        - "8083:8083"
-      depends_on:
-        - kafka
+    # api_service:
+    #   networks:
+    #     - frontend_net
+    #     - backend_net 
+    #   build:
+    #     context: .
+    #     dockerfile: API_service/Dockerfile
+    #   environment:
+    #     DOCKER: "TRUE"
+    #     SESSION_SERVICE_GRPC_ADDRESS: session_service:50052
+    #     PHOTO_SERVICE_GRPC_ADDRESS: photo_service:50053
+    #     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    #     USER_SERVICE_HOST: user_service:8082
+    #   container_name: api_service
+    #   ports:
+    #     - "8083:8083"
+    #   depends_on:
+    #     - kafka
 volumes:
     zookeeper_log:
     zookeeper_data:
@@ -247,5 +257,5 @@ volumes:
     prometheus_data:
     session_data:
     profile_data:
-    logs_data:
+    #logs_data:
     photocache_data:

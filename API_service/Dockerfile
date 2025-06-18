@@ -5,6 +5,8 @@ WORKDIR /app
 COPY API_service/go.mod API_service/go.sum ./
 COPY SessionManagement_service/go.mod SessionManagement_service/go.sum ./SessionManagement_service/
 RUN go mod edit -replace github.com/niktin06sash/MicroserviceProject/SessionManagement_service=/app/SessionManagement_service
+COPY Photo_service/go.mod Photo_service/go.sum ./Photo_service/
+RUN go mod edit -replace github.com/niktin06sash/MicroserviceProject/Photo_service=/app/Photo_service
 RUN go mod download
 
 COPY . .
