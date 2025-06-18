@@ -24,7 +24,7 @@ dockerstop:
 	docker-compose stop zookeeper
 	docker-compose stop
 	@echo "All services stopped."
-dockerrun: swagger dockerstart
+dockerrun: dockerstart
 dockershutdown: dockerstop clean
 
 kafka:
@@ -69,5 +69,5 @@ clean:
 tests:
 	@echo "Starting tests in User-Service...."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(User_Service_DIR)/internal/service/; go test -v ./...'"
-run: kafka swagger prometheus redis start
+run: swagger start
 shutdown: stop clean
