@@ -1,5 +1,5 @@
 CREATE TABLE usersid (
-    userid TEXT PRIMARY KEY,
+    userid TEXT PRIMARY KEY
 );
 
 CREATE TABLE photos (
