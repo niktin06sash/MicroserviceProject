@@ -57,6 +57,7 @@ func NewMegaClient(config configs.MegaConfig) (*MegaClient, error) {
 }
 func (m *MegaClient) Close() {
 	m.cancel()
-	m.wg.Wait()
 	close(m.progressChan)
+	m.wg.Wait()
+	log.Println("[DEBUG] [Photo-Service] Successful close Mega-Client")
 }

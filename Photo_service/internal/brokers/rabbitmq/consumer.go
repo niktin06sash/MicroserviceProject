@@ -21,7 +21,7 @@ type DBUserRepos interface {
 	GetPhotos(ctx context.Context, userid string) *repository.RepositoryResponse
 }
 type PhotoCloudRepos interface {
-	DeleteFile(id, ext string) *repository.RepositoryResponse
+	DeleteFile(ctx context.Context, id, ext string) *repository.RepositoryResponse
 }
 type RabbitConsumer struct {
 	conn        *amqp.Connection
@@ -72,7 +72,7 @@ func NewRabbitConsumer(config configs.RabbitMQConfig, logproducer LogProducer, d
 		log.Printf("[DEBUG] [Photo-Service] Failed to declare an queue: %v", err)
 		return nil, err
 	}
-	routingKeys := []string{"user.registration", "user.delete"}
+	routingKeys := []string{userRegistrationKey, userDeleteKey}
 	for _, routingKey := range routingKeys {
 		err = channel.QueueBind(
 			queue.Name,
@@ -98,14 +98,17 @@ func NewRabbitConsumer(config configs.RabbitMQConfig, logproducer LogProducer, d
 		logproducer: logproducer,
 	}
 	rc.wg.Add(1)
-	go rc.readEvent()
-	log.Printf("[DEBUG] [Logs-Service] Successful connect to Rabbit-Consumer")
+	go func() {
+		defer rc.wg.Done()
+		rc.readEvent()
+	}()
+	log.Printf("[DEBUG] [Photo-Service] Successful connect to Rabbit-Consumer")
 	return rc, nil
 }
 func (rc *RabbitConsumer) Close() {
 	rc.cancel()
-	rc.wg.Wait()
 	rc.channel.Close()
+	rc.wg.Wait()
 	rc.conn.Close()
-	log.Printf("[DEBUG] [Logs-Service] Successful close Rabbit-Consumer")
+	log.Printf("[DEBUG] [Photo-Service] Successful close Rabbit-Consumer")
 }
