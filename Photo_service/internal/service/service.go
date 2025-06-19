@@ -15,8 +15,8 @@ type DBPhotoRepos interface {
 	GetPhoto(ctx context.Context, photoid string, userid string) *repository.RepositoryResponse
 }
 type CloudPhotoStorage interface {
-	UploadFile(localfilepath string, photoid string, ext string) *repository.RepositoryResponse
-	DeleteFile(id, contenttype string) *repository.RepositoryResponse
+	UploadFile(ctx context.Context, localfilepath string, photoid string, ext string) *repository.RepositoryResponse
+	DeleteFile(ctx context.Context, id, contenttype string) *repository.RepositoryResponse
 }
 type LogProducer interface {
 	NewPhotoLog(level, place, traceid, msg string)

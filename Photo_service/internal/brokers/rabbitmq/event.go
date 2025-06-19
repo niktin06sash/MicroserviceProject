@@ -38,7 +38,6 @@ func (rc *RabbitConsumer) readEvent() {
 		log.Printf("[DEBUG] [Photo-Service] Failed to consume messages: %v", err)
 		return
 	}
-	defer rc.wg.Done()
 	for {
 		select {
 		case <-rc.ctx.Done():
@@ -72,7 +71,7 @@ func (rc *RabbitConsumer) readEvent() {
 				rc.wg.Add(1)
 				go func() {
 					defer rc.wg.Done()
-					rc.deleteAllUserData(ctx, newmsg.UserID, newmsg.Traceid)
+					rc.deleteAllUserData(newmsg.UserID, newmsg.Traceid)
 				}()
 			}
 			err = msg.Ack(false)
@@ -82,31 +81,29 @@ func (rc *RabbitConsumer) readEvent() {
 		}
 	}
 }
-func (rc *RabbitConsumer) deleteAllUserData(ctx context.Context, userid string, traceid string) {
-	const place = "RabbitConsumer-DeleteAllUserData"
-	getresp := rc.userrepo.GetPhotos(ctx, userid)
+func (rc *RabbitConsumer) deleteAllUserData(userid string, traceid string) {
+	getctx, cancel := context.WithTimeout(rc.ctx, 5*time.Second)
+	defer cancel()
+	getresp := rc.userrepo.GetPhotos(getctx, userid)
 	if getresp.Errors != nil {
 		rc.logproducer.NewPhotoLog(kafka.LogLevelError, getresp.Place, traceid, getresp.Errors[erro.ErrorMessage])
 		return
 	}
 	rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, getresp.Place, traceid, getresp.SuccessMessage)
 	photos := getresp.Data[repository.KeyPhoto].([]*model.Photo)
-	delresp := rc.userrepo.DeleteUserData(ctx, userid)
+	deluserctx, cancel := context.WithTimeout(rc.ctx, 15*time.Second)
+	defer cancel()
+	delresp := rc.userrepo.DeleteUserData(deluserctx, userid)
 	if delresp.Errors != nil {
 		rc.logproducer.NewPhotoLog(kafka.LogLevelError, delresp.Place, traceid, delresp.Errors[erro.ErrorMessage])
 		return
 	}
 	rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, delresp.Place, traceid, delresp.SuccessMessage)
-	select {
-	case <-ctx.Done():
-		rc.logproducer.NewPhotoLog(kafka.LogLevelError, place, traceid, "Context canceled or timeout")
-	default:
-		for _, photo := range photos {
-			photodelresp := rc.photocloud.DeleteFile(photo.ID, photo.ContentType)
-			if photodelresp.Errors != nil {
-				rc.logproducer.NewPhotoLog(kafka.LogLevelError, photodelresp.Place, traceid, photodelresp.Errors[erro.ErrorMessage])
-			}
-			rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, photodelresp.Place, traceid, photodelresp.SuccessMessage)
+	for _, photo := range photos {
+		photodelresp := rc.photocloud.DeleteFile(rc.ctx, photo.ID, photo.ContentType)
+		if photodelresp.Errors != nil {
+			rc.logproducer.NewPhotoLog(kafka.LogLevelError, photodelresp.Place, traceid, photodelresp.Errors[erro.ErrorMessage])
 		}
+		rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, photodelresp.Place, traceid, photodelresp.SuccessMessage)
 	}
 }

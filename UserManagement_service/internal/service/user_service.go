@@ -80,7 +80,7 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
-	return &ServiceResponse{Success: true, Data: map[string]any{repository.KeyUserID: userID, KeyExpirySession: grpcresponse.SessionID, KeySessionID: time.Unix(grpcresponse.ExpiryTime, 0)}}
+	return &ServiceResponse{Success: true, Data: map[string]any{repository.KeyUserID: userID, KeySessionID: grpcresponse.SessionID, KeyExpirySession: time.Unix(grpcresponse.ExpiryTime, 0)}}
 }
 func (as *UserService) AuthenticateAndLogin(ctx context.Context, req *model.AuthenticationRequest) *ServiceResponse {
 	const place = AuthenticateAndLogin

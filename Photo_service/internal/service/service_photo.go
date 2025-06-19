@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
@@ -34,11 +33,9 @@ func (use *PhotoService) DeletePhoto(ctx context.Context, userid string, photoid
 	}
 	ext := bdresponse.Data[repository.KeyContentType].(string)
 	use.wg.Add(1)
-	newctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
 	go func() {
 		defer use.wg.Done()
-		use.deletePhotoCloud(newctx, photoid, ext)
+		use.deletePhotoCloud(photoid, ext, traceid)
 	}()
 	return &ServiceResponse{Success: true}
 }
@@ -68,12 +65,10 @@ func (use *PhotoService) LoadPhoto(ctx context.Context, userid string, filedata 
 	case "image/png":
 		ext = ".png"
 	}
-	newctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
 	use.wg.Add(1)
 	go func() {
-		use.wg.Done()
-		use.unloadPhotoCloud(newctx, filedata, photoid, ext, userid)
+		defer use.wg.Done()
+		use.unloadPhotoCloud(filedata, photoid, ext, userid, traceid)
 	}()
 	return &ServiceResponse{Success: true, Data: Data{PhotoID: photoid}}
 }
@@ -114,7 +109,4 @@ func (use *PhotoService) GetPhotos(ctx context.Context, userid string) *ServiceR
 		grpcphotos = append(grpcphotos, grpcphoto)
 	}
 	return &ServiceResponse{Success: true, Data: Data{Photos: grpcphotos}}
-}
-func (use *PhotoService) WaitGoroutines() {
-	use.wg.Wait()
 }
