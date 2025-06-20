@@ -95,6 +95,7 @@ func NewRabbitConsumer(config configs.RabbitMQConfig, logproducer LogProducer, d
 		ctx:         ctx,
 		cancel:      cancel,
 		wg:          &sync.WaitGroup{},
+		photocloud:  photocloud,
 		logproducer: logproducer,
 	}
 	rc.wg.Add(1)
