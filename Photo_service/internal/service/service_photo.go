@@ -27,7 +27,11 @@ func NewPhotoService(repo DBPhotoRepos, cloud CloudPhotoStorage, logproducer Log
 
 func (use *PhotoService) DeletePhoto(ctx context.Context, userid string, photoid string) *ServiceResponse {
 	traceid := ctx.Value("traceID").(string)
-	bdresponse, serviceresponse := use.requestToDB(use.repo.DeletePhoto(ctx, userid, photoid), traceid)
+	bdresponse, serviceresponse := use.requestToDB(use.repo.GetPhoto(ctx, userid, photoid), traceid)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	bdresponse, serviceresponse = use.requestToDB(use.repo.DeletePhoto(ctx, userid, photoid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}

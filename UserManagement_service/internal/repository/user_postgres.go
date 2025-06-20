@@ -155,6 +155,7 @@ func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, 
 	defer DBMetrics(place, start)
 	stmt := tx.StmtContext(ctx, repoap.db.mapstmt[updateUserName])
 	_, err := stmt.ExecContext(ctx, name, userId)
+	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
 		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err)
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
@@ -184,6 +185,7 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 	var count int
 	stmt = tx.StmtContext(ctx, repoap.db.mapstmt[selectEmailCount])
 	err = stmt.QueryRowContext(ctx, email).Scan(&count)
+	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		fmterr := fmt.Sprintf("Error after request into %s: %v", KeyUserTable, err)
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()

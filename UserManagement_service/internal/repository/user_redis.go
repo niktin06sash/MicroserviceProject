@@ -51,9 +51,7 @@ func (redisrepo *UserRedisRepo) DeleteProfileCache(ctx context.Context, id strin
 		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmt.Sprintf("Del profiles-cache error: %v", err)}, Place: place}
 	}
 	if num == 0 {
-		return &RepositoryResponse{
-			Success: false,
-		}
+		return &RepositoryResponse{Success: false, SuccessMessage: "Profile was not found in the cache", Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful deleted profile from cache", Place: place}
 }
@@ -67,7 +65,7 @@ func (redisrepo *UserRedisRepo) GetProfileCache(ctx context.Context, id string) 
 		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: fmt.Sprintf("HGetAll profiles-cache error: %v", err)}, Place: place}
 	}
 	if len(result) == 0 {
-		return &RepositoryResponse{Success: false}
+		return &RepositoryResponse{Success: false, SuccessMessage: "Profile was not found in the cache", Place: place}
 	}
 	userIDstr := result[KeyUserID]
 	userEmail := result[KeyUserEmail]

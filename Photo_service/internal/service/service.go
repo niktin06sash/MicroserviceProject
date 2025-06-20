@@ -12,7 +12,7 @@ type DBPhotoRepos interface {
 	LoadPhoto(ctx context.Context, photo *model.Photo) *repository.RepositoryResponse
 	DeletePhoto(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
 	GetPhotos(ctx context.Context, userid string) *repository.RepositoryResponse
-	GetPhoto(ctx context.Context, photoid string, userid string) *repository.RepositoryResponse
+	GetPhoto(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
 }
 type CloudPhotoStorage interface {
 	UploadFile(ctx context.Context, localfilepath string, photoid string, ext string) *repository.RepositoryResponse

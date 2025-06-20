@@ -44,22 +44,22 @@ func getAllData[T any](r *http.Request, w http.ResponseWriter, traceID string, p
 	return true
 }
 func (h *Handler) getPersonality(r *http.Request, w http.ResponseWriter, traceID string, place string, personmapa map[string]string) bool {
-	sessionID, ok := r.Context().Value("sessionID").(string)
+	sessionID, ok := r.Context().Value(sessionID).(string)
 	if !ok {
 		h.LogProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Session ID not found in context")
 		response.BadResponse(r, w, http.StatusInternalServerError, erro.UserServiceUnavalaible, traceID, place, h.LogProducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return false
 	}
-	personmapa["sessionID"] = sessionID
-	userID, ok := r.Context().Value("userID").(string)
+	personmapa[sessionID] = sessionID
+	userID, ok := r.Context().Value(userID).(string)
 	if !ok {
 		h.LogProducer.NewUserLog(kafka.LogLevelError, place, traceID, "User ID not found in context")
 		response.BadResponse(r, w, http.StatusInternalServerError, erro.UserServiceUnavalaible, traceID, place, h.LogProducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return false
 	}
-	personmapa["userID"] = userID
+	personmapa[userID] = userID
 	return true
 }
 func (h *Handler) serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.ResponseWriter, traceID string, place string) bool {
@@ -101,7 +101,7 @@ func (h *Handler) getQueryParameters(r *http.Request, w http.ResponseWriter, tra
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return false
 		}
-		personmapa["update_type"] = updateType
+		personmapa[update_type] = updateType
 		return true
 	}
 	return false
@@ -117,7 +117,7 @@ func (h *Handler) getDinamicParameters(r *http.Request, w http.ResponseWriter, t
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return false
 		}
-		personmapa["getID"] = userID
+		personmapa[getID] = userID
 		return true
 	}
 	return false

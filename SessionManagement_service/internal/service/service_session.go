@@ -63,6 +63,9 @@ func (s *SessionService) ValidateSession(ctx context.Context, sessionid string) 
 	if serviceresponse != nil {
 		return serviceresponse
 	}
+	if flag == "false" {
+		return &ServiceResponse{Success: bdresponse.Success}
+	}
 	return &ServiceResponse{Success: bdresponse.Success, Data: Data{UserID: bdresponse.Data[repository.KeyUserId].(string)}}
 }
 func (s *SessionService) DeleteSession(ctx context.Context, sessionid string) *ServiceResponse {

@@ -61,7 +61,7 @@ func (client *MegaClient) DeleteFile(ctx context.Context, id, ext string) *Repos
 	case <-ctx.Done():
 		return &RepositoryResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: "Context canceled or timeout"}}
 	default:
-		return &RepositoryResponse{Success: true, SuccessMessage: "Photo was successfully deleted from cloud"}
+		return &RepositoryResponse{Success: true, SuccessMessage: "Photo was successfully deleted from cloud", Place: place}
 	}
 }
 func (client *MegaClient) findFileByName(node *mega.Node, name string) (*mega.Node, error) {
