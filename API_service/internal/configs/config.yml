@@ -10,7 +10,7 @@ routes:
    /api/users/del: "http://localhost:8082/users/del"
    /api/users/logout: "http://localhost:8082/users/logout"
    /api/me/update: "http://localhost:8082/me/update"
-   /api/users/id: "http://localhost:8082/users/id"
+   /api/users: "http://localhost:8082/users"
    /api/me: "http://localhost:8082/me"
 kafka:
   bootstrap_servers: localhost:9092
