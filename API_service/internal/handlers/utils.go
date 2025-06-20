@@ -21,10 +21,13 @@ func (h *Handler) badGrpcResponse(c *gin.Context, traceID, place string, err err
 	st, _ := status.FromError(err)
 	switch st.Code() {
 	case codes.Canceled, codes.Unavailable:
+		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, st.Message(), traceID, place)
 		response.BadResponse(c, http.StatusInternalServerError, erro.PhotoServiceUnavalaible, traceID, place, h.logproducer)
 	case codes.Internal:
+		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, st.Message(), traceID, place)
 		response.BadResponse(c, http.StatusInternalServerError, st.Message(), traceID, place, h.logproducer)
 	default:
+		h.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, st.Message(), traceID, place)
 		response.BadResponse(c, http.StatusBadRequest, st.Message(), traceID, place, h.logproducer)
 	}
 }
@@ -83,7 +86,7 @@ func (h *Handler) asynchttpRequest(c *gin.Context, target string, place string, 
 	return nil
 }
 
-func asyncGrpcRequest[T any](context context.Context, operation func(context.Context) (T, error), traceid string, place string, protoresponseChan chan T, logproducer LogProducer) error {
+func asyncGrpcRequest[T any](context context.Context, operation func(context.Context) (T, error), protoresponseChan chan T) error {
 	protoresponse, err := operation(context)
 	if err != nil {
 		st, _ := status.FromError(err)

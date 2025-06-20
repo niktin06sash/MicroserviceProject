@@ -133,7 +133,7 @@ func (h *Handler) GetMyProfile(c *gin.Context) {
 	g.Go(func() error {
 		return asyncGrpcRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
 			return h.photoclient.GetPhotos(ctx, userid)
-		}, traceID, place, protoresponseChan, h.logproducer)
+		}, protoresponseChan)
 	})
 	if err := g.Wait(); err != nil {
 		h.asyncBadResponse(c, traceID, place, err)
@@ -188,7 +188,7 @@ func (h *Handler) GetUserProfileById(c *gin.Context) {
 	g.Go(func() error {
 		return asyncGrpcRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
 			return h.photoclient.GetPhotos(ctx, paramuserid)
-		}, traceID, place, protoresponseChan, h.logproducer)
+		}, protoresponseChan)
 	})
 	if err := g.Wait(); err != nil {
 		h.asyncBadResponse(c, traceID, place, err)
