@@ -12,13 +12,20 @@ import (
 )
 
 const Registration = "API-Registration"
-const Authentication = "API-Authentication"
+const Login = "API-Login"
 const DeleteAccount = "API-DeleteAccount"
 const Logout = "API-Logout"
 const Update = "API-Update"
 const MyProfile = "API-MyProfile"
 const GetUserById = "API-GetUserById"
 const MyFriends = "API-MyFriends"
+
+const (
+	userID      = "userID"
+	sessionID   = "sessionID"
+	getID       = "getID"
+	update_type = "update_type"
+)
 
 type MiddlewareService interface {
 	Logging(next http.Handler) http.Handler

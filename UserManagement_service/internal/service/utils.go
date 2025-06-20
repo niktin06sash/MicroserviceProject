@@ -172,6 +172,7 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 				}
 			}
 		} else {
+			kafkaprod.NewUserLog(kafka.LogLevelInfo, place, traceID, "Successful gRPC-request to Session-Service")
 			return response, nil
 		}
 	}
