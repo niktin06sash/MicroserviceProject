@@ -70,12 +70,10 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	err = as.commitTransaction(tx, traceid, place)
 	if err != nil {
 		as.rollbackTransaction(tx, traceid, place)
-		_, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
+		_, _ = retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 			return as.GrpcSessionClient.DeleteSession(ctx, grpcresponse.SessionID)
 		}, traceid, place, as.LogProducer)
-		if serviceresponse != nil {
-			as.LogProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Failed to delete session after transaction failure")
-		}
+		_ = as.EventProducer.NewUserEvent(ctx, rabbitmq.UserDeleteKey, user.Id.String(), place, traceid)
 		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")

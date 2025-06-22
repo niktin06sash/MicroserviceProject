@@ -2,7 +2,6 @@ package service_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -11,14 +10,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
-	mock_client "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/client/mocks"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka"
-	mock_kafka "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/kafka/mocks"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
-	mock_repository "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/mocks"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
+	mock_service "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -26,7 +23,6 @@ import (
 )
 
 func TestAuthenticateAndLogin_Success(t *testing.T) {
-	var place = "UseCase-AuthenticateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
 	fixedUserId := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
@@ -35,310 +31,251 @@ func TestAuthenticateAndLogin_Success(t *testing.T) {
 	defer cancel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
-	mockGrpc := mock_client.NewMockGrpcClientService(ctrl)
-	mockKafka := mock_kafka.NewMockKafkaProducerService(ctrl)
-	as := &service.AuthService{
-		Dbrepo:        mockRepo,
-		GrpcClient:    mockGrpc,
-		KafkaProducer: mockKafka,
-		Validator:     validator.New(),
+	mockUserRepo := mock_service.NewMockDBUserRepos(ctrl)
+	mockSessionClient := mock_service.NewMockSessionClient(ctrl)
+	mockLogProducer := mock_service.NewMockLogProducer(ctrl)
+	mockEventProducer := mock_service.NewMockEventProducer(ctrl)
+	mockTransactionRepo := mock_service.NewMockDBTransactionManager(ctrl)
+	mockCacheRepo := mock_service.NewMockCacheUserRepos(ctrl)
+	as := &service.UserService{
+		Dbrepo:            mockUserRepo,
+		Validator:         validator.New(),
+		GrpcSessionClient: mockSessionClient,
+		LogProducer:       mockLogProducer,
+		EventProducer:     mockEventProducer,
+		Dbtxmanager:       mockTransactionRepo,
+		CacheUserRepos:    mockCacheRepo,
 	}
-	user := &model.Person{
+	req := &model.AuthenticationRequest{
 		Email:    "test@example.com",
 		Password: "password123",
 	}
-	mockRepo.EXPECT().GetUser(
+	mockUserRepo.EXPECT().GetUser(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
-		user.Email,
-		user.Password,
+		req.Email,
+		req.Password,
 	).
-		Return(&repository.DBRepositoryResponse{
-			Success: true,
-			UserId:  fixedUserId,
+		Return(&repository.RepositoryResponse{
+			Success:        true,
+			Data:           map[string]any{repository.KeyUserID: fixedUserId.String()},
+			Place:          repository.GetUser,
+			SuccessMessage: "Successful get user from database",
 		})
-	mockGrpc.EXPECT().
+	mockSessionClient.EXPECT().
 		CreateSession(
 			mock.MatchedBy(func(ctx context.Context) bool {
 				traceID := ctx.Value("traceID")
 				return traceID != nil && traceID.(string) == fixedTraceID
 			}),
-			"123e4567-e89b-12d3-a456-426614174000",
+			fixedUserId.String(),
 		).
 		Return(&proto.CreateSessionResponse{
 			SessionID:  fixedSessionId,
 			ExpiryTime: time.Now().Add(1 * time.Hour).Unix(),
 			Success:    true,
 		}, nil)
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelInfo, place, fixedTraceID, "The session was created successfully and received")
-	response := as.AuthenticateAndLogin(ctx, user)
+	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	response := as.AuthenticateAndLogin(ctx, req)
 	require.True(t, response.Success)
-	require.Equal(t, fixedUserId, response.UserId)
-	require.Equal(t, fixedSessionId, response.SessionId)
-	require.NotNil(t, response.ExpireSession)
+	require.Equal(t, fixedUserId.String(), response.Data[repository.KeyUserID])
+	require.Equal(t, fixedSessionId, response.Data[service.KeySessionID])
 }
 func TestAuthenticateAndLogin_ValidationErrors(t *testing.T) {
-	var place = "UseCase-AuthenticateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
-	mockGrpc := mock_client.NewMockGrpcClientService(ctrl)
-	mockKafka := mock_kafka.NewMockKafkaProducerService(ctrl)
-	as := &service.AuthService{
-		Dbrepo:        mockRepo,
-		GrpcClient:    mockGrpc,
-		KafkaProducer: mockKafka,
-		Validator:     validator.New(),
+	mockUserRepo := mock_service.NewMockDBUserRepos(ctrl)
+	mockSessionClient := mock_service.NewMockSessionClient(ctrl)
+	mockLogProducer := mock_service.NewMockLogProducer(ctrl)
+	mockEventProducer := mock_service.NewMockEventProducer(ctrl)
+	mockTransactionRepo := mock_service.NewMockDBTransactionManager(ctrl)
+	mockCacheRepo := mock_service.NewMockCacheUserRepos(ctrl)
+	as := &service.UserService{
+		Dbrepo:            mockUserRepo,
+		Validator:         validator.New(),
+		GrpcSessionClient: mockSessionClient,
+		LogProducer:       mockLogProducer,
+		EventProducer:     mockEventProducer,
+		Dbtxmanager:       mockTransactionRepo,
+		CacheUserRepos:    mockCacheRepo,
 	}
 	tests := []struct {
-		name           string
-		user           *model.Person
-		expectedError  map[string]error
-		exprectedKafka *gomock.Call
-		responseType   erro.ErrorType
+		name          string
+		req           *model.AuthenticationRequest
+		expectedError *erro.CustomError
+		logproducer   *gomock.Call
 	}{
 		{
-			name: "Invalid Email",
-			user: &model.Person{
+			name: "Invalid Email Format",
+			req: &model.AuthenticationRequest{
 				Email:    "testexample.com",
 				Password: "password123",
 			},
-			expectedError: map[string]error{
-				"Email": erro.ErrorNotEmail,
-			},
-			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
-			responseType:   erro.ClientErrorType,
+			expectedError: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorNotEmailConst},
+			logproducer:   mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
 		},
 		{
 			name: "Too Short Password",
-			user: &model.Person{
+			req: &model.AuthenticationRequest{
 				Email:    "valid@example.com",
 				Password: "pas3",
 			},
-			expectedError: map[string]error{
-				"Password": fmt.Errorf("Password is too short"),
-			},
-			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()),
-			responseType:   erro.ClientErrorType,
+			expectedError: &erro.CustomError{Type: erro.ClientErrorType, Message: "Password is too short"},
+			logproducer:   mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
 		},
 		{
-			name: "Missing Required Fields",
-			user: &model.Person{
-				Email: "",
-				Name:  "",
+			name: "Required Field",
+			req: &model.AuthenticationRequest{
+				Email:    "valid@example.com",
+				Password: "",
 			},
-			expectedError: map[string]error{
-				"Email":    fmt.Errorf("Email is Null"),
-				"Password": fmt.Errorf("Password is Null"),
-			},
-			exprectedKafka: mockKafka.EXPECT().NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, gomock.Any()).AnyTimes(),
-			responseType:   erro.ClientErrorType,
+			expectedError: &erro.CustomError{Type: erro.ClientErrorType, Message: "Password is Null"},
+			logproducer:   mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response := as.AuthenticateAndLogin(ctx, tt.user)
+			response := as.AuthenticateAndLogin(ctx, tt.req)
 			require.False(t, response.Success)
-			require.Equal(t, tt.responseType, response.Type)
-			require.Len(t, response.Errors, len(tt.expectedError))
-			for field, expectedErr := range tt.expectedError {
-				actualErr, exists := response.Errors[field]
-				require.True(t, exists)
-				require.EqualError(t, actualErr, expectedErr.Error())
-			}
+			require.Equal(t, tt.expectedError, response.Errors)
 		})
 	}
 }
 func TestAuthenticateAndLogin_DataBaseError_ClientError(t *testing.T) {
-	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockTxManager := mock_repository.NewMockDBTransactionManager(ctrl)
-	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
-	as := &service.AuthService{
-		Dbtxmanager: mockTxManager,
-		Validator:   validator.New(),
-		Dbrepo:      mockRepo,
+	mockUserRepo := mock_service.NewMockDBUserRepos(ctrl)
+	mockSessionClient := mock_service.NewMockSessionClient(ctrl)
+	mockLogProducer := mock_service.NewMockLogProducer(ctrl)
+	mockEventProducer := mock_service.NewMockEventProducer(ctrl)
+	mockTransactionRepo := mock_service.NewMockDBTransactionManager(ctrl)
+	mockCacheRepo := mock_service.NewMockCacheUserRepos(ctrl)
+	as := &service.UserService{
+		Dbrepo:            mockUserRepo,
+		Validator:         validator.New(),
+		GrpcSessionClient: mockSessionClient,
+		LogProducer:       mockLogProducer,
+		EventProducer:     mockEventProducer,
+		Dbtxmanager:       mockTransactionRepo,
+		CacheUserRepos:    mockCacheRepo,
 	}
-	user := &model.Person{
+	req := &model.AuthenticationRequest{
 		Email:    "test@example.com",
 		Password: "wrongpassword",
 	}
-	mockRepo.EXPECT().GetUser(ctx, user.Email, user.Password).Return(&repository.DBRepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword, Type: erro.ClientErrorType})
-	response := as.AuthenticateAndLogin(ctx, user)
+	mockUserRepo.EXPECT().GetUser(ctx, req.Email, req.Password).Return(
+		&repository.RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorInvalidPasswordConst}, Place: repository.GetUser},
+	)
+	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	response := as.AuthenticateAndLogin(ctx, req)
 	require.False(t, response.Success)
-	require.Contains(t, response.Errors, "ClientError")
-	require.EqualError(t, response.Errors["ClientError"], erro.ErrorInvalidPassword.Error())
-	require.Equal(t, erro.ClientErrorType, response.Type)
+	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorInvalidPasswordConst})
 }
 func TestAuthenticateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
-	fixedTraceUuid := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid.String())
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockTxManager := mock_repository.NewMockDBTransactionManager(ctrl)
-	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
-	as := &service.AuthService{
-		Dbtxmanager: mockTxManager,
-		Validator:   validator.New(),
-		Dbrepo:      mockRepo,
+	mockUserRepo := mock_service.NewMockDBUserRepos(ctrl)
+	mockSessionClient := mock_service.NewMockSessionClient(ctrl)
+	mockLogProducer := mock_service.NewMockLogProducer(ctrl)
+	mockEventProducer := mock_service.NewMockEventProducer(ctrl)
+	mockTransactionRepo := mock_service.NewMockDBTransactionManager(ctrl)
+	mockCacheRepo := mock_service.NewMockCacheUserRepos(ctrl)
+	as := &service.UserService{
+		Dbrepo:            mockUserRepo,
+		Validator:         validator.New(),
+		GrpcSessionClient: mockSessionClient,
+		LogProducer:       mockLogProducer,
+		EventProducer:     mockEventProducer,
+		Dbtxmanager:       mockTransactionRepo,
+		CacheUserRepos:    mockCacheRepo,
 	}
-	user := &model.Person{
+	req := &model.AuthenticationRequest{
 		Email:    "test@example.com",
-		Password: "wrongpassword",
+		Password: "password123",
 	}
-	mockRepo.EXPECT().GetUser(ctx, user.Email, user.Password).Return(&repository.DBRepositoryResponse{Success: false, Errors: fmt.Errorf(erro.UserServiceUnavalaible), Type: erro.ServerErrorType})
-	response := as.AuthenticateAndLogin(ctx, user)
-	require.False(t, response.Success)
-	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.UserServiceUnavalaible)
-	require.Equal(t, erro.ServerErrorType, response.Type)
-}
-func TestAuthenticateAndLogin_RetryGrpc_ContextCanceled(t *testing.T) {
-	var place = "UseCase-AuthenticateAndLogin"
-	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	cancel()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockTxManager := mock_repository.NewMockDBTransactionManager(ctrl)
-	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
-	mockGrpcClient := mock_client.NewMockGrpcClientService(ctrl)
-	mockKafka := mock_kafka.NewMockKafkaProducerService(ctrl)
-	as := &service.AuthService{
-		Dbtxmanager:   mockTxManager,
-		Dbrepo:        mockRepo,
-		GrpcClient:    mockGrpcClient,
-		KafkaProducer: mockKafka,
-		Validator:     validator.New(),
-	}
-	user := &model.Person{
-		Email:    "test@example.com",
-		Password: "wrongpassword",
-	}
-	mockRepo.EXPECT().GetUser(ctx, user.Email, user.Password).Return(&repository.DBRepositoryResponse{Success: true, UserId: fixedUUID})
-	mockKafka.EXPECT().NewUserLog(kafka.LogLevelError, place, fixedTraceID, gomock.Any())
-	response := as.AuthenticateAndLogin(ctx, user)
-	require.False(t, response.Success)
-	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], "Request timed out")
-	require.Equal(t, erro.ServerErrorType, response.Type)
-}
-func TestAuthenticateAndLogin_RetryGrpc_ClientError(t *testing.T) {
-	var place = "UseCase-AuthenticateAndLogin"
-	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockTxManager := mock_repository.NewMockDBTransactionManager(ctrl)
-	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
-	mockGrpcClient := mock_client.NewMockGrpcClientService(ctrl)
-	mockKafka := mock_kafka.NewMockKafkaProducerService(ctrl)
-	as := &service.AuthService{
-		Dbtxmanager:   mockTxManager,
-		Dbrepo:        mockRepo,
-		GrpcClient:    mockGrpcClient,
-		KafkaProducer: mockKafka,
-		Validator:     validator.New(),
-	}
-	user := &model.Person{
-		Email:    "test@example.com",
-		Password: "wrongpassword",
-	}
-	mockRepo.EXPECT().GetUser(ctx, user.Email, user.Password).Return(&repository.DBRepositoryResponse{Success: true, UserId: fixedUUID})
-	mockGrpcClient.EXPECT().
-		CreateSession(mock.MatchedBy(func(ctx context.Context) bool {
-			traceID := ctx.Value("traceID")
-			return traceID != nil && traceID.(string) == fixedTraceID
-		}),
-			fixedUUID.String()).
-		Return(&pb.CreateSessionResponse{
-			Success: false}, status.Error(codes.InvalidArgument, "Session not found")).
-		Times(1)
-	gomock.InOrder(
-		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
-		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session not found"),
+	mockUserRepo.EXPECT().GetUser(ctx, req.Email, req.Password).Return(
+		&repository.RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorAfterReqUsers}, Place: repository.GetUser},
 	)
-	response := as.AuthenticateAndLogin(ctx, user)
+	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	response := as.AuthenticateAndLogin(ctx, req)
 	require.False(t, response.Success)
-	require.Contains(t, response.Errors, "ClientError")
-	require.EqualError(t, response.Errors["ClientError"], "Session not found")
-	require.Equal(t, erro.ClientErrorType, response.Type)
+	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible})
 }
 func TestAuthenticateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
-	var place = "UseCase-AuthenticateAndLogin"
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
+	fixedUserId := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockTxManager := mock_repository.NewMockDBTransactionManager(ctrl)
-	mockRepo := mock_repository.NewMockDBAuthenticateRepos(ctrl)
-	mockGrpcClient := mock_client.NewMockGrpcClientService(ctrl)
-	mockKafka := mock_kafka.NewMockKafkaProducerService(ctrl)
-	as := &service.AuthService{
-		Dbtxmanager:   mockTxManager,
-		Dbrepo:        mockRepo,
-		GrpcClient:    mockGrpcClient,
-		KafkaProducer: mockKafka,
-		Validator:     validator.New(),
+	mockUserRepo := mock_service.NewMockDBUserRepos(ctrl)
+	mockSessionClient := mock_service.NewMockSessionClient(ctrl)
+	mockLogProducer := mock_service.NewMockLogProducer(ctrl)
+	mockEventProducer := mock_service.NewMockEventProducer(ctrl)
+	mockTransactionRepo := mock_service.NewMockDBTransactionManager(ctrl)
+	mockCacheRepo := mock_service.NewMockCacheUserRepos(ctrl)
+	as := &service.UserService{
+		Dbrepo:            mockUserRepo,
+		Validator:         validator.New(),
+		GrpcSessionClient: mockSessionClient,
+		LogProducer:       mockLogProducer,
+		EventProducer:     mockEventProducer,
+		Dbtxmanager:       mockTransactionRepo,
+		CacheUserRepos:    mockCacheRepo,
 	}
-	user := &model.Person{
+	req := &model.AuthenticationRequest{
 		Email:    "test@example.com",
-		Password: "wrongpassword",
+		Password: "password123",
 	}
-	mockRepo.EXPECT().GetUser(ctx, user.Email, user.Password).Return(&repository.DBRepositoryResponse{Success: true, UserId: fixedUUID})
-	mockGrpcClient.EXPECT().
+	mockUserRepo.EXPECT().GetUser(ctx, req.Email, req.Password).Return(&repository.RepositoryResponse{
+		Success:        true,
+		Data:           map[string]any{repository.KeyUserID: fixedUserId.String()},
+		Place:          repository.GetUser,
+		SuccessMessage: "Successful get user from database",
+	})
+	mockLogProducer.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mockSessionClient.EXPECT().
 		CreateSession(mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
-			fixedUUID.String()).
+			fixedUserId.String()).
 		Return(&pb.CreateSessionResponse{
 			Success: false}, status.Error(codes.Internal, erro.SessionServiceUnavalaible)).
 		Times(3)
 	gomock.InOrder(
-		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 1 failed"),
-		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service is unavailable, retrying..."),
-		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 2 failed"),
-		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service is unavailable, retrying..."),
-		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Operation attempt 3 failed"),
-		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelWarn, place, fixedTraceID, "Session-Service is unavailable, retrying..."),
-		mockKafka.EXPECT().
-			NewUserLog(kafka.LogLevelError, place, fixedTraceID, "All retry attempts failed"),
+		mockLogProducer.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, gomock.Any(), fixedTraceID, "Operation attempt 1 failed"),
+		mockLogProducer.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, gomock.Any(), fixedTraceID, "Session-Service is unavailable, retrying..."),
+		mockLogProducer.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, gomock.Any(), fixedTraceID, "Operation attempt 2 failed"),
+		mockLogProducer.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, gomock.Any(), fixedTraceID, "Session-Service is unavailable, retrying..."),
+		mockLogProducer.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, gomock.Any(), fixedTraceID, "Operation attempt 3 failed"),
+		mockLogProducer.EXPECT().
+			NewUserLog(kafka.LogLevelWarn, gomock.Any(), fixedTraceID, "Session-Service is unavailable, retrying..."),
+		mockLogProducer.EXPECT().
+			NewUserLog(kafka.LogLevelError, gomock.Any(), fixedTraceID, "All retry attempts failed"),
 	)
-	response := as.AuthenticateAndLogin(ctx, user)
+	response := as.AuthenticateAndLogin(ctx, req)
 	require.False(t, response.Success)
-	require.Contains(t, response.Errors, "InternalServerError")
-	require.EqualError(t, response.Errors["InternalServerError"], erro.SessionServiceUnavalaible)
-	require.Equal(t, erro.ServerErrorType, response.Type)
+	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ServerErrorType, Message: erro.SessionServiceUnavalaible})
 }

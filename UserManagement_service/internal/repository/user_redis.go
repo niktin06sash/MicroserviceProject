@@ -53,7 +53,7 @@ func (redisrepo *UserRedisRepo) DeleteProfileCache(ctx context.Context, id strin
 	if num == 0 {
 		return &RepositoryResponse{Success: false, SuccessMessage: "Profile was not found in the cache", Place: place}
 	}
-	return &RepositoryResponse{Success: true, SuccessMessage: "Successful deleted profile from cache", Place: place}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete profile from cache", Place: place}
 }
 func (redisrepo *UserRedisRepo) GetProfileCache(ctx context.Context, id string) *RepositoryResponse {
 	const place = GetProfileCache
