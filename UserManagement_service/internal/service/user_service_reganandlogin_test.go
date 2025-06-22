@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/golang/mock/gomock"
-	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
@@ -25,10 +24,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestDeleteAccount_Success(t *testing.T) {
+func TestRegistrateAndLogin_Success(t *testing.T) {
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
-	fixedUserId := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
@@ -50,7 +48,9 @@ func TestDeleteAccount_Success(t *testing.T) {
 		CacheUserRepos:    mockCacheRepo,
 	}
 	tx := &sql.Tx{}
-	req := &model.DeletionRequest{
+	req := &model.RegistrationRequest{
+		Name:     "tester",
+		Email:    "test@example.com",
 		Password: "password123",
 	}
 	mockTransactionRepo.EXPECT().BeginTx(
@@ -59,52 +59,51 @@ func TestDeleteAccount_Success(t *testing.T) {
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
 	).Return(tx, nil)
-	mockUserRepo.EXPECT().DeleteUser(
+	mockUserRepo.EXPECT().CreateUser(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
 		tx,
-		fixedUserId,
-		req.Password).Return(&repository.RepositoryResponse{
+		mock.MatchedBy(func(u *model.User) bool {
+			return u.Name == "tester" && u.Email == "test@example.com"
+		}),
+	).Return(&repository.RepositoryResponse{
 		Success:        true,
-		Place:          repository.DeleteUser,
-		SuccessMessage: "Successful delete user in database",
+		Place:          repository.CreateUser,
+		SuccessMessage: "Successful create user in database",
 	})
-	mockCacheRepo.EXPECT().DeleteProfileCache(mock.MatchedBy(func(ctx context.Context) bool {
-		traceID := ctx.Value("traceID")
-		return traceID != nil && traceID.(string) == fixedTraceID
-	}),
-		fixedUserId.String(),
-	).Return(&repository.RepositoryResponse{Success: true, Place: repository.DeleteProfileCache, SuccessMessage: "Successful delete profile from cache"})
-	mockSessionClient.EXPECT().DeleteSession(
+	mockSessionClient.EXPECT().CreateSession(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
-		fixedSessionId,
-	).Return(&proto.DeleteSessionResponse{
-		Success: true,
+		gomock.Any(),
+	).Return(&proto.CreateSessionResponse{
+		SessionID:  fixedSessionId,
+		ExpiryTime: time.Now().Add(1 * time.Hour).Unix(),
+		Success:    true,
 	}, nil)
+
 	mockEventProducer.EXPECT().NewUserEvent(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
-		rabbitmq.UserDeleteKey,
-		fixedUserId.String(),
+		rabbitmq.UserRegistrationKey,
+		gomock.Any(),
 		gomock.Any(),
 		fixedTraceID,
 	).Return(nil)
 	mockTransactionRepo.EXPECT().CommitTx(tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
+	response := as.RegistrateAndLogin(ctx, req)
 	require.True(t, response.Success)
+	require.NotEmpty(t, response.Data[repository.KeyUserID])
+	require.Equal(t, fixedSessionId, response.Data[service.KeySessionID])
 }
-func TestDeleteAccount_ParsingUserID_Error(t *testing.T) {
+func TestRegistrateAndLogin_ValidationErrors(t *testing.T) {
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
-	fixedUserId := "123e4567-e89b-12d3-a456-42661417400"
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
@@ -125,19 +124,73 @@ func TestDeleteAccount_ParsingUserID_Error(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	req := &model.DeletionRequest{
-		Password: "password123",
+	tests := []struct {
+		name          string
+		req           *model.RegistrationRequest
+		expectedError *erro.CustomError
+		logproducer   *gomock.Call
+	}{
+		{
+			name: "Invalid Email Format",
+			req: &model.RegistrationRequest{
+				Email:    "testexample.com",
+				Password: "password123",
+				Name:     "tester",
+			},
+			expectedError: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorNotEmailConst},
+			logproducer:   mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
+		},
+		{
+			name: "Too Short Password",
+			req: &model.RegistrationRequest{
+				Email:    "valid@example.com",
+				Password: "pas3",
+				Name:     "tester",
+			},
+			expectedError: &erro.CustomError{Type: erro.ClientErrorType, Message: "Password is too short"},
+			logproducer:   mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
+		},
+		{
+			name: "Too Long Password",
+			req: &model.RegistrationRequest{
+				Email:    "valid@example.com",
+				Password: "pas3sdsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+				Name:     "tester",
+			},
+			expectedError: &erro.CustomError{Type: erro.ClientErrorType, Message: "Password is too long"},
+			logproducer:   mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
+		},
+		{
+			name: "Too Short Name",
+			req: &model.RegistrationRequest{
+				Email:    "valid@example.com",
+				Password: "pas3sdsssss",
+				Name:     "te",
+			},
+			expectedError: &erro.CustomError{Type: erro.ClientErrorType, Message: "Name is too short"},
+			logproducer:   mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
+		},
+		{
+			name: "Required Field",
+			req: &model.RegistrationRequest{
+				Email:    "valid@example.com",
+				Password: "sdddsdscs",
+			},
+			expectedError: &erro.CustomError{Type: erro.ClientErrorType, Message: "Name is Null"},
+			logproducer:   mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
+		},
 	}
-	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId)
-	require.False(t, response.Success)
-	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorInvalidUserIDFormat})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := as.RegistrateAndLogin(ctx, tt.req)
+			require.False(t, response.Success)
+			require.Equal(t, tt.expectedError, response.Errors)
+		})
+	}
 }
-func TestDeleteAccount_ValidationError(t *testing.T) {
-	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
-	fixedUserId := "123e4567-e89b-12d3-a456-426614174000"
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
+func TestRegistrateAndLogin_BeginTxError(t *testing.T) {
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	ctrl := gomock.NewController(t)
@@ -157,52 +210,20 @@ func TestDeleteAccount_ValidationError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	req := &model.DeletionRequest{
-		Password: "pas",
-	}
-	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId)
-	require.False(t, response.Success)
-	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ClientErrorType, Message: "Password is too short"})
-}
-func TestDeleteAccount_BeginTxError(t *testing.T) {
-	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
-	fixedUserId := "123e4567-e89b-12d3-a456-426614174000"
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockUserRepo := mock_service.NewMockDBUserRepos(ctrl)
-	mockSessionClient := mock_service.NewMockSessionClient(ctrl)
-	mockLogProducer := mock_service.NewMockLogProducer(ctrl)
-	mockEventProducer := mock_service.NewMockEventProducer(ctrl)
-	mockTransactionRepo := mock_service.NewMockDBTransactionManager(ctrl)
-	mockCacheRepo := mock_service.NewMockCacheUserRepos(ctrl)
-	as := &service.UserService{
-		Dbrepo:            mockUserRepo,
-		Validator:         validator.New(),
-		GrpcSessionClient: mockSessionClient,
-		LogProducer:       mockLogProducer,
-		EventProducer:     mockEventProducer,
-		Dbtxmanager:       mockTransactionRepo,
-		CacheUserRepos:    mockCacheRepo,
-	}
-	req := &model.DeletionRequest{
+	req := &model.RegistrationRequest{
+		Name:     "tester",
+		Email:    "test@example.com",
 		Password: "password123",
 	}
 	mockTransactionRepo.EXPECT().BeginTx(gomock.Any()).Return(nil, fmt.Errorf("database connection error"))
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId)
+	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)
 	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible})
 }
-func TestDeleteAccount_DataBaseError_ClientError(t *testing.T) {
-	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
-	fixedUserId := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
+func TestRegistrateAndLogin_DataBaseError_ClientError(t *testing.T) {
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	ctrl := gomock.NewController(t)
@@ -223,37 +244,30 @@ func TestDeleteAccount_DataBaseError_ClientError(t *testing.T) {
 		CacheUserRepos:    mockCacheRepo,
 	}
 	tx := &sql.Tx{}
-	req := &model.DeletionRequest{
+	req := &model.RegistrationRequest{
+		Name:     "tester",
+		Email:    "test@example.com",
 		Password: "password123",
 	}
 	mockTransactionRepo.EXPECT().BeginTx(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
-			return traceID != nil && traceID.(string) == fixedTraceID
+			return traceID != nil && traceID.(string) == fixedTraceUuid
 		})).Return(tx, nil)
-	mockUserRepo.EXPECT().DeleteUser(
-		mock.MatchedBy(func(ctx context.Context) bool {
-			traceID := ctx.Value("traceID")
-			return traceID != nil && traceID.(string) == fixedTraceID
-		}),
-		tx,
-		fixedUserId,
-		req.Password).Return(&repository.RepositoryResponse{
-		Success: false,
-		Place:   repository.DeleteUser,
-		Errors:  &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorIncorrectPassword},
-	})
+	mockUserRepo.EXPECT().CreateUser(ctx, tx, mock.MatchedBy(func(u *model.User) bool {
+		return u.Name == "tester" && u.Email == "test@example.com"
+	})).Return(
+		&repository.RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorUniqueEmailConst}, Place: repository.CreateUser},
+	)
 	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
+	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)
-	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorIncorrectPassword})
+	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorUniqueEmailConst})
 }
-func TestDeleteAccount_DataBaseError_InternalServerError(t *testing.T) {
-	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
-	fixedUserId := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
+func TestRegistrateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
+	fixedTraceUuid := "123e4567-e89b-12d3-a456-426614174000"
+	ctx := context.WithValue(context.Background(), "traceID", fixedTraceUuid)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	ctrl := gomock.NewController(t)
@@ -274,36 +288,30 @@ func TestDeleteAccount_DataBaseError_InternalServerError(t *testing.T) {
 		CacheUserRepos:    mockCacheRepo,
 	}
 	tx := &sql.Tx{}
-	req := &model.DeletionRequest{
+	req := &model.RegistrationRequest{
+		Name:     "tester",
+		Email:    "test@example.com",
 		Password: "password123",
 	}
 	mockTransactionRepo.EXPECT().BeginTx(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
-			return traceID != nil && traceID.(string) == fixedTraceID
+			return traceID != nil && traceID.(string) == fixedTraceUuid
 		})).Return(tx, nil)
-	mockUserRepo.EXPECT().DeleteUser(
-		mock.MatchedBy(func(ctx context.Context) bool {
-			traceID := ctx.Value("traceID")
-			return traceID != nil && traceID.(string) == fixedTraceID
-		}),
-		tx,
-		fixedUserId,
-		req.Password).Return(&repository.RepositoryResponse{
-		Success: false,
-		Place:   repository.DeleteUser,
-		Errors:  &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorAfterReqUsers},
-	})
+	mockUserRepo.EXPECT().CreateUser(ctx, tx, mock.MatchedBy(func(u *model.User) bool {
+		return u.Name == "tester" && u.Email == "test@example.com"
+	})).Return(
+		&repository.RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorAfterReqUsers}, Place: repository.CreateUser},
+	)
 	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
+	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)
 	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible})
 }
-func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
+
+func TestRegistrateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
-	fixedUserId := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
@@ -325,7 +333,9 @@ func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
 		CacheUserRepos:    mockCacheRepo,
 	}
 	tx := &sql.Tx{}
-	req := &model.DeletionRequest{
+	req := &model.RegistrationRequest{
+		Name:     "tester",
+		Email:    "test@example.com",
 		Password: "password123",
 	}
 	mockTransactionRepo.EXPECT().BeginTx(
@@ -333,31 +343,28 @@ func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		})).Return(tx, nil)
-	mockUserRepo.EXPECT().DeleteUser(
+	mockUserRepo.EXPECT().CreateUser(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
 		tx,
-		fixedUserId,
-		req.Password).Return(&repository.RepositoryResponse{
+		mock.MatchedBy(func(u *model.User) bool {
+			return u.Name == "tester" && u.Email == "test@example.com"
+		}),
+	).Return(&repository.RepositoryResponse{
 		Success:        true,
-		Place:          repository.DeleteUser,
-		SuccessMessage: "Successful delete user in database",
+		Place:          repository.CreateUser,
+		SuccessMessage: "Successful create user in database",
 	})
-	mockCacheRepo.EXPECT().DeleteProfileCache(mock.MatchedBy(func(ctx context.Context) bool {
-		traceID := ctx.Value("traceID")
-		return traceID != nil && traceID.(string) == fixedTraceID
-	}),
-		fixedUserId.String(),
-	).Return(&repository.RepositoryResponse{Success: true, Place: repository.DeleteProfileCache, SuccessMessage: "Successful delete profile from cache"})
+	mockLogProducer.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	mockSessionClient.EXPECT().
-		DeleteSession(mock.MatchedBy(func(ctx context.Context) bool {
+		CreateSession(mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
-			fixedSessionId).
-		Return(&pb.DeleteSessionResponse{
+			gomock.Any()).
+		Return(&pb.CreateSessionResponse{
 			Success: false}, status.Error(codes.Internal, erro.SessionServiceUnavalaible)).
 		Times(3)
 	gomock.InOrder(
@@ -374,16 +381,15 @@ func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
 		mockLogProducer.EXPECT().
 			NewUserLog(kafka.LogLevelWarn, gomock.Any(), fixedTraceID, "Session-Service is unavailable, retrying..."),
 		mockLogProducer.EXPECT().
-			NewUserLog(kafka.LogLevelError, gomock.Any(), fixedTraceID, "All retry attempts failed"))
+			NewUserLog(kafka.LogLevelError, gomock.Any(), fixedTraceID, "All retry attempts failed"),
+	)
 	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
-	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
+	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)
 	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ServerErrorType, Message: erro.SessionServiceUnavalaible})
 }
-func TestDeleteAccount_DeleteCacheError(t *testing.T) {
+func TestRegistrateAndLogin_EventProducerError(t *testing.T) {
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedUserId := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -406,7 +412,9 @@ func TestDeleteAccount_DeleteCacheError(t *testing.T) {
 		CacheUserRepos:    mockCacheRepo,
 	}
 	tx := &sql.Tx{}
-	req := &model.DeletionRequest{
+	req := &model.RegistrationRequest{
+		Name:     "tester",
+		Email:    "test@example.com",
 		Password: "password123",
 	}
 	mockTransactionRepo.EXPECT().BeginTx(
@@ -415,111 +423,51 @@ func TestDeleteAccount_DeleteCacheError(t *testing.T) {
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
 	).Return(tx, nil)
-	mockUserRepo.EXPECT().DeleteUser(
+	mockUserRepo.EXPECT().CreateUser(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
 		tx,
-		fixedUserId,
-		req.Password).Return(&repository.RepositoryResponse{
+		mock.MatchedBy(func(u *model.User) bool {
+			return u.Name == "tester" && u.Email == "test@example.com"
+		}),
+	).Return(&repository.RepositoryResponse{
 		Success:        true,
-		Place:          repository.DeleteUser,
-		SuccessMessage: "Successful delete user in database",
+		Place:          repository.CreateUser,
+		SuccessMessage: "Successful create user in database",
 	})
-	mockCacheRepo.EXPECT().DeleteProfileCache(mock.MatchedBy(func(ctx context.Context) bool {
-		traceID := ctx.Value("traceID")
-		return traceID != nil && traceID.(string) == fixedTraceID
-	}),
-		fixedUserId.String(),
-	).Return(&repository.RepositoryResponse{Success: false, Place: repository.DeleteProfileCache, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorDelProfiles}})
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
-	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
-	require.False(t, response.Success)
-	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible})
-}
-func TestDeleteAccount_EventProducerError(t *testing.T) {
-	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
-	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
-	fixedUserId := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
-	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockUserRepo := mock_service.NewMockDBUserRepos(ctrl)
-	mockSessionClient := mock_service.NewMockSessionClient(ctrl)
-	mockLogProducer := mock_service.NewMockLogProducer(ctrl)
-	mockEventProducer := mock_service.NewMockEventProducer(ctrl)
-	mockTransactionRepo := mock_service.NewMockDBTransactionManager(ctrl)
-	mockCacheRepo := mock_service.NewMockCacheUserRepos(ctrl)
-	as := &service.UserService{
-		Dbrepo:            mockUserRepo,
-		Validator:         validator.New(),
-		GrpcSessionClient: mockSessionClient,
-		LogProducer:       mockLogProducer,
-		EventProducer:     mockEventProducer,
-		Dbtxmanager:       mockTransactionRepo,
-		CacheUserRepos:    mockCacheRepo,
-	}
-	tx := &sql.Tx{}
-	req := &model.DeletionRequest{
-		Password: "password123",
-	}
-	mockTransactionRepo.EXPECT().BeginTx(
+	mockSessionClient.EXPECT().CreateSession(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
-	).Return(tx, nil)
-	mockUserRepo.EXPECT().DeleteUser(
-		mock.MatchedBy(func(ctx context.Context) bool {
-			traceID := ctx.Value("traceID")
-			return traceID != nil && traceID.(string) == fixedTraceID
-		}),
-		tx,
-		fixedUserId,
-		req.Password).Return(&repository.RepositoryResponse{
-		Success:        true,
-		Place:          repository.DeleteUser,
-		SuccessMessage: "Successful delete user in database",
-	})
-	mockCacheRepo.EXPECT().DeleteProfileCache(mock.MatchedBy(func(ctx context.Context) bool {
-		traceID := ctx.Value("traceID")
-		return traceID != nil && traceID.(string) == fixedTraceID
-	}),
-		fixedUserId.String(),
-	).Return(&repository.RepositoryResponse{Success: true, Place: repository.DeleteProfileCache, SuccessMessage: "Successful delete profile from cache"})
-	mockSessionClient.EXPECT().DeleteSession(
-		mock.MatchedBy(func(ctx context.Context) bool {
-			traceID := ctx.Value("traceID")
-			return traceID != nil && traceID.(string) == fixedTraceID
-		}),
-		fixedSessionId,
-	).Return(&proto.DeleteSessionResponse{
-		Success: true,
+		gomock.Any(),
+	).Return(&proto.CreateSessionResponse{
+		SessionID:  fixedSessionId,
+		ExpiryTime: time.Now().Add(1 * time.Hour).Unix(),
+		Success:    true,
 	}, nil)
+
 	mockEventProducer.EXPECT().NewUserEvent(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
-		rabbitmq.UserDeleteKey,
-		fixedUserId.String(),
+		rabbitmq.UserRegistrationKey,
+		gomock.Any(),
 		gomock.Any(),
 		fixedTraceID,
 	).Return(fmt.Errorf("rabbitMQ error"))
 	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
+	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)
 	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible})
 }
-func TestDeleteAccount_CommitTransactionError(t *testing.T) {
+func TestRegistrateAndLogin_CommitTransactionError(t *testing.T) {
 	fixedTraceID := "123e4567-e89b-12d3-a456-426614174000"
 	fixedSessionId := "123e4567-e89b-12d3-a456-426614171000"
-	fixedUserId := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
 	ctx := context.WithValue(context.Background(), "traceID", fixedTraceID)
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
@@ -541,7 +489,9 @@ func TestDeleteAccount_CommitTransactionError(t *testing.T) {
 		CacheUserRepos:    mockCacheRepo,
 	}
 	tx := &sql.Tx{}
-	req := &model.DeletionRequest{
+	req := &model.RegistrationRequest{
+		Name:     "tester",
+		Email:    "test@example.com",
 		Password: "password123",
 	}
 	mockTransactionRepo.EXPECT().BeginTx(
@@ -550,34 +500,51 @@ func TestDeleteAccount_CommitTransactionError(t *testing.T) {
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
 	).Return(tx, nil)
-	mockUserRepo.EXPECT().DeleteUser(
+	mockUserRepo.EXPECT().CreateUser(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
 		tx,
-		fixedUserId,
-		req.Password).Return(&repository.RepositoryResponse{
+		mock.MatchedBy(func(u *model.User) bool {
+			return u.Name == "tester" && u.Email == "test@example.com"
+		}),
+	).Return(&repository.RepositoryResponse{
 		Success:        true,
-		Place:          repository.DeleteUser,
-		SuccessMessage: "Successful delete user in database",
+		Place:          repository.CreateUser,
+		SuccessMessage: "Successful create user in database",
 	})
-	mockCacheRepo.EXPECT().DeleteProfileCache(mock.MatchedBy(func(ctx context.Context) bool {
-		traceID := ctx.Value("traceID")
-		return traceID != nil && traceID.(string) == fixedTraceID
-	}),
-		fixedUserId.String(),
-	).Return(&repository.RepositoryResponse{Success: true, Place: repository.DeleteProfileCache, SuccessMessage: "Successful delete profile from cache"})
-	mockSessionClient.EXPECT().DeleteSession(
+	mockSessionClient.EXPECT().CreateSession(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
 			return traceID != nil && traceID.(string) == fixedTraceID
 		}),
-		fixedSessionId,
-	).Return(&proto.DeleteSessionResponse{
-		Success: true,
+		gomock.Any(),
+	).Return(&proto.CreateSessionResponse{
+		SessionID:  fixedSessionId,
+		ExpiryTime: time.Now().Add(1 * time.Hour).Unix(),
+		Success:    true,
 	}, nil)
 
+	mockEventProducer.EXPECT().NewUserEvent(
+		mock.MatchedBy(func(ctx context.Context) bool {
+			traceID := ctx.Value("traceID")
+			return traceID != nil && traceID.(string) == fixedTraceID
+		}),
+		rabbitmq.UserRegistrationKey,
+		gomock.Any(),
+		gomock.Any(),
+		fixedTraceID,
+	).Return(nil)
+	mockTransactionRepo.EXPECT().CommitTx(tx).Return(fmt.Errorf("Failed to commit transaction after all attempts")).Times(3)
+	mockSessionClient.EXPECT().DeleteSession(mock.MatchedBy(func(ctx context.Context) bool {
+		traceID := ctx.Value("traceID")
+		return traceID != nil && traceID.(string) == fixedTraceID
+	}), mock.MatchedBy(func(sessionid string) bool {
+		return sessionid == fixedSessionId
+	})).Return(&pb.DeleteSessionResponse{
+		Success: true,
+	}, nil)
 	mockEventProducer.EXPECT().NewUserEvent(
 		mock.MatchedBy(func(ctx context.Context) bool {
 			traceID := ctx.Value("traceID")
@@ -588,10 +555,9 @@ func TestDeleteAccount_CommitTransactionError(t *testing.T) {
 		gomock.Any(),
 		fixedTraceID,
 	).Return(nil)
-	mockTransactionRepo.EXPECT().CommitTx(tx).Return(fmt.Errorf("Failed to commit transaction after all attempts")).Times(3)
 	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
+	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)
 	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible})
 }

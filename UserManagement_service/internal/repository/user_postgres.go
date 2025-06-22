@@ -59,7 +59,7 @@ func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful create user in database", Place: place}
 }
 func (repoap *UserPostgresRepo) GetUser(ctx context.Context, useremail, userpassword string) *RepositoryResponse {
-	const place = AuthenticateUser
+	const place = GetUser
 	start := time.Now()
 	defer DBMetrics(place, start)
 	var hashpass string

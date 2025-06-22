@@ -6,89 +6,366 @@ package mock_service
 
 import (
 	context "context"
+	sql "database/sql"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
 	uuid "github.com/google/uuid"
+	proto "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	model "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
-	service "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
+	repository "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 )
 
-// MockUserAuthentication is a mock of UserAuthentication interface.
-type MockUserAuthentication struct {
+// MockDBUserRepos is a mock of DBUserRepos interface.
+type MockDBUserRepos struct {
 	ctrl     *gomock.Controller
-	recorder *MockUserAuthenticationMockRecorder
+	recorder *MockDBUserReposMockRecorder
 }
 
-// MockUserAuthenticationMockRecorder is the mock recorder for MockUserAuthentication.
-type MockUserAuthenticationMockRecorder struct {
-	mock *MockUserAuthentication
+// MockDBUserReposMockRecorder is the mock recorder for MockDBUserRepos.
+type MockDBUserReposMockRecorder struct {
+	mock *MockDBUserRepos
 }
 
-// NewMockUserAuthentication creates a new mock instance.
-func NewMockUserAuthentication(ctrl *gomock.Controller) *MockUserAuthentication {
-	mock := &MockUserAuthentication{ctrl: ctrl}
-	mock.recorder = &MockUserAuthenticationMockRecorder{mock}
+// NewMockDBUserRepos creates a new mock instance.
+func NewMockDBUserRepos(ctrl *gomock.Controller) *MockDBUserRepos {
+	mock := &MockDBUserRepos{ctrl: ctrl}
+	mock.recorder = &MockDBUserReposMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockUserAuthentication) EXPECT() *MockUserAuthenticationMockRecorder {
+func (m *MockDBUserRepos) EXPECT() *MockDBUserReposMockRecorder {
 	return m.recorder
 }
 
-// AuthenticateAndLogin mocks base method.
-func (m *MockUserAuthentication) AuthenticateAndLogin(ctx context.Context, user *model.Person) *service.ServiceResponse {
+// CreateUser mocks base method.
+func (m *MockDBUserRepos) CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *repository.RepositoryResponse {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AuthenticateAndLogin", ctx, user)
-	ret0, _ := ret[0].(*service.ServiceResponse)
+	ret := m.ctrl.Call(m, "CreateUser", ctx, tx, user)
+	ret0, _ := ret[0].(*repository.RepositoryResponse)
 	return ret0
 }
 
-// AuthenticateAndLogin indicates an expected call of AuthenticateAndLogin.
-func (mr *MockUserAuthenticationMockRecorder) AuthenticateAndLogin(ctx, user interface{}) *gomock.Call {
+// CreateUser indicates an expected call of CreateUser.
+func (mr *MockDBUserReposMockRecorder) CreateUser(ctx, tx, user interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthenticateAndLogin", reflect.TypeOf((*MockUserAuthentication)(nil).AuthenticateAndLogin), ctx, user)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockDBUserRepos)(nil).CreateUser), ctx, tx, user)
 }
 
-// DeleteAccount mocks base method.
-func (m *MockUserAuthentication) DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *service.ServiceResponse {
+// DeleteUser mocks base method.
+func (m *MockDBUserRepos) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *repository.RepositoryResponse {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAccount", ctx, sessionID, userid, password)
-	ret0, _ := ret[0].(*service.ServiceResponse)
+	ret := m.ctrl.Call(m, "DeleteUser", ctx, tx, userId, password)
+	ret0, _ := ret[0].(*repository.RepositoryResponse)
 	return ret0
 }
 
-// DeleteAccount indicates an expected call of DeleteAccount.
-func (mr *MockUserAuthenticationMockRecorder) DeleteAccount(ctx, sessionID, userid, password interface{}) *gomock.Call {
+// DeleteUser indicates an expected call of DeleteUser.
+func (mr *MockDBUserReposMockRecorder) DeleteUser(ctx, tx, userId, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAccount", reflect.TypeOf((*MockUserAuthentication)(nil).DeleteAccount), ctx, sessionID, userid, password)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUser", reflect.TypeOf((*MockDBUserRepos)(nil).DeleteUser), ctx, tx, userId, password)
 }
 
-// Logout mocks base method.
-func (m *MockUserAuthentication) Logout(ctx context.Context, sessionID string) *service.ServiceResponse {
+// GetProfileById mocks base method.
+func (m *MockDBUserRepos) GetProfileById(ctx context.Context, userid uuid.UUID) *repository.RepositoryResponse {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Logout", ctx, sessionID)
-	ret0, _ := ret[0].(*service.ServiceResponse)
+	ret := m.ctrl.Call(m, "GetProfileById", ctx, userid)
+	ret0, _ := ret[0].(*repository.RepositoryResponse)
 	return ret0
 }
 
-// Logout indicates an expected call of Logout.
-func (mr *MockUserAuthenticationMockRecorder) Logout(ctx, sessionID interface{}) *gomock.Call {
+// GetProfileById indicates an expected call of GetProfileById.
+func (mr *MockDBUserReposMockRecorder) GetProfileById(ctx, userid interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logout", reflect.TypeOf((*MockUserAuthentication)(nil).Logout), ctx, sessionID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProfileById", reflect.TypeOf((*MockDBUserRepos)(nil).GetProfileById), ctx, userid)
 }
 
-// RegistrateAndLogin mocks base method.
-func (m *MockUserAuthentication) RegistrateAndLogin(ctx context.Context, user *model.Person) *service.ServiceResponse {
+// GetUser mocks base method.
+func (m *MockDBUserRepos) GetUser(ctx context.Context, useremail, password string) *repository.RepositoryResponse {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegistrateAndLogin", ctx, user)
-	ret0, _ := ret[0].(*service.ServiceResponse)
+	ret := m.ctrl.Call(m, "GetUser", ctx, useremail, password)
+	ret0, _ := ret[0].(*repository.RepositoryResponse)
 	return ret0
 }
 
-// RegistrateAndLogin indicates an expected call of RegistrateAndLogin.
-func (mr *MockUserAuthenticationMockRecorder) RegistrateAndLogin(ctx, user interface{}) *gomock.Call {
+// GetUser indicates an expected call of GetUser.
+func (mr *MockDBUserReposMockRecorder) GetUser(ctx, useremail, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegistrateAndLogin", reflect.TypeOf((*MockUserAuthentication)(nil).RegistrateAndLogin), ctx, user)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockDBUserRepos)(nil).GetUser), ctx, useremail, password)
+}
+
+// UpdateUserData mocks base method.
+func (m *MockDBUserRepos) UpdateUserData(ctx context.Context, tx *sql.Tx, userId uuid.UUID, updateType string, args ...interface{}) *repository.RepositoryResponse {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, tx, userId, updateType}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateUserData", varargs...)
+	ret0, _ := ret[0].(*repository.RepositoryResponse)
+	return ret0
+}
+
+// UpdateUserData indicates an expected call of UpdateUserData.
+func (mr *MockDBUserReposMockRecorder) UpdateUserData(ctx, tx, userId, updateType interface{}, args ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, tx, userId, updateType}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserData", reflect.TypeOf((*MockDBUserRepos)(nil).UpdateUserData), varargs...)
+}
+
+// MockDBTransactionManager is a mock of DBTransactionManager interface.
+type MockDBTransactionManager struct {
+	ctrl     *gomock.Controller
+	recorder *MockDBTransactionManagerMockRecorder
+}
+
+// MockDBTransactionManagerMockRecorder is the mock recorder for MockDBTransactionManager.
+type MockDBTransactionManagerMockRecorder struct {
+	mock *MockDBTransactionManager
+}
+
+// NewMockDBTransactionManager creates a new mock instance.
+func NewMockDBTransactionManager(ctrl *gomock.Controller) *MockDBTransactionManager {
+	mock := &MockDBTransactionManager{ctrl: ctrl}
+	mock.recorder = &MockDBTransactionManagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDBTransactionManager) EXPECT() *MockDBTransactionManagerMockRecorder {
+	return m.recorder
+}
+
+// BeginTx mocks base method.
+func (m *MockDBTransactionManager) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BeginTx", ctx)
+	ret0, _ := ret[0].(*sql.Tx)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BeginTx indicates an expected call of BeginTx.
+func (mr *MockDBTransactionManagerMockRecorder) BeginTx(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTx", reflect.TypeOf((*MockDBTransactionManager)(nil).BeginTx), ctx)
+}
+
+// CommitTx mocks base method.
+func (m *MockDBTransactionManager) CommitTx(tx *sql.Tx) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CommitTx", tx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CommitTx indicates an expected call of CommitTx.
+func (mr *MockDBTransactionManagerMockRecorder) CommitTx(tx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitTx", reflect.TypeOf((*MockDBTransactionManager)(nil).CommitTx), tx)
+}
+
+// RollbackTx mocks base method.
+func (m *MockDBTransactionManager) RollbackTx(tx *sql.Tx) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RollbackTx", tx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RollbackTx indicates an expected call of RollbackTx.
+func (mr *MockDBTransactionManagerMockRecorder) RollbackTx(tx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackTx", reflect.TypeOf((*MockDBTransactionManager)(nil).RollbackTx), tx)
+}
+
+// MockCacheUserRepos is a mock of CacheUserRepos interface.
+type MockCacheUserRepos struct {
+	ctrl     *gomock.Controller
+	recorder *MockCacheUserReposMockRecorder
+}
+
+// MockCacheUserReposMockRecorder is the mock recorder for MockCacheUserRepos.
+type MockCacheUserReposMockRecorder struct {
+	mock *MockCacheUserRepos
+}
+
+// NewMockCacheUserRepos creates a new mock instance.
+func NewMockCacheUserRepos(ctrl *gomock.Controller) *MockCacheUserRepos {
+	mock := &MockCacheUserRepos{ctrl: ctrl}
+	mock.recorder = &MockCacheUserReposMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockCacheUserRepos) EXPECT() *MockCacheUserReposMockRecorder {
+	return m.recorder
+}
+
+// AddProfileCache mocks base method.
+func (m *MockCacheUserRepos) AddProfileCache(ctx context.Context, id string, data map[string]any) *repository.RepositoryResponse {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddProfileCache", ctx, id, data)
+	ret0, _ := ret[0].(*repository.RepositoryResponse)
+	return ret0
+}
+
+// AddProfileCache indicates an expected call of AddProfileCache.
+func (mr *MockCacheUserReposMockRecorder) AddProfileCache(ctx, id, data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddProfileCache", reflect.TypeOf((*MockCacheUserRepos)(nil).AddProfileCache), ctx, id, data)
+}
+
+// DeleteProfileCache mocks base method.
+func (m *MockCacheUserRepos) DeleteProfileCache(ctx context.Context, id string) *repository.RepositoryResponse {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProfileCache", ctx, id)
+	ret0, _ := ret[0].(*repository.RepositoryResponse)
+	return ret0
+}
+
+// DeleteProfileCache indicates an expected call of DeleteProfileCache.
+func (mr *MockCacheUserReposMockRecorder) DeleteProfileCache(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProfileCache", reflect.TypeOf((*MockCacheUserRepos)(nil).DeleteProfileCache), ctx, id)
+}
+
+// GetProfileCache mocks base method.
+func (m *MockCacheUserRepos) GetProfileCache(ctx context.Context, id string) *repository.RepositoryResponse {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProfileCache", ctx, id)
+	ret0, _ := ret[0].(*repository.RepositoryResponse)
+	return ret0
+}
+
+// GetProfileCache indicates an expected call of GetProfileCache.
+func (mr *MockCacheUserReposMockRecorder) GetProfileCache(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProfileCache", reflect.TypeOf((*MockCacheUserRepos)(nil).GetProfileCache), ctx, id)
+}
+
+// MockEventProducer is a mock of EventProducer interface.
+type MockEventProducer struct {
+	ctrl     *gomock.Controller
+	recorder *MockEventProducerMockRecorder
+}
+
+// MockEventProducerMockRecorder is the mock recorder for MockEventProducer.
+type MockEventProducerMockRecorder struct {
+	mock *MockEventProducer
+}
+
+// NewMockEventProducer creates a new mock instance.
+func NewMockEventProducer(ctrl *gomock.Controller) *MockEventProducer {
+	mock := &MockEventProducer{ctrl: ctrl}
+	mock.recorder = &MockEventProducerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockEventProducer) EXPECT() *MockEventProducerMockRecorder {
+	return m.recorder
+}
+
+// NewUserEvent mocks base method.
+func (m *MockEventProducer) NewUserEvent(ctx context.Context, routingKey, userid, place, traceid string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewUserEvent", ctx, routingKey, userid, place, traceid)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// NewUserEvent indicates an expected call of NewUserEvent.
+func (mr *MockEventProducerMockRecorder) NewUserEvent(ctx, routingKey, userid, place, traceid interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewUserEvent", reflect.TypeOf((*MockEventProducer)(nil).NewUserEvent), ctx, routingKey, userid, place, traceid)
+}
+
+// MockLogProducer is a mock of LogProducer interface.
+type MockLogProducer struct {
+	ctrl     *gomock.Controller
+	recorder *MockLogProducerMockRecorder
+}
+
+// MockLogProducerMockRecorder is the mock recorder for MockLogProducer.
+type MockLogProducerMockRecorder struct {
+	mock *MockLogProducer
+}
+
+// NewMockLogProducer creates a new mock instance.
+func NewMockLogProducer(ctrl *gomock.Controller) *MockLogProducer {
+	mock := &MockLogProducer{ctrl: ctrl}
+	mock.recorder = &MockLogProducerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLogProducer) EXPECT() *MockLogProducerMockRecorder {
+	return m.recorder
+}
+
+// NewUserLog mocks base method.
+func (m *MockLogProducer) NewUserLog(level, place, traceid, msg string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "NewUserLog", level, place, traceid, msg)
+}
+
+// NewUserLog indicates an expected call of NewUserLog.
+func (mr *MockLogProducerMockRecorder) NewUserLog(level, place, traceid, msg interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewUserLog", reflect.TypeOf((*MockLogProducer)(nil).NewUserLog), level, place, traceid, msg)
+}
+
+// MockSessionClient is a mock of SessionClient interface.
+type MockSessionClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockSessionClientMockRecorder
+}
+
+// MockSessionClientMockRecorder is the mock recorder for MockSessionClient.
+type MockSessionClientMockRecorder struct {
+	mock *MockSessionClient
+}
+
+// NewMockSessionClient creates a new mock instance.
+func NewMockSessionClient(ctrl *gomock.Controller) *MockSessionClient {
+	mock := &MockSessionClient{ctrl: ctrl}
+	mock.recorder = &MockSessionClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSessionClient) EXPECT() *MockSessionClientMockRecorder {
+	return m.recorder
+}
+
+// CreateSession mocks base method.
+func (m *MockSessionClient) CreateSession(ctx context.Context, userID string) (*proto.CreateSessionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSession", ctx, userID)
+	ret0, _ := ret[0].(*proto.CreateSessionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateSession indicates an expected call of CreateSession.
+func (mr *MockSessionClientMockRecorder) CreateSession(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSession", reflect.TypeOf((*MockSessionClient)(nil).CreateSession), ctx, userID)
+}
+
+// DeleteSession mocks base method.
+func (m *MockSessionClient) DeleteSession(ctx context.Context, sessionID string) (*proto.DeleteSessionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSession", ctx, sessionID)
+	ret0, _ := ret[0].(*proto.DeleteSessionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteSession indicates an expected call of DeleteSession.
+func (mr *MockSessionClientMockRecorder) DeleteSession(ctx, sessionID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSession", reflect.TypeOf((*MockSessionClient)(nil).DeleteSession), ctx, sessionID)
 }

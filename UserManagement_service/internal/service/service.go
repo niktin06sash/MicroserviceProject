@@ -11,7 +11,6 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 )
 
-//go:generate mockgen -source=service.go -destination=mocks/mock.go
 const RegistrateAndLogin = "UseCase-RegistrateAndLogin"
 const AuthenticateAndLogin = "UseCase-AuthenticateAndLogin"
 const DeleteAccount = "UseCase-DeleteAccount"
@@ -29,6 +28,7 @@ type ServiceResponse struct {
 	Errors  *erro.CustomError
 }
 
+//go:generate mockgen -source=service.go -destination=mocks/mock.go
 type DBUserRepos interface {
 	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *repository.RepositoryResponse
 	GetUser(ctx context.Context, useremail, password string) *repository.RepositoryResponse
