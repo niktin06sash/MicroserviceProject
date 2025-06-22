@@ -36,10 +36,10 @@ func (s *PhotoAPI) LoadPhoto(ctx context.Context, req *pb.LoadPhotoRequest) (*pb
 		s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Person with id %s has successfully uploaded photo", req.UserId))
 		return &pb.LoadPhotoResponse{Status: true, PhotoId: serviceresp.Data.PhotoID, Message: "You have successfully uploaded photo"}, nil
 	}
-	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
-		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
+	if serviceresp.Errors.Type == erro.ClientErrorType {
+		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors.Message)
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.Internal, serviceresp.Errors.Message)
 }
 
 func (s *PhotoAPI) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) (*pb.DeletePhotoResponse, error) {
@@ -53,10 +53,10 @@ func (s *PhotoAPI) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) 
 		s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Person with id %s has successfully deleted photo with id %s", req.UserId, req.PhotoId))
 		return &pb.DeletePhotoResponse{Status: true, Message: "You have successfully deleted photo"}, nil
 	}
-	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
-		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
+	if serviceresp.Errors.Type == erro.ClientErrorType {
+		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors.Message)
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.Internal, serviceresp.Errors.Message)
 }
 
 func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.GetPhotoResponse, error) {
@@ -70,10 +70,10 @@ func (s *PhotoAPI) GetPhoto(ctx context.Context, req *pb.GetPhotoRequest) (*pb.G
 		s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Person with id %s has successfully get photo with id %s", req.UserId, req.PhotoId))
 		return &pb.GetPhotoResponse{Status: true, Photo: serviceresp.Data.Photo}, nil
 	}
-	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
-		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
+	if serviceresp.Errors.Type == erro.ClientErrorType {
+		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors.Message)
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.Internal, serviceresp.Errors.Message)
 }
 func (s *PhotoAPI) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb.GetPhotosResponse, error) {
 	const place = API_GetPhotos
@@ -86,10 +86,10 @@ func (s *PhotoAPI) GetPhotos(ctx context.Context, req *pb.GetPhotosRequest) (*pb
 		s.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Successfully get person's with id %s photos", req.UserId))
 		return &pb.GetPhotosResponse{Status: true, Photos: serviceresp.Data.Photos}, nil
 	}
-	if serviceresp.Errors[erro.ErrorType] == erro.ClientErrorType {
-		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors[erro.ErrorMessage])
+	if serviceresp.Errors.Type == erro.ClientErrorType {
+		return nil, status.Error(codes.InvalidArgument, serviceresp.Errors.Message)
 	}
-	return nil, status.Error(codes.Internal, serviceresp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.Internal, serviceresp.Errors.Message)
 }
 func (s *PhotoAPI) getTraceIdFromMetadata(ctx context.Context, place string) string {
 	md, ok := metadata.FromIncomingContext(ctx)

@@ -8,9 +8,6 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/model"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
 )
 
 type UserEvent struct {
@@ -61,7 +58,7 @@ func (rc *RabbitConsumer) readEvent() {
 				rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, newmsg.Traceid, fmt.Sprintf("Received user registration event for userID: %s", newmsg.UserID))
 				resp := rc.userrepo.AddUserId(ctx, newmsg.UserID)
 				if resp.Errors != nil {
-					rc.logproducer.NewPhotoLog(kafka.LogLevelError, resp.Place, newmsg.Traceid, resp.Errors[erro.ErrorMessage])
+					rc.logproducer.NewPhotoLog(kafka.LogLevelError, resp.Place, newmsg.Traceid, resp.Errors.Message)
 					continue
 				}
 				rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, resp.Place, newmsg.Traceid, resp.SuccessMessage)
@@ -86,23 +83,23 @@ func (rc *RabbitConsumer) deleteAllUserData(userid string, traceid string) {
 	defer cancel()
 	getresp := rc.userrepo.GetPhotos(getctx, userid)
 	if getresp.Errors != nil {
-		rc.logproducer.NewPhotoLog(kafka.LogLevelError, getresp.Place, traceid, getresp.Errors[erro.ErrorMessage])
+		rc.logproducer.NewPhotoLog(kafka.LogLevelError, getresp.Place, traceid, getresp.Errors.Message)
 		return
 	}
 	rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, getresp.Place, traceid, getresp.SuccessMessage)
-	photos := getresp.Data[repository.KeyPhoto].([]*model.Photo)
+	photos := getresp.Data.Photos
 	deluserctx, cancel := context.WithTimeout(rc.ctx, 15*time.Second)
 	defer cancel()
 	delresp := rc.userrepo.DeleteUserData(deluserctx, userid)
 	if delresp.Errors != nil {
-		rc.logproducer.NewPhotoLog(kafka.LogLevelError, delresp.Place, traceid, delresp.Errors[erro.ErrorMessage])
+		rc.logproducer.NewPhotoLog(kafka.LogLevelError, delresp.Place, traceid, delresp.Errors.Message)
 		return
 	}
 	rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, delresp.Place, traceid, delresp.SuccessMessage)
 	for _, photo := range photos {
 		photodelresp := rc.photocloud.DeleteFile(rc.ctx, photo.ID, photo.ContentType)
 		if photodelresp.Errors != nil {
-			rc.logproducer.NewPhotoLog(kafka.LogLevelError, photodelresp.Place, traceid, photodelresp.Errors[erro.ErrorMessage])
+			rc.logproducer.NewPhotoLog(kafka.LogLevelError, photodelresp.Place, traceid, photodelresp.Errors.Message)
 		}
 		rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, photodelresp.Place, traceid, photodelresp.SuccessMessage)
 	}

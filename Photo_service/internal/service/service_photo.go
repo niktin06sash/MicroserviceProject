@@ -9,8 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/model"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 )
 
@@ -31,11 +29,11 @@ func (use *PhotoService) DeletePhoto(ctx context.Context, userid string, photoid
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	bdresponse, serviceresponse = use.requestToDB(use.repo.DeletePhoto(ctx, userid, photoid), traceid)
+	bdresponse, serviceresponse = use.requestToDB(use.repo.DeletePhoto(ctx, userid, bdresponse.Data.Photo.ID), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	ext := bdresponse.Data[repository.KeyContentType].(string)
+	ext := bdresponse.Data.ContentType
 	use.wg.Add(1)
 	go func() {
 		defer use.wg.Done()
@@ -50,16 +48,16 @@ func (use *PhotoService) LoadPhoto(ctx context.Context, userid string, filedata 
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.InvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.InvalidUserIDFormat}}
 	}
 	if len(filedata) > MaxFileSize {
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("File too large: %v bytes", len(filedata)))
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "File too large - max 10 MB"}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.LargeFile}}
 	}
 	contentType := http.DetectContentType(filedata)
 	if contentType != "image/jpeg" && contentType != "image/png" {
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("Invalid file format: %s", contentType))
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: "Invalid file format"}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.InvalidFileFormat}}
 	}
 	photoid := uuid.New().String()
 	var ext string
@@ -83,13 +81,13 @@ func (use *PhotoService) GetPhoto(ctx context.Context, photoid string, userid st
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.InvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.InvalidUserIDFormat}}
 	}
 	bdresponse, serviceresponse := use.requestToDB(use.repo.GetPhoto(ctx, userid, photoid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	photo := bdresponse.Data[repository.KeyPhoto].(*model.Photo)
+	photo := bdresponse.Data.Photo
 	grpcphoto := &pb.Photo{PhotoId: photo.ID, Url: photo.URL, CreatedAt: photo.CreatedAt.String()}
 	return &ServiceResponse{Success: true, Data: Data{Photo: grpcphoto}}
 }
@@ -100,13 +98,13 @@ func (use *PhotoService) GetPhotos(ctx context.Context, userid string) *ServiceR
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.InvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.InvalidUserIDFormat}}
 	}
 	bdresponse, serviceresponse := use.requestToDB(use.repo.GetPhotos(ctx, userid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	photos := bdresponse.Data[repository.KeyPhoto].([]*model.Photo)
+	photos := bdresponse.Data.Photos
 	grpcphotos := []*pb.Photo{}
 	for _, p := range photos {
 		grpcphoto := &pb.Photo{PhotoId: p.ID, Url: p.URL, CreatedAt: p.CreatedAt.String()}

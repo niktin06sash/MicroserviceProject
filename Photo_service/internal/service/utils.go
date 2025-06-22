@@ -9,20 +9,19 @@ import (
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
 )
 
 func (use *PhotoService) requestToDB(response *repository.RepositoryResponse, traceid string) (*repository.RepositoryResponse, *ServiceResponse) {
 	if !response.Success && response.Errors != nil {
-		switch response.Errors[erro.ErrorType] {
+		switch response.Errors.Type {
 		case erro.ServerErrorType:
-			use.logProducer.NewPhotoLog(kafka.LogLevelError, response.Place, traceid, response.Errors[erro.ErrorMessage])
-			response.Errors[erro.ErrorMessage] = erro.PhotoServiceUnavalaible
+			use.logProducer.NewPhotoLog(kafka.LogLevelError, response.Place, traceid, response.Errors.Message)
+			response.Errors.Message = erro.PhotoServiceUnavalaible
 			return response, &ServiceResponse{Success: false, Errors: response.Errors}
 
 		case erro.ClientErrorType:
-			use.logProducer.NewPhotoLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors[erro.ErrorMessage])
+			use.logProducer.NewPhotoLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors.Message)
 			return response, &ServiceResponse{Success: false, Errors: response.Errors}
 		}
 	}
@@ -48,17 +47,17 @@ func (use *PhotoService) unloadPhotoCloud(file []byte, photoid string, ext strin
 	defer cancel()
 	cloudresponse := use.cloud.UploadFile(cloudctx, tempFile, photoid, ext)
 	if !cloudresponse.Success && cloudresponse.Errors != nil {
-		use.logProducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, cloudresponse.Errors[erro.ErrorMessage])
+		use.logProducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, cloudresponse.Errors.Message)
 		return
 	}
 	use.logProducer.NewPhotoLog(kafka.LogLevelInfo, cloudresponse.Place, traceid, cloudresponse.SuccessMessage)
-	photo := cloudresponse.Data[repository.KeyPhoto].(*model.Photo)
+	photo := cloudresponse.Data.Photo
 	photo.UserID = userid
 	databasectx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	bdresponse := use.repo.LoadPhoto(databasectx, photo)
 	if !bdresponse.Success && bdresponse.Errors != nil {
-		use.logProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors[erro.ErrorMessage])
+		use.logProducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors.Message)
 		return
 	}
 	use.logProducer.NewPhotoLog(kafka.LogLevelInfo, bdresponse.Place, traceid, bdresponse.SuccessMessage)
@@ -71,7 +70,7 @@ func (use *PhotoService) deletePhotoCloud(photoid string, ext string, traceid st
 	defer cancel()
 	cloudresponse := use.cloud.DeleteFile(newctx, photoid, ext)
 	if !cloudresponse.Success && cloudresponse.Errors != nil {
-		use.logProducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, cloudresponse.Errors[erro.ErrorMessage])
+		use.logProducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, cloudresponse.Errors.Message)
 		return
 	}
 	use.logProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceid, fmt.Sprintf("The photo(id = %s) has been successfully deleted from cloud and database", photoid))
