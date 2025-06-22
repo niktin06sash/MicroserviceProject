@@ -36,10 +36,10 @@ func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionReq
 		s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("For person with id %s has successfully created session", req.UserID))
 		return &pb.CreateSessionResponse{Success: true, SessionID: resp.Data.SessionID, ExpiryTime: resp.Data.ExpirationTime}, nil
 	}
-	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
-		return nil, status.Error(codes.Internal, resp.Errors[erro.ErrorMessage])
+	if resp.Errors.Type == erro.ServerErrorType {
+		return nil, status.Error(codes.Internal, resp.Errors.Message)
 	}
-	return nil, status.Error(codes.InvalidArgument, resp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.InvalidArgument, resp.Errors.Message)
 }
 
 func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
@@ -58,10 +58,10 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 		s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("For person with id %s has successfully validated session", resp.Data.UserID))
 		return &pb.ValidateSessionResponse{Success: true, UserID: resp.Data.UserID}, nil
 	}
-	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
-		return nil, status.Error(codes.Internal, resp.Errors[erro.ErrorMessage])
+	if resp.Errors.Type == erro.ServerErrorType {
+		return nil, status.Error(codes.Internal, resp.Errors.Message)
 	}
-	return nil, status.Error(codes.InvalidArgument, resp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.InvalidArgument, resp.Errors.Message)
 }
 func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
 	const place = DeleteSession
@@ -74,10 +74,10 @@ func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionReq
 		s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Session with id %v has successfully deleted", req.SessionID))
 		return &pb.DeleteSessionResponse{Success: true}, nil
 	}
-	if resp.Errors[erro.ErrorType] == erro.ServerErrorType {
-		return nil, status.Error(codes.Internal, resp.Errors[erro.ErrorMessage])
+	if resp.Errors.Type == erro.ServerErrorType {
+		return nil, status.Error(codes.Internal, resp.Errors.Message)
 	}
-	return nil, status.Error(codes.InvalidArgument, resp.Errors[erro.ErrorMessage])
+	return nil, status.Error(codes.InvalidArgument, resp.Errors.Message)
 }
 func (s *SessionAPI) getTraceIdFromMetadata(ctx context.Context, place string) string {
 	md, ok := metadata.FromIncomingContext(ctx)

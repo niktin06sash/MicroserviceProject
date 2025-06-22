@@ -18,37 +18,31 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func validateData[T any](val *validator.Validate, data T, traceid string, place string, LogProducer LogProducer) map[string]string {
+func validateData[T any](val *validator.Validate, data T, traceid string, place string, LogProducer LogProducer) *erro.CustomError {
 	err := val.Struct(data)
 	if err != nil {
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if ok {
-			erors := make(map[string]string)
 			for _, err := range validationErrors {
+				metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 				switch err.Tag() {
 				case "email":
 					LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Invalid email format")
-					erors[erro.ErrorType] = erro.ClientErrorType
-					erors[erro.ErrorMessage] = erro.ErrorNotEmailConst
+					return &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorNotEmailConst}
 				case "min":
 					fmterr := fmt.Sprintf("%s is too short", err.Field())
 					LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
-					erors[erro.ErrorType] = erro.ClientErrorType
-					erors[erro.ErrorMessage] = fmterr
+					return &erro.CustomError{Type: erro.ClientErrorType, Message: fmterr}
 				case "required":
 					fmterr := fmt.Sprintf("%s is Null", err.Field())
 					LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
-					erors[erro.ErrorType] = erro.ClientErrorType
-					erors[erro.ErrorMessage] = fmterr
+					return &erro.CustomError{Type: erro.ClientErrorType, Message: fmterr}
 				case "max":
 					fmterr := fmt.Sprintf("%s is too long", err.Field())
 					LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, fmterr)
-					erors[erro.ErrorType] = erro.ClientErrorType
-					erors[erro.ErrorMessage] = fmterr
+					return &erro.CustomError{Type: erro.ClientErrorType, Message: fmterr}
 				}
-				metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			}
-			return erors
 		}
 	}
 	return nil
@@ -61,7 +55,7 @@ func (as *UserService) beginTransaction(ctx context.Context, place, traceid stri
 		as.LogProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmterr)
 		metrics.UserDBErrorsTotal.WithLabelValues("Begin Transaction", "Transaction").Inc()
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-		return nil, &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
+		return nil, &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	return tx, nil
@@ -127,15 +121,13 @@ func (as *UserService) commitTransaction(tx *sql.Tx, traceid string, place strin
 	}
 	return fmt.Errorf("Failed to commit transaction after all attempts")
 }
-func checkContext(ctx context.Context, mapa map[string]string, place string, traceID string, kafkaprod LogProducer) *ServiceResponse {
+func checkContext(ctx context.Context, place string, traceID string, kafkaprod LogProducer) *ServiceResponse {
 	select {
 	case <-ctx.Done():
-		fmterr := fmt.Sprintf("Context cancelled before operation: %v", ctx.Err())
+		fmterr := fmt.Sprintf("Context cancelled before gRPC-Request: %v", ctx.Err())
 		kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, fmterr)
-		mapa[erro.ErrorType] = erro.ServerErrorType
-		mapa[erro.ErrorMessage] = erro.RequestTimedOut
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-		return &ServiceResponse{Success: false, Errors: mapa}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.RequestTimedOut}}
 	default:
 		return nil
 	}
@@ -144,10 +136,9 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 	var response T
 	var err error
 	for i := 1; i <= 3; i++ {
-		grpcerrormap := make(map[string]string)
 		md := metadata.Pairs("traceID", traceID)
 		ctx = metadata.NewOutgoingContext(ctx, md)
-		if ctxresponse := checkContext(ctx, grpcerrormap, place, traceID, kafkaprod); ctxresponse != nil {
+		if ctxresponse := checkContext(ctx, place, traceID, kafkaprod); ctxresponse != nil {
 			return response, ctxresponse
 		}
 		response, err = operation(ctx)
@@ -162,13 +153,11 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 				time.Sleep(time.Duration(i) * time.Second)
 				continue
 			default:
-				grpcerrormap[erro.ErrorType] = erro.ClientErrorType
-				grpcerrormap[erro.ErrorMessage] = st.Message()
 				kafkaprod.NewUserLog(kafka.LogLevelWarn, place, traceID, st.Message())
 				metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 				return response, &ServiceResponse{
 					Success: false,
-					Errors:  grpcerrormap,
+					Errors:  &erro.CustomError{Type: erro.ClientErrorType, Message: st.Message()},
 				}
 			}
 		} else {
@@ -177,21 +166,21 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 		}
 	}
 	kafkaprod.NewUserLog(kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	return response, &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.SessionServiceUnavalaible}}
+	return response, &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 }
 
 func (as *UserService) requestToDB(response *repository.RepositoryResponse, traceid string) (*repository.RepositoryResponse, *ServiceResponse) {
 	if !response.Success && response.Errors != nil {
-		switch response.Errors[erro.ErrorType] {
+		switch response.Errors.Type {
 		case erro.ServerErrorType:
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-			as.LogProducer.NewUserLog(kafka.LogLevelError, response.Place, traceid, response.Errors[erro.ErrorMessage])
-			response.Errors[erro.ErrorMessage] = erro.UserServiceUnavalaible
+			as.LogProducer.NewUserLog(kafka.LogLevelError, response.Place, traceid, response.Errors.Message)
+			response.Errors.Message = erro.UserServiceUnavalaible
 			return response, &ServiceResponse{Success: false, Errors: response.Errors}
 
 		case erro.ClientErrorType:
 			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
-			as.LogProducer.NewUserLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors[erro.ErrorMessage])
+			as.LogProducer.NewUserLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors.Message)
 			return response, &ServiceResponse{Success: false, Errors: response.Errors}
 		}
 	}
@@ -223,8 +212,8 @@ func (as *UserService) updateAndCommit(ctx context.Context, tx *sql.Tx, userid u
 	err := as.commitTransaction(tx, traceid, place)
 	if err != nil {
 		as.rollbackTransaction(tx, traceid, place)
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
-	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and profile's data updates")
+	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and user's data updates")
 	return &ServiceResponse{Success: bdresponse.Success}
 }

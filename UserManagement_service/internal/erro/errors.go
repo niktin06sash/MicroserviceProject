@@ -3,8 +3,8 @@ package erro
 const SessionServiceUnavalaible = "Session-Service is unavailable"
 const UserServiceUnavalaible = "User-Service is unavailable"
 const RequestTimedOut = "Request timed out"
-const ClientErrorType = "ClientError"
-const ServerErrorType = "ServerError"
+const ClientErrorType = "Client"
+const ServerErrorType = "Server"
 const ErrorType = "type"
 const ErrorMessage = "message"
 
@@ -25,7 +25,6 @@ const (
 	ErrorRequiredSessionIDConst       = "SessionID in request is required!"
 	ErrorNotRequiredSessionIDConst    = "SessionID in request is not-required!"
 	ErrorNotEmailConst                = "This email format is not supported"
-	ErrorHashPassConst                = "Hash-Password error"
 	ErrorInternalServerConst          = "Internal Server Error"
 	ErrorEmailNotRegisterConst        = "Not registered has been entered"
 	ErrorFoundUserConst               = "Person not found"
@@ -51,4 +50,15 @@ const (
 	ErrorUniqueEmailConst             = "Already registered email has been entered"
 	ErrorIncorrectPassword            = "Incorrect password has been entered"
 	ErrorIDNotRegisterConst           = "Unregistered id has been entered"
+	ErrorAfterReqUsers                = "Error after request into users: %v"
+	ErrorGenerateHashPassword         = "Generate HashPassword : %v"
+	ErrorHsetProfiles                 = "Hset profiles-cache error: %v"
+	ErrorHgetAllProfiles              = "HGetAll profiles-cache error: %v"
+	ErrorExpireProfiles               = "Expire profiles-cache error: %v"
+	ErrorDelProfiles                  = "Del profiles-cache error: %v"
 )
+
+type CustomError struct {
+	Message string `json:"message"`
+	Type    string `json:"type"`
+}

@@ -67,8 +67,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context, place string) {
 		response.BadResponse(c, http.StatusInternalServerError, erro.APIServiceUnavalaible, traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 	}
-	resp := fmt.Sprintf("Successful HTTP-request to %s", targetURL)
-	h.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, resp)
+	h.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Successful Proxy-HTTP-request to %s", targetURL))
 	proxy.ServeHTTP(c.Writer, c.Request)
 	duration := time.Since(start).Seconds()
 	metrics.APISuccessfulRequestDuration.WithLabelValues(place, normalizedPath).Observe(duration)

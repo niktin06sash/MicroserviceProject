@@ -14,7 +14,7 @@ import (
 // swagger:model HTTPResponse
 type HTTPResponse struct {
 	Success bool              `json:"success"`
-	Errors  map[string]string `json:"errors,omitempty"`
+	Errors  *erro.CustomError `json:"errors,omitempty"`
 	Data    map[string]any    `json:"data,omitempty"`
 }
 
@@ -57,9 +57,9 @@ func OkResponse(c *gin.Context, status int, data map[string]any, traceid, place 
 }
 func BadResponse(c *gin.Context, status int, errormessage string, traceid string, place string, logproducer LogProducer) {
 	if status >= 400 && status < 500 {
-		sendResponse(c, status, HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: errormessage}}, traceid, place, logproducer)
+		sendResponse(c, status, HTTPResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: errormessage}}, traceid, place, logproducer)
 	} else {
-		sendResponse(c, status, HTTPResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: errormessage}}, traceid, place, logproducer)
+		sendResponse(c, status, HTTPResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: errormessage}}, traceid, place, logproducer)
 	}
 }
 func sendResponse(c *gin.Context, status int, response HTTPResponse, traceid string, place string, logproducer LogProducer) {

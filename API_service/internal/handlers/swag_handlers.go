@@ -129,9 +129,9 @@ func (h *Handler) GetMyProfile(c *gin.Context) {
 	protoresponseChan := make(chan *pb.GetPhotosResponse, 1)
 	defer close(httpresponseChan)
 	defer close(protoresponseChan)
-	g.Go(func() error { return h.asynchttpRequest(c, target, place, httpresponseChan) })
+	g.Go(func() error { return h.httpRequest(c, target, place, httpresponseChan) })
 	g.Go(func() error {
-		return asyncGrpcRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
+		return GrpcRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
 			return h.photoclient.GetPhotos(ctx, userid)
 		}, protoresponseChan)
 	})
@@ -146,6 +146,7 @@ func (h *Handler) GetMyProfile(c *gin.Context) {
 	}
 	totalresp := userresponse.Data
 	totalresp[response.KeyPhotos] = photoresp.Photos
+	h.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Succesfull HTTP-request to User-Service and gRPC-request to Photo-Service")
 	response.OkResponse(c, http.StatusOK, totalresp, traceID, place, h.logproducer)
 }
 
@@ -184,9 +185,9 @@ func (h *Handler) GetUserProfileById(c *gin.Context) {
 	protoresponseChan := make(chan *pb.GetPhotosResponse, 1)
 	defer close(httpresponseChan)
 	defer close(protoresponseChan)
-	g.Go(func() error { return h.asynchttpRequest(c, targetid, place, httpresponseChan) })
+	g.Go(func() error { return h.httpRequest(c, targetid, place, httpresponseChan) })
 	g.Go(func() error {
-		return asyncGrpcRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
+		return GrpcRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
 			return h.photoclient.GetPhotos(ctx, paramuserid)
 		}, protoresponseChan)
 	})
@@ -201,6 +202,7 @@ func (h *Handler) GetUserProfileById(c *gin.Context) {
 	}
 	totalresp := userresponse.Data
 	totalresp[response.KeyPhotos] = photoresp.Photos
+	h.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Succesfull HTTP-request to User-Service and gRPC-request to Photo-Service")
 	response.OkResponse(c, http.StatusOK, totalresp, traceID, place, h.logproducer)
 }
 
@@ -230,6 +232,7 @@ func (h *Handler) GetPhotoById(c *gin.Context) {
 	}
 	protoresponse, err := h.photoclient.GetPhoto(ctx, userid, photoid)
 	if err == nil && protoresponse != nil && protoresponse.Status {
+		h.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Succesfull gRPC-request to Photo-Service")
 		response.OkResponse(c, http.StatusOK, map[string]any{response.KeyPhoto: protoresponse.Photo}, traceID, place, h.logproducer)
 		return
 	}
@@ -261,6 +264,7 @@ func (h *Handler) DeletePhoto(c *gin.Context) {
 	}
 	protoresponse, err := h.photoclient.DeletePhoto(ctx, userid, photoid)
 	if err == nil && protoresponse != nil && protoresponse.Status {
+		h.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Succesfull gRPC-request to Photo-Service")
 		response.OkResponse(c, http.StatusOK, map[string]any{response.KeyMessage: protoresponse.Message}, traceID, place, h.logproducer)
 		return
 	}
@@ -306,6 +310,7 @@ func (h *Handler) LoadPhoto(c *gin.Context) {
 	}
 	protoresponse, err := h.photoclient.LoadPhoto(ctx, userid, bytes)
 	if err == nil && protoresponse != nil && protoresponse.Status {
+		h.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Succesfull gRPC-request to Photo-Service")
 		response.OkResponse(c, http.StatusOK, map[string]any{response.KeyMessage: protoresponse.Message, response.KeyPhotoID: protoresponse.PhotoId}, traceID, place, h.logproducer)
 		return
 	}
@@ -337,6 +342,7 @@ func (h *Handler) GetMyPhotoById(c *gin.Context) {
 	}
 	protoresponse, err := h.photoclient.GetPhoto(ctx, userid, photoid)
 	if err == nil && protoresponse != nil && protoresponse.Status {
+		h.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, "Succesfull gRPC-request to Photo-Service")
 		response.OkResponse(c, http.StatusOK, map[string]any{response.KeyPhoto: protoresponse.Photo}, traceID, place, h.logproducer)
 		return
 	}

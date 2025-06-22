@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 )
@@ -25,8 +26,9 @@ const KeySessionID = "sessionid"
 type ServiceResponse struct {
 	Success bool
 	Data    map[string]any
-	Errors  map[string]string
+	Errors  *erro.CustomError
 }
+
 type DBUserRepos interface {
 	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *repository.RepositoryResponse
 	GetUser(ctx context.Context, useremail, password string) *repository.RepositoryResponse

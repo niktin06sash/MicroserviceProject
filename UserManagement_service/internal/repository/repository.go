@@ -1,5 +1,9 @@
 package repository
 
+import (
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
+)
+
 //go:generate mockgen -source=repository.go -destination=mocks/mock.go
 const GetProfileCache = "Repository-GetProfileCache"
 const DeleteProfileCache = "Repository-DeleteProfileCache"
@@ -26,5 +30,5 @@ type RepositoryResponse struct {
 	SuccessMessage string
 	Place          string
 	Data           map[string]any
-	Errors         map[string]string
+	Errors         *erro.CustomError
 }

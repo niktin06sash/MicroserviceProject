@@ -64,11 +64,11 @@ func (h *Handler) getPersonality(r *http.Request, w http.ResponseWriter, traceID
 }
 func (h *Handler) serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.ResponseWriter, traceID string, place string) bool {
 	if !resp.Success {
-		switch resp.Errors[erro.ErrorType] {
+		switch resp.Errors.Type {
 		case erro.ClientErrorType:
-			response.BadResponse(r, w, http.StatusBadRequest, resp.Errors[erro.ErrorMessage], traceID, place, h.LogProducer)
+			response.BadResponse(r, w, http.StatusBadRequest, resp.Errors.Message, traceID, place, h.LogProducer)
 		case erro.ServerErrorType:
-			response.BadResponse(r, w, http.StatusInternalServerError, resp.Errors[erro.ErrorMessage], traceID, place, h.LogProducer)
+			response.BadResponse(r, w, http.StatusInternalServerError, resp.Errors.Message, traceID, place, h.LogProducer)
 		}
 		return false
 	}

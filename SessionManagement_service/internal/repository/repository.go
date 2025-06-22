@@ -1,12 +1,17 @@
 package repository
 
+import "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
+
 //go:generate mockgen -source=repository.go -destination=mocks/mock.go
 type RepositoryResponse struct {
 	Success        bool
 	SuccessMessage string
-	Data           map[string]any
-	Errors         map[string]string
+	Data           Data
+	Errors         *erro.CustomError
 	Place          string
+}
+type Data struct {
+	UserID string
 }
 
 const KeySessionId = "sessionID"
