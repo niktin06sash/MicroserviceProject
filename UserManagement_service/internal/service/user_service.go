@@ -42,7 +42,7 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	if err != nil {
 		as.LogProducer.NewUserLog(kafka.LogLevelError, place, traceid, err.Error())
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	user := &model.User{Id: uuid.New(), Password: string(hashpass), Email: req.Email, Name: req.Name}
 	var tx *sql.Tx
@@ -50,23 +50,22 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	if resp != nil {
 		return resp
 	}
-	bdresponse, serviceresponse := as.requestToDB(as.Dbrepo.CreateUser(ctx, tx, user), traceid)
+	_, serviceresponse := as.requestToDB(as.Dbrepo.CreateUser(ctx, tx, user), traceid)
 	if serviceresponse != nil {
 		as.rollbackTransaction(tx, traceid, place)
 		return serviceresponse
 	}
-	userID := bdresponse.Data[repository.KeyUserID].(string)
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
-		return as.GrpcSessionClient.CreateSession(ctx, userID)
+		return as.GrpcSessionClient.CreateSession(ctx, user.Id.String())
 	}, traceid, place, as.LogProducer)
 	if serviceresponse != nil {
 		as.rollbackTransaction(tx, traceid, place)
 		return serviceresponse
 	}
-	err = as.EventProducer.NewUserEvent(ctx, rabbitmq.UserRegistrationKey, userID, place, traceid)
+	err = as.EventProducer.NewUserEvent(ctx, rabbitmq.UserRegistrationKey, user.Id.String(), place, traceid)
 	if err != nil {
 		as.rollbackTransaction(tx, traceid, place)
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	err = as.commitTransaction(tx, traceid, place)
 	if err != nil {
@@ -77,10 +76,10 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 		if serviceresponse != nil {
 			as.LogProducer.NewUserLog(kafka.LogLevelError, place, traceid, "Failed to delete session after transaction failure")
 		}
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
-	return &ServiceResponse{Success: true, Data: map[string]any{repository.KeyUserID: userID, KeySessionID: grpcresponse.SessionID, KeyExpirySession: time.Unix(grpcresponse.ExpiryTime, 0)}}
+	return &ServiceResponse{Success: true, Data: map[string]any{repository.KeyUserID: user.Id.String(), KeyExpirySession: time.Unix(grpcresponse.ExpiryTime, 0), KeySessionID: grpcresponse.SessionID}}
 }
 func (as *UserService) AuthenticateAndLogin(ctx context.Context, req *model.AuthenticationRequest) *ServiceResponse {
 	const place = AuthenticateAndLogin
@@ -101,14 +100,14 @@ func (as *UserService) AuthenticateAndLogin(ctx context.Context, req *model.Auth
 		return serviceresponse
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "The session was created successfully and received")
-	return &ServiceResponse{Success: true, Data: map[string]any{repository.KeyUserID: userID, KeySessionID: grpcresponse.SessionID, KeyExpirySession: time.Unix(grpcresponse.ExpiryTime, 0)}}
+	return &ServiceResponse{Success: true, Data: map[string]any{repository.KeyUserID: bdresponse.Data[repository.KeyUserID], KeyExpirySession: time.Unix(grpcresponse.ExpiryTime, 0), KeySessionID: grpcresponse.SessionID}}
 }
 func (as *UserService) DeleteAccount(ctx context.Context, req *model.DeletionRequest, sessionID string, useridstr string) *ServiceResponse {
 	const place = DeleteAccount
 	traceid := ctx.Value("traceID").(string)
 	userid, err := as.parsingUserId(useridstr, traceid, place)
 	if err != nil {
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorInvalidUserIDFormat}}
 	}
 	errorvalidate := validateData(as.Validator, req, traceid, place, as.LogProducer)
 	if errorvalidate != nil {
@@ -139,12 +138,12 @@ func (as *UserService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 	err = as.EventProducer.NewUserEvent(ctx, rabbitmq.UserDeleteKey, useridstr, place, traceid)
 	if err != nil {
 		as.rollbackTransaction(tx, traceid, place)
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	err = as.commitTransaction(tx, traceid, place)
 	if err != nil {
 		as.rollbackTransaction(tx, traceid, place)
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.UserServiceUnavalaible}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible}}
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and user has successfully deleted his account with all data")
 	return &ServiceResponse{Success: grpcresponse.Success}
@@ -166,7 +165,7 @@ func (as *UserService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 	traceid := ctx.Value("traceID").(string)
 	userid, err := as.parsingUserId(useridstr, traceid, place)
 	if err != nil {
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorInvalidUserIDFormat}}
 	}
 	errorvalidate := validateData(as.Validator, req, traceid, place, as.LogProducer)
 	if errorvalidate != nil {
@@ -189,14 +188,14 @@ func (as *UserService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 	as.LogProducer.NewUserLog(kafka.LogLevelWarn, UpdateAccount, traceid, erro.ErrorInvalidCountDinamicParameter)
 	metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 	as.rollbackTransaction(tx, traceid, place)
-	return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidCountDinamicParameter}}
+	return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorInvalidCountDinamicParameter}}
 }
 func (as *UserService) GetMyProfile(ctx context.Context, useridstr string) *ServiceResponse {
 	const place = GetMyProfile
 	traceid := ctx.Value("traceID").(string)
 	userid, err := as.parsingUserId(useridstr, traceid, place)
 	if err != nil {
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorInvalidUserIDFormat}}
 	}
 	redisresponse, serviceresponse := as.requestToDB(as.CacheUserRepos.GetProfileCache(ctx, useridstr), traceid)
 	if serviceresponse != nil {
@@ -220,16 +219,16 @@ func (as *UserService) GetProfileById(ctx context.Context, useridstr string, get
 	traceid := ctx.Value("traceID").(string)
 	userid, err := as.parsingUserId(useridstr, traceid, place)
 	if err != nil {
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorInvalidUserIDFormat}}
 	}
 	getid, err := as.parsingUserId(getidstr, traceid, place)
 	if err != nil {
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.ErrorInvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorInvalidUserIDFormat}}
 	}
 	if userid == getid {
 		as.LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, "Person attempted to search for their own profile by ID")
 		metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ClientErrorType: erro.ErrorSearchOwnProfile}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorSearchOwnProfile}}
 	}
 	redisresponse, serviceresponse := as.requestToDB(as.CacheUserRepos.GetProfileCache(ctx, getidstr), traceid)
 	if serviceresponse != nil {

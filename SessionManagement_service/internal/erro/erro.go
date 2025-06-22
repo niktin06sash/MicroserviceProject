@@ -7,9 +7,9 @@ const UserIdInvalid = "Invalid userID format"
 const SessionIdRequired = "SessionID is required"
 const SessionIdInvalid = "Invalid sessionID format"
 const SessionNotFound = "Session not found"
-const AlreadyAuthorized = "AlreadyAuthorized"
-const ClientErrorType = "ClientError"
-const ServerErrorType = "ServerError"
+const AlreadyAuthorized = "Already Authorized"
+const ClientErrorType = "Client"
+const ServerErrorType = "Server"
 const ErrorType = "type"
 const ErrorMessage = "message"
 const (
@@ -27,4 +27,14 @@ const (
 	ErrorRequiredUserIdConst           = "UserId is required"
 	ErrorRequiredSessionIdConst        = "SessionId is required"
 	ErrorInvalidSessionIdFormat        = "Invalid SessionId format"
+	ErrorHset                          = "Hset session error: %v"
+	ErrorExpire                        = "Expire session error: %v"
+	ErrorHgetAll                       = "HGetAll session error: %v"
+	ErrorDelSession                    = "Del session error: %v"
+	InvalidSession                     = "Session is invalid"
 )
+
+type CustomError struct {
+	Message string
+	Type    string
+}

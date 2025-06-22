@@ -15,3 +15,8 @@ const (
 	ClientErrorType = "ClientError"
 	ServerErrorType = "ServerError"
 )
+
+type CustomError struct {
+	Message string `json:"message"`
+	Type    string `json:"type"`
+}

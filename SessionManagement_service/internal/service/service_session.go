@@ -26,21 +26,18 @@ func (s *SessionService) CreateSession(ctx context.Context, userid string) *Serv
 	traceID := ctx.Value("traceID").(string)
 	if userid == "" {
 		s.logproducer.NewSessionLog(kafka.LogLevelError, place, traceID, erro.UserIdRequired)
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.SessionServiceUnavalaible}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.SessionServiceUnavalaible}}
 	}
-	sessionID := uuid.New()
-	expiryTime := time.Now().Add(24 * time.Hour)
-	newsession := model.Session{
-		SessionID:      sessionID.String(),
+	newsession := &model.Session{
+		SessionID:      uuid.New().String(),
 		UserID:         userid,
-		ExpirationTime: expiryTime,
+		ExpirationTime: time.Now().Add(24 * time.Hour),
 	}
 	bdresponse, serviceresponse := s.requestToDB(s.repo.SetSession(ctx, newsession), traceID)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	exp64 := bdresponse.Data[repository.KeyExpiryTime].(time.Time).Unix()
-	return &ServiceResponse{Success: bdresponse.Success, Data: Data{SessionID: bdresponse.Data[repository.KeySessionId].(string), ExpirationTime: exp64}}
+	return &ServiceResponse{Success: bdresponse.Success, Data: Data{SessionID: newsession.SessionID, ExpirationTime: newsession.ExpirationTime.Unix()}}
 }
 func (s *SessionService) ValidateSession(ctx context.Context, sessionid string) *ServiceResponse {
 	const place = ValidateSession
@@ -51,12 +48,12 @@ func (s *SessionService) ValidateSession(ctx context.Context, sessionid string) 
 		if _, err := uuid.Parse(sessionid); err != nil {
 			fmterr := fmt.Sprintf("UUID-Parse sessionID error: %v", err)
 			s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, fmterr)
-			return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.SessionIdInvalid}}
+			return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.SessionIdInvalid}}
 		}
 	case "false":
 		if _, err := uuid.Parse(sessionid); err != nil {
 			s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Request for an unauthorized users with invalid sessionID format")
-			return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: erro.SessionIdInvalid}}
+			return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.SessionIdInvalid}}
 		}
 	}
 	bdresponse, serviceresponse := s.requestToDB(s.repo.GetSession(ctx, sessionid), traceID)
@@ -66,7 +63,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, sessionid string) 
 	if flag == "false" {
 		return &ServiceResponse{Success: bdresponse.Success}
 	}
-	return &ServiceResponse{Success: bdresponse.Success, Data: Data{UserID: bdresponse.Data[repository.KeyUserId].(string)}}
+	return &ServiceResponse{Success: bdresponse.Success, Data: Data{UserID: bdresponse.Data.UserID}}
 }
 func (s *SessionService) DeleteSession(ctx context.Context, sessionid string) *ServiceResponse {
 	const place = DeleteSession
@@ -74,7 +71,7 @@ func (s *SessionService) DeleteSession(ctx context.Context, sessionid string) *S
 	if _, err := uuid.Parse(sessionid); err != nil {
 		fmterr := fmt.Sprintf("UUID-Parse sessionID error: %v", err)
 		s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, fmterr)
-		return &ServiceResponse{Success: false, Errors: map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.SessionIdInvalid}}
+		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.SessionIdInvalid}}
 	}
 	bdresponse, serviceresponse := s.requestToDB(s.repo.DeleteSession(ctx, sessionid), traceID)
 	if serviceresponse != nil {
@@ -84,14 +81,14 @@ func (s *SessionService) DeleteSession(ctx context.Context, sessionid string) *S
 }
 func (use *SessionService) requestToDB(response *repository.RepositoryResponse, traceid string) (*repository.RepositoryResponse, *ServiceResponse) {
 	if !response.Success && response.Errors != nil {
-		switch response.Errors[erro.ErrorType] {
+		switch response.Errors.Type {
 		case erro.ServerErrorType:
-			use.logproducer.NewSessionLog(kafka.LogLevelError, response.Place, traceid, response.Errors[erro.ErrorMessage])
-			response.Errors[erro.ErrorMessage] = erro.SessionServiceUnavalaible
+			use.logproducer.NewSessionLog(kafka.LogLevelError, response.Place, traceid, response.Errors.Message)
+			response.Errors.Message = erro.SessionServiceUnavalaible
 			return response, &ServiceResponse{Success: false, Errors: response.Errors}
 
 		case erro.ClientErrorType:
-			use.logproducer.NewSessionLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors[erro.ErrorMessage])
+			use.logproducer.NewSessionLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors.Message)
 			return response, &ServiceResponse{Success: false, Errors: response.Errors}
 		}
 	}

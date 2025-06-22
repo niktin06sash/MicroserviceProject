@@ -3,12 +3,13 @@ package service
 import (
 	"context"
 
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 )
 
 type SessionRepos interface {
-	SetSession(ctx context.Context, session model.Session) *repository.RepositoryResponse
+	SetSession(ctx context.Context, session *model.Session) *repository.RepositoryResponse
 	GetSession(ctx context.Context, sessionID string) *repository.RepositoryResponse
 	DeleteSession(ctx context.Context, sessionID string) *repository.RepositoryResponse
 }
@@ -23,7 +24,7 @@ const DeleteSession = "UseCase-DeleteSession"
 type ServiceResponse struct {
 	Success bool
 	Data    Data
-	Errors  map[string]string
+	Errors  *erro.CustomError
 }
 type Data struct {
 	SessionID      string

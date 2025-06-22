@@ -33,17 +33,16 @@ func (h *Handler) badGrpcResponse(c *gin.Context, traceID, place string, err err
 }
 func (h *Handler) badHttpResponse(c *gin.Context, traceID, place string, userresponse response.HTTPResponse) bool {
 	if !userresponse.Success {
-		typ := userresponse.Errors[erro.ErrorType]
-		if typ == erro.ServerErrorType {
-			response.BadResponse(c, http.StatusInternalServerError, userresponse.Errors[erro.ErrorMessage], traceID, place, h.logproducer)
+		if userresponse.Errors.Type == erro.ServerErrorType {
+			response.BadResponse(c, http.StatusInternalServerError, userresponse.Errors.Message, traceID, place, h.logproducer)
 		} else {
-			response.BadResponse(c, http.StatusBadRequest, userresponse.Errors[erro.ErrorMessage], traceID, place, h.logproducer)
+			response.BadResponse(c, http.StatusBadRequest, userresponse.Errors.Message, traceID, place, h.logproducer)
 		}
 		return true
 	}
 	return false
 }
-func (h *Handler) asynchttpRequest(c *gin.Context, target string, place string, httpresponseChan chan response.HTTPResponse) error {
+func (h *Handler) httpRequest(c *gin.Context, target string, place string, httpresponseChan chan response.HTTPResponse) error {
 	traceID := c.MustGet("traceID").(string)
 	userid := c.MustGet("userID").(string)
 	sessionid := c.MustGet("sessionID").(string)
@@ -86,7 +85,7 @@ func (h *Handler) asynchttpRequest(c *gin.Context, target string, place string, 
 	return nil
 }
 
-func asyncGrpcRequest[T any](context context.Context, operation func(context.Context) (T, error), protoresponseChan chan T) error {
+func GrpcRequest[T any](context context.Context, operation func(context.Context) (T, error), protoresponseChan chan T) error {
 	protoresponse, err := operation(context)
 	if err != nil {
 		st, _ := status.FromError(err)
