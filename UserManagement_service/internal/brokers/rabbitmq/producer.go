@@ -11,13 +11,12 @@ import (
 )
 
 type RabbitProducer struct {
-	conn         *amqp.Connection
-	channel      *amqp.Channel
-	config       configs.RabbitMQConfig
-	logProducer  LogProducer
-	context      context.Context
-	cancel       context.CancelFunc
-	confirmsChan <-chan amqp.Confirmation
+	conn        *amqp.Connection
+	channel     *amqp.Channel
+	config      configs.RabbitMQConfig
+	logProducer LogProducer
+	context     context.Context
+	cancel      context.CancelFunc
 }
 type LogProducer interface {
 	NewUserLog(level, place, traceid, msg string)
@@ -57,7 +56,7 @@ func NewRabbitProducer(config configs.RabbitMQConfig, kafkaprod LogProducer) (*R
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	log.Println("[DEBUG] [User-Service] Successful connect to Rabbit-Producer")
-	return &RabbitProducer{conn: conn, channel: channel, config: config, logProducer: kafkaprod, context: ctx, cancel: cancel, confirmsChan: channel.NotifyPublish(make(chan amqp.Confirmation, 1))}, nil
+	return &RabbitProducer{conn: conn, channel: channel, config: config, logProducer: kafkaprod, context: ctx, cancel: cancel}, nil
 }
 func (rp *RabbitProducer) Close() {
 	rp.channel.Close()
