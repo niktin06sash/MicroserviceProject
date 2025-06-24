@@ -110,15 +110,6 @@
 - Стандартная библиотека/Zap
 - Централизованный сбор через Logs-Service
 
-### Особенности реализации
-```mermaid
-graph TD
-    A[API-Service] -->|gRPC| B[SessionManagement]
-    A -->|HTTP| C[UserManagement]
-    C -->|gRPC| D[Photo-Service]
-    C -->|Kafka| E[Logs-Service]
-    A -->|Prometheus| F[Monitoring]
-
 ### Ключевые характеристики:
 - Модульная структура (разделение на пакеты)
 - Retry-логика для внешних вызовов
