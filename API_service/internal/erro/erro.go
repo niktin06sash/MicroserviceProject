@@ -12,11 +12,18 @@ const RequiredFormPhoto = "Photo file is required"
 const (
 	ErrorType       = "type"
 	ErrorMessage    = "message"
-	ClientErrorType = "ClientError"
-	ServerErrorType = "ServerError"
+	ClientErrorType = "Client"
+	ServerErrorType = "Server"
 )
 
 type CustomError struct {
 	Message string `json:"message"`
 	Type    string `json:"type"`
+}
+
+func ServerError(reason string) *CustomError {
+	return &CustomError{Message: reason, Type: ServerErrorType}
+}
+func ClientError(reason string) *CustomError {
+	return &CustomError{Message: reason, Type: ClientErrorType}
 }

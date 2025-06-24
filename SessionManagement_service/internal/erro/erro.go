@@ -38,3 +38,10 @@ type CustomError struct {
 	Message string
 	Type    string
 }
+
+func ServerError(reason string) *CustomError {
+	return &CustomError{Message: reason, Type: ServerErrorType}
+}
+func ClientError(reason string) *CustomError {
+	return &CustomError{Message: reason, Type: ClientErrorType}
+}

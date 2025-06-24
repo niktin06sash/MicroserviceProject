@@ -41,8 +41,7 @@ type UserService interface {
 	DeleteAccount(ctx context.Context, req *model.DeletionRequest, sessionID string, useridstr string) *service.ServiceResponse
 	Logout(ctx context.Context, sessionID string) *service.ServiceResponse
 	UpdateAccount(ctx context.Context, req *model.UpdateRequest, useridstr string, updateType string) *service.ServiceResponse
-	GetMyProfile(ctx context.Context, useridstr string) *service.ServiceResponse
-	GetProfileById(ctx context.Context, useridstr string, findidstr string) *service.ServiceResponse
+	GetProfileById(ctx context.Context, getid string) *service.ServiceResponse
 }
 
 func (h *Handler) InitRoutes() *mux.Router {

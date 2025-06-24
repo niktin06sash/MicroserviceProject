@@ -48,16 +48,16 @@ func (use *PhotoService) LoadPhoto(ctx context.Context, userid string, filedata 
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
-		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.InvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidUserIDFormat)}
 	}
 	if len(filedata) > MaxFileSize {
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("File too large: %v bytes", len(filedata)))
-		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.LargeFile}}
+		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.LargeFile)}
 	}
 	contentType := http.DetectContentType(filedata)
 	if contentType != "image/jpeg" && contentType != "image/png" {
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("Invalid file format: %s", contentType))
-		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.InvalidFileFormat}}
+		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidFileFormat)}
 	}
 	photoid := uuid.New().String()
 	var ext string
@@ -81,7 +81,7 @@ func (use *PhotoService) GetPhoto(ctx context.Context, photoid string, userid st
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
-		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.InvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidUserIDFormat)}
 	}
 	bdresponse, serviceresponse := use.requestToDB(use.repo.GetPhoto(ctx, userid, photoid), traceid)
 	if serviceresponse != nil {
@@ -98,7 +98,7 @@ func (use *PhotoService) GetPhotos(ctx context.Context, userid string) *ServiceR
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
 		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
-		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.InvalidUserIDFormat}}
+		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidUserIDFormat)}
 	}
 	bdresponse, serviceresponse := use.requestToDB(use.repo.GetPhotos(ctx, userid), traceid)
 	if serviceresponse != nil {
