@@ -8,9 +8,10 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 )
 
+//go:generate mockgen -source=service.go -destination=mocks/mock.go
 type SessionRepos interface {
 	SetSession(ctx context.Context, session *model.Session) *repository.RepositoryResponse
-	GetSession(ctx context.Context, sessionID string) *repository.RepositoryResponse
+	GetSession(ctx context.Context, sessionID string, flag string) *repository.RepositoryResponse
 	DeleteSession(ctx context.Context, sessionID string) *repository.RepositoryResponse
 }
 type LogProducer interface {

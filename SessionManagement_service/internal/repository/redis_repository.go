@@ -34,24 +34,22 @@ func (redisrepo *SessionRedis) SetSession(ctx context.Context, session *model.Se
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successfull session installation", Place: place}
 }
 
-func (redisrepo *SessionRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
+func (redisrepo *SessionRedis) GetSession(ctx context.Context, sessionID string, flag string) *RepositoryResponse {
 	const place = GetSession
-	flag := ctx.Value("flagvalidate").(string)
-	flagValidate := flag == "true"
-	return redisrepo.getSessionData(ctx, sessionID, place, flagValidate)
+	return redisrepo.getSessionData(ctx, sessionID, place, flag)
 }
-func (redisrepo *SessionRedis) getSessionData(ctx context.Context, sessionID string, place string, flagvalidate bool) *RepositoryResponse {
+func (redisrepo *SessionRedis) getSessionData(ctx context.Context, sessionID string, place string, flag string) *RepositoryResponse {
 	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, sessionID).Result()
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorHgetAll, err)), Place: place}
 	}
 	if len(result) == 0 {
-		if flagvalidate {
+		if flag == "true" {
 			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.InvalidSession), Place: place}
 		}
-		return &RepositoryResponse{Success: true}
+		return &RepositoryResponse{Success: true, SuccessMessage: "Request for an unauthorized page with invalid session", Place: place}
 	}
-	if !flagvalidate {
+	if flag == "false" {
 		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.AlreadyAuthorized), Place: place}
 	}
 	userIDString := result[KeyUserId]

@@ -8,7 +8,7 @@ import (
 
 type SessionAuthentication interface {
 	CreateSession(ctx context.Context, userid string) *service.ServiceResponse
-	ValidateSession(ctx context.Context, sessionid string) *service.ServiceResponse
+	ValidateSession(ctx context.Context, sessionid string, flag string) *service.ServiceResponse
 	DeleteSession(ctx context.Context, sessionid string) *service.ServiceResponse
 }
 type LogProducer interface {
