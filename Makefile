@@ -69,5 +69,5 @@ clean:
 tests:
 	@echo "Starting tests in User-Service...."
 	powershell -Command "Start-Process powershell -ArgumentList '-NoExit', 'cd $(User_Service_DIR)/internal/service/; go test -v ./...'"
-run: swagger start
+run: tests swagger start
 shutdown: stop clean
