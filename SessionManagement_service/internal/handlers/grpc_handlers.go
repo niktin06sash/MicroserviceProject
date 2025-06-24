@@ -52,8 +52,7 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 	}
 	s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 	ctx = context.WithValue(ctx, "traceID", traceID)
-	ctx = context.WithValue(ctx, "flagvalidate", flag)
-	resp := s.sessionService.ValidateSession(ctx, req.SessionID)
+	resp := s.sessionService.ValidateSession(ctx, req.SessionID, flag)
 	if resp.Errors == nil {
 		s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("For person with id %s has successfully validated session", resp.Data.UserID))
 		return &pb.ValidateSessionResponse{Success: true, UserID: resp.Data.UserID}, nil
