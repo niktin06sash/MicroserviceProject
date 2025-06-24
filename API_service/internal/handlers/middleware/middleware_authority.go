@@ -28,16 +28,16 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return
 		}
-		grpcresponse, errmap := m.retryAuthorized(c, sessionID, traceID, place)
-		if errmap != nil {
-			switch errmap[erro.ErrorType] {
+		grpcresponse, grpcerr := m.retryAuthorized(c, sessionID, traceID, place)
+		if grpcerr != nil {
+			switch grpcerr.Type {
 			case erro.ClientErrorType:
-				response.BadResponse(c, http.StatusUnauthorized, errmap[erro.ErrorMessage], traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusUnauthorized, grpcerr.Message, traceID, place, m.logproducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				response.BadResponse(c, http.StatusInternalServerError, errmap[erro.ErrorMessage], traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusInternalServerError, grpcerr.Message, traceID, place, m.logproducer)
 				c.Abort()
 				return
 			}
@@ -59,16 +59,16 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		_, errmap := m.retryAuthorized_Not(c, sessionID, traceID, place)
-		if errmap != nil {
-			switch errmap[erro.ErrorType] {
+		_, grpcerr := m.retryAuthorized_Not(c, sessionID, traceID, place)
+		if grpcerr != nil {
+			switch grpcerr.Type {
 			case erro.ClientErrorType:
-				response.BadResponse(c, http.StatusForbidden, errmap[erro.ErrorMessage], traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusForbidden, grpcerr.Message, traceID, place, m.logproducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				response.BadResponse(c, http.StatusInternalServerError, errmap[erro.ErrorMessage], traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusInternalServerError, grpcerr.Message, traceID, place, m.logproducer)
 				c.Abort()
 				return
 			}
