@@ -151,7 +151,7 @@ func (h *Handler) MyProfile(w http.ResponseWriter, r *http.Request) {
 	if !h.getPersonality(r, w, traceID, place, persondata) {
 		return
 	}
-	myprofileresponse := h.Services.GetMyProfile(r.Context(), persondata[userID])
+	myprofileresponse := h.Services.GetProfileById(r.Context(), persondata[userID])
 	if !h.serviceResponse(myprofileresponse, r, w, traceID, place) {
 		return
 	}
@@ -173,7 +173,7 @@ func (h *Handler) GetUserById(w http.ResponseWriter, r *http.Request) {
 	if !h.getDinamicParameters(r, w, traceID, place, persondata) {
 		return
 	}
-	getprofileresponse := h.Services.GetProfileById(r.Context(), persondata[userID], persondata[getID])
+	getprofileresponse := h.Services.GetProfileById(r.Context(), persondata[getID])
 	if !h.serviceResponse(getprofileresponse, r, w, traceID, place) {
 		return
 	}

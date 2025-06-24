@@ -28,9 +28,9 @@ func OkResponse(r *http.Request, w http.ResponseWriter, status int, data map[str
 }
 func BadResponse(r *http.Request, w http.ResponseWriter, status int, errormessage string, traceid string, place string, logproducer LogProducer) {
 	if status >= 400 && status < 500 {
-		sendResponse(r, w, status, HTTPResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: errormessage}}, traceid, place, logproducer)
+		sendResponse(r, w, status, HTTPResponse{Success: false, Errors: erro.ClientError(errormessage)}, traceid, place, logproducer)
 	} else if status >= 500 {
-		sendResponse(r, w, status, HTTPResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: errormessage}}, traceid, place, logproducer)
+		sendResponse(r, w, status, HTTPResponse{Success: false, Errors: erro.ServerError(errormessage)}, traceid, place, logproducer)
 	}
 }
 func sendResponse(r *http.Request, w http.ResponseWriter, status int, resp HTTPResponse, traceid string, place string, logproducer LogProducer) {
@@ -43,7 +43,7 @@ func sendResponse(r *http.Request, w http.ResponseWriter, status int, resp HTTPR
 		w.WriteHeader(http.StatusInternalServerError)
 		badresp := HTTPResponse{
 			Success: false,
-			Errors:  &erro.CustomError{Type: erro.ServerErrorType, Message: erro.RequestTimedOut},
+			Errors:  erro.ServerError(erro.RequestTimedOut),
 		}
 		json.NewEncoder(w).Encode(badresp)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
@@ -59,7 +59,7 @@ func sendResponse(r *http.Request, w http.ResponseWriter, status int, resp HTTPR
 		w.WriteHeader(http.StatusInternalServerError)
 		badreq := HTTPResponse{
 			Success: false,
-			Errors:  &erro.CustomError{Type: erro.ServerErrorType, Message: erro.UserServiceUnavalaible},
+			Errors:  erro.ServerError(erro.UserServiceUnavalaible),
 		}
 		json.NewEncoder(w).Encode(badreq)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()

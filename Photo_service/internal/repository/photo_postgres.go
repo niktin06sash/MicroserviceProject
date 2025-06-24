@@ -31,7 +31,7 @@ func (ph *PhotoPostgresRepo) LoadPhoto(ctx context.Context, photo *model.Photo) 
 	const place = LoadPhoto
 	_, err := ph.Db.mapstmt[insertPhotoQuery].ExecContext(ctx, photo.ID, photo.UserID, photo.URL, photo.Size, photo.ContentType, photo.CreatedAt)
 	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Message: fmt.Sprintf(erro.ErrorAfterReqPhotos, err), Type: erro.ServerErrorType}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqPhotos, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, Place: place, SuccessMessage: "Successful load photo metadata to database"}
 }
@@ -41,9 +41,9 @@ func (ph *PhotoPostgresRepo) DeletePhoto(ctx context.Context, userid string, pho
 	err := ph.Db.mapstmt[deletePhotoQuery].QueryRowContext(ctx, photoid, userid).Scan(&content_type)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Message: erro.DeleteSomeonePhoto, Type: erro.ClientErrorType}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.DeleteSomeonePhoto), Place: place}
 		}
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Message: fmt.Sprintf(erro.ErrorAfterReqPhotos, err), Type: erro.ServerErrorType}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqPhotos, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, Place: place, Data: Data{ContentType: content_type}, SuccessMessage: "Successful delete photo metadata from database"}
 }
@@ -53,16 +53,16 @@ func (ph *PhotoPostgresRepo) GetPhotos(ctx context.Context, userid string) *Repo
 	rows, err := ph.Db.mapstmt[selectPhotosQuery].QueryContext(ctx, userid)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Message: erro.UnregisteredUserID, Type: erro.ClientErrorType}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.UnregisteredUserID), Place: place}
 		}
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Message: fmt.Sprintf(erro.ErrorAfterReqPhotos, err), Type: erro.ServerErrorType}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqPhotos, err)), Place: place}
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var photo model.Photo
 		err := rows.Scan(&photo.ID, &photo.URL, &photo.ContentType, &photo.CreatedAt)
 		if err != nil {
-			return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Message: fmt.Sprintf(erro.ErrorAfterReqPhotos, err), Type: erro.ServerErrorType}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqPhotos, err)), Place: place}
 		}
 		photoslice = append(photoslice, &photo)
 	}
@@ -74,9 +74,9 @@ func (ph *PhotoPostgresRepo) GetPhoto(ctx context.Context, userid string, photoi
 	err := ph.Db.mapstmt[selectPhotoQuery].QueryRowContext(ctx, userid, photoid).Scan(&photo.ID, &photo.URL, &photo.ContentType, &photo.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.NonExistentData}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.NonExistentData), Place: place}
 		}
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Message: fmt.Sprintf(erro.ErrorAfterReqPhotos, err), Type: erro.ServerErrorType}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqPhotos, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, Data: Data{Photo: &photo}, Place: place, SuccessMessage: "Successful get photo metadata from database"}
 }
@@ -85,7 +85,7 @@ func (ph *PhotoPostgresRepo) AddUserId(ctx context.Context, userid string) *Repo
 	const place = AddUserId
 	_, err := ph.Db.mapstmt[insertUserQuery].ExecContext(ctx, userid)
 	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Message: fmt.Sprintf(erro.ErrorAfterReqUsersID, err), Type: erro.ServerErrorType}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqPhotos, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, Place: place, SuccessMessage: "Successful add userID to Photo-Service's database after registration"}
 }
@@ -93,7 +93,7 @@ func (ph *PhotoPostgresRepo) DeleteUserData(ctx context.Context, userid string) 
 	const place = DeleteUserData
 	_, err := ph.Db.mapstmt[deleteUserQuery].ExecContext(ctx, userid)
 	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Message: fmt.Sprintf(erro.ErrorAfterReqUsersID, err), Type: erro.ServerErrorType}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqPhotos, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, Place: place, SuccessMessage: "Successful delete userdata from Photo-Service's database after delete account"}
 }

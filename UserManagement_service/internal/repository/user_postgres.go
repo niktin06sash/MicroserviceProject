@@ -51,10 +51,10 @@ func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "INSERT").Inc()
-			return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorUniqueEmailConst}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorUniqueEmailConst), Place: place}
 		}
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "INSERT").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful create user in database", Place: place}
 }
@@ -69,16 +69,16 @@ func (repoap *UserPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
-			return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorEmailNotRegisterConst}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorEmailNotRegisterConst), Place: place}
 		}
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(userpassword))
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorIncorrectPassword}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorIncorrectPassword), Place: place}
 	}
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userId.String()}, SuccessMessage: "Successful get user from database", Place: place}
 }
@@ -92,20 +92,20 @@ func (repoap *UserPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(password))
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorIncorrectPassword}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorIncorrectPassword), Place: place}
 	}
 	stmt = tx.StmtContext(ctx, repoap.db.mapstmt[deleteUserQuery])
 	_, err = stmt.ExecContext(ctx, userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("DELETE").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "DELETE").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete user from database", Place: place}
 }
@@ -120,10 +120,10 @@ func (repoap *UserPostgresRepo) GetProfileById(ctx context.Context, userid uuid.
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
-			return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorIDNotRegisterConst}, Place: place}
+			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorIDNotRegisterConst), Place: place}
 		}
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userid.String(), KeyUserName: name, KeyUserEmail: email}, SuccessMessage: "Successful get profile by id from database", Place: place}
 }
@@ -142,7 +142,7 @@ func (repoap *UserPostgresRepo) UpdateUserData(ctx context.Context, tx *sql.Tx, 
 		newpassword := args[1].(string)
 		return repoap.updateUserPassword(ctx, tx, userId, lastpassword, newpassword)
 	}
-	return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorInvalidDinamicParameter}, Place: place}
+	return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorInvalidCountDinamicParameter), Place: place}
 }
 func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, userId uuid.UUID, name string) *RepositoryResponse {
 	const place = UpdateName
@@ -153,7 +153,7 @@ func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, 
 	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful update username in database", Place: place}
 }
@@ -167,13 +167,13 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(password))
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorIncorrectPassword}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorIncorrectPassword), Place: place}
 	}
 	var count int
 	stmt = tx.StmtContext(ctx, repoap.db.mapstmt[selectEmailCount])
@@ -181,18 +181,18 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	if count > 0 {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorUniqueEmailConst}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorUniqueEmailConst), Place: place}
 	}
 	stmt = tx.StmtContext(ctx, repoap.db.mapstmt[updateUserEmail])
 	_, err = stmt.ExecContext(ctx, email, userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful update useremail in database", Place: place}
 }
@@ -206,26 +206,26 @@ func (repoap *UserPostgresRepo) updateUserPassword(ctx context.Context, tx *sql.
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(lastpassword))
 	metrics.UserDBQueriesTotal.WithLabelValues("CompareHashAndPassword").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorIncorrectPassword}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorIncorrectPassword), Place: place}
 	}
 	hashnewpass, err := bcrypt.GenerateFromPassword([]byte(newpassword), bcrypt.DefaultCost)
 	metrics.UserDBQueriesTotal.WithLabelValues("GenerateHashPassword").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "GenerateHashPassword").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorGenerateHashPassword, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGenerateHashPassword, err)), Place: place}
 	}
 	stmt = tx.StmtContext(ctx, repoap.db.mapstmt[UpdatePassword])
 	_, err = stmt.ExecContext(ctx, hashnewpass, userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
-		return &RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: fmt.Sprintf(erro.ErrorAfterReqUsers, err)}, Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful update userpassword in database", Place: place}
 }

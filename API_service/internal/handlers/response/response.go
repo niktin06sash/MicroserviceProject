@@ -57,15 +57,26 @@ func OkResponse(c *gin.Context, status int, data map[string]any, traceid, place 
 }
 func BadResponse(c *gin.Context, status int, errormessage string, traceid string, place string, logproducer LogProducer) {
 	if status >= 400 && status < 500 {
-		sendResponse(c, status, HTTPResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: errormessage}}, traceid, place, logproducer)
+		sendResponse(c, status, HTTPResponse{Success: false, Errors: erro.ClientError(errormessage)}, traceid, place, logproducer)
 	} else {
-		sendResponse(c, status, HTTPResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: errormessage}}, traceid, place, logproducer)
+		sendResponse(c, status, HTTPResponse{Success: false, Errors: erro.ServerError(errormessage)}, traceid, place, logproducer)
 	}
 }
 func sendResponse(c *gin.Context, status int, response HTTPResponse, traceid string, place string, logproducer LogProducer) {
-	c.JSON(status, response)
 	start := c.MustGet("starttime").(time.Time)
 	duration := time.Since(start).Seconds()
+	err := CheckContext(c, place, traceid, logproducer)
+	if err != nil {
+		badresp := HTTPResponse{
+			Success: false,
+			Errors:  erro.ServerError(erro.RequestTimedOut),
+		}
+		c.JSON(http.StatusInternalServerError, badresp)
+		metrics.APITotalBadRequests.WithLabelValues(place, metrics.NormalizePath(c.Request.URL.Path)).Inc()
+		metrics.APIBadRequestDuration.WithLabelValues(place, metrics.NormalizePath(c.Request.URL.Path)).Observe(duration)
+		return
+	}
+	c.JSON(status, response)
 	if response.Success {
 		metrics.APITotalSuccessfulRequests.WithLabelValues(place, metrics.NormalizePath((c.Request.URL.Path))).Inc()
 		metrics.APISuccessfulRequestDuration.WithLabelValues(place, metrics.NormalizePath((c.Request.URL.Path))).Observe(duration)

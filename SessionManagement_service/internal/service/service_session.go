@@ -26,7 +26,7 @@ func (s *SessionService) CreateSession(ctx context.Context, userid string) *Serv
 	traceID := ctx.Value("traceID").(string)
 	if userid == "" {
 		s.logproducer.NewSessionLog(kafka.LogLevelError, place, traceID, erro.UserIdRequired)
-		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.SessionServiceUnavalaible}}
+		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.SessionServiceUnavalaible)}
 	}
 	newsession := &model.Session{
 		SessionID:      uuid.New().String(),
@@ -43,18 +43,10 @@ func (s *SessionService) ValidateSession(ctx context.Context, sessionid string) 
 	const place = ValidateSession
 	traceID := ctx.Value("traceID").(string)
 	flag := ctx.Value("flagvalidate").(string)
-	switch flag {
-	case "true":
-		if _, err := uuid.Parse(sessionid); err != nil {
-			fmterr := fmt.Sprintf("UUID-Parse sessionID error: %v", err)
-			s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, fmterr)
-			return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.SessionIdInvalid}}
-		}
-	case "false":
-		if _, err := uuid.Parse(sessionid); err != nil {
-			s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, "Request for an unauthorized users with invalid sessionID format")
-			return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.SessionIdInvalid}}
-		}
+	if _, err := uuid.Parse(sessionid); err != nil {
+		fmterr := fmt.Sprintf("UUID-Parse sessionID error: %v", err)
+		s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, fmterr)
+		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.SessionIdInvalid)}
 	}
 	bdresponse, serviceresponse := s.requestToDB(s.repo.GetSession(ctx, sessionid), traceID)
 	if serviceresponse != nil {
@@ -71,7 +63,7 @@ func (s *SessionService) DeleteSession(ctx context.Context, sessionid string) *S
 	if _, err := uuid.Parse(sessionid); err != nil {
 		fmterr := fmt.Sprintf("UUID-Parse sessionID error: %v", err)
 		s.logproducer.NewSessionLog(kafka.LogLevelWarn, place, traceID, fmterr)
-		return &ServiceResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.SessionIdInvalid}}
+		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.SessionIdInvalid)}
 	}
 	bdresponse, serviceresponse := s.requestToDB(s.repo.DeleteSession(ctx, sessionid), traceID)
 	if serviceresponse != nil {
