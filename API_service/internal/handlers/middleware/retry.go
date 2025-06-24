@@ -15,14 +15,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (middleware *Middleware) retryAuthorized(c *gin.Context, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, map[string]string) {
+func (middleware *Middleware) retryAuthorized(c *gin.Context, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, *erro.CustomError) {
 	var err error
 	var protoresponse *proto.ValidateSessionResponse
 	for i := 1; i <= 3; i++ {
 		md := metadata.Pairs("traceID", traceID, "flagvalidate", "true")
 		ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 		if err = response.CheckContext(c, place, traceID, middleware.logproducer); err != nil {
-			return nil, map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.RequestTimedOut}
+			return nil, erro.ServerError(erro.RequestTimedOut)
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
 		if err == nil && protoresponse != nil && protoresponse.Success {
@@ -41,21 +41,21 @@ func (middleware *Middleware) retryAuthorized(c *gin.Context, sessionID string, 
 			default:
 				middleware.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, st.Message())
 				metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
-				return nil, map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: st.Message()}
+				return nil, erro.ClientError(st.Message())
 			}
 		}
 	}
 	middleware.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	return nil, map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.SessionServiceUnavalaible}
+	return nil, erro.ServerError(erro.SessionServiceUnavalaible)
 }
-func (middleware *Middleware) retryAuthorized_Not(c *gin.Context, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, map[string]string) {
+func (middleware *Middleware) retryAuthorized_Not(c *gin.Context, sessionID string, traceID string, place string) (*proto.ValidateSessionResponse, *erro.CustomError) {
 	var err error
 	var protoresponse *proto.ValidateSessionResponse
 	for i := 1; i <= 3; i++ {
 		md := metadata.Pairs("traceID", traceID, "flagvalidate", "false")
 		ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 		if err = response.CheckContext(c, place, traceID, middleware.logproducer); err != nil {
-			return nil, map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.RequestTimedOut}
+			return nil, erro.ServerError(erro.RequestTimedOut)
 		}
 		protoresponse, err = middleware.grpcClient.ValidateSession(ctx, sessionID)
 		if err == nil && protoresponse != nil && protoresponse.Success {
@@ -74,10 +74,10 @@ func (middleware *Middleware) retryAuthorized_Not(c *gin.Context, sessionID stri
 			default:
 				middleware.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, st.Message())
 				metrics.APIErrorsTotal.WithLabelValues("ClientError").Inc()
-				return nil, map[string]string{erro.ErrorType: erro.ClientErrorType, erro.ErrorMessage: st.Message()}
+				return nil, erro.ClientError(st.Message())
 			}
 		}
 	}
 	middleware.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, "All retry attempts failed")
-	return nil, map[string]string{erro.ErrorType: erro.ServerErrorType, erro.ErrorMessage: erro.SessionServiceUnavalaible}
+	return nil, erro.ServerError(erro.SessionServiceUnavalaible)
 }
