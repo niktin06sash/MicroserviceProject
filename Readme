@@ -1,77 +1,127 @@
-/////////////////////////////////////////////////////////////////////////
-1. API-Service
-Обрабатывает входящие запросы, выполняет маршрутизацию и базовую авторизацию.
-Основные функции:
-    • Middleware:
-        ◦ Logging (traceID, таймауты)
-        ◦ Rate-Limiter
-        ◦ Authorization через grpc-запросы в SessionManagement
-    • Проксирование: /reg, /auth, /logout, /delete, /me/update, /me, /users/id/{id} → UserManagement
-    • gRPC-запросы в Photo-Service
-    • Документация Swagger
-    • Отправка логов в Logs-Service в формате JSON
-    • Отправка метрик в Prometheus
-Технологии: Gin, gRPC, Swagger, Kafka-Producer, Prometheus
-/////////////////////////////////////////////////////////////////////////
-2. UserManagement
-Управляет профилями пользователей.
-Эндпоинты:
-    • POST /reg
-    • POST /auth
-    • DELETE /logout
-    • DELETE /delete
-    • PATCH /me/update
-    • GET /me
-    • GET /users/id/{id}
-Бизнес-логика:
-    • RegistrateAndLogin
-    • AuthenticateAndLogin
-    • Logout
-    • DeleteAccount
-    • UpdateAccount
-    • GetMyProfile
-    • GetProfileById
-• Использование миграций баз данных
-• Отправка метрик в Prometheus
-• Отправка событий в Photo-Service
-• Кэширование профилей пользователей
-• Отправка логов в Logs-Service в формате JSON
-Технологии: net/http, PostgreSQL, gRPC, bcrypt, Kafka-Producer, Prometheus, Redis
-/////////////////////////////////////////////////////////////////////////
-3. SessionManagement
-Управляет сессиями пользователей.
-gRPC методы:
-    • CreateSession
-    • ValidateSession
-    • DeleteSession
-Хранение: Redis с TTL
-• Отправка логов в Logs-Service в формате JSON
-Технологии: gRPC, Redis, Kafka-Producer
-/////////////////////////////////////////////////////////////////////////
-4. Logs-Service
-Отвечает за единый файловый сбор логов со всех сервисов.
-Технологии: Kafka-Consumer, Zap-Logger, os
-/////////////////////////////////////////////////////////////////////////
-5. Photo-Service
-Отвечает за загрузку/получение фотографий пользователей.
-gRPC методы:
-    • LoadPhoto
-    • DeletePhoto
-    • GetPhoto
-    • GetPhotos
-• Хранение id пользователей и метаданных фотографий в PostgreSQL(каскадное удаление фотографий пользователя)
-• Загрузка и удаление фотографий в хранилище Mega.nz
-• Получение событий от UserManagement
-• Отправка логов в Logs-Service в формате JSON
-Технологии: gRPC, PostgreSQL, Rabbit-Consumer, Mega.nz
-/////////////////////////////////////////////////////////////////////////
-Общие характеристики:
-    • Конфигурация: config.yml (Viper)
-    • Логирование: стандартная библиотека/Zap
-    • Модульность: разделение на пакеты
-    • Обработка ошибок и разделение их на клиентские и серверные
-    • Реализован DockerFile для каждого сервиса
-Особенности реализации:
-    • Retry-логика для внешних вызовов
-    • Timeout handling
-    • Graceful shutdown во всех сервисах
+# Микросервисная архитектура системы управления пользователями
+
+## Сервисы системы
+
+### 1. API-Service
+**Назначение**: Обрабатывает входящие запросы, выполняет маршрутизацию и базовую авторизацию через SessionManagement.
+
+**Основные функции**:
+- **Middleware**:
+  - Logging (traceID, таймауты)
+  - Rate-Limiter
+  - Authorization через gRPC-запросы в SessionManagement
+- **Проксирование**:
+  - `/auth/register`, `/auth/login`, `users/logout`, `users/del` `/me/update` → UserManagement
+  - `/me`, `/users/{id}` → UserManagement + Photo_Service
+  - `/me/photos`, `/me/photos{photo_id}`, `/users/{id}/photos/{photo_id}` → Photo_Service
+- gRPC-запросы в Photo-Service
+- Документация Swagger
+- Отправка логов в Logs-Service в формате JSON
+- Отправка метрик в Prometheus
+
+**Технологии**: 
+`Gin` | `gRPC-Client` | `Swagger` | `Kafka-Producer` | `Prometheus`
+
+---
+
+### 2. UserManagement
+**Назначение**: Управление профилями пользователей.
+
+**Эндпоинты**:
+- `POST /auth/register`
+- `POST /auth/login`
+- `DELETE /users/logout` 
+- `DELETE /users/delete`
+- `PATCH /me/update`
+- `GET /me`
+- `GET /users/{id}`
+
+**Бизнес-логика**:
+- RegistrateAndLogin
+- AuthenticateAndLogin
+- Logout
+- DeleteAccount
+- UpdateAccount
+- GetProfileById
+
+**Особенности**:
+- Использование миграций баз данных
+- Отправка метрик в Prometheus
+- Отправка событий в Photo-Service
+- Кэширование профилей пользователей
+- Отправка логов в Logs-Service в формате JSON
+
+**Технологии**: 
+`net/http` | `PostgreSQL` | `gRPC-Client` | `bcrypt` | `Kafka-Producer` | `Prometheus` | `Redis`
+
+---
+
+### 3. SessionManagement
+**Назначение**: Управление сессиями пользователей.
+
+**gRPC методы**:
+- CreateSession
+- ValidateSession
+- DeleteSession
+
+**Особенности**:
+- Redis с TTL
+- Отправка логов в Logs-Service в формате JSON
+
+**Технологии**: 
+`gRPC-Server` | `Redis` | `Kafka-Producer`
+
+---
+
+### 4. Logs-Service
+**Назначение**: Централизованный сбор логов со всех сервисов.
+
+**Технологии**: 
+`Kafka-Consumer` | `Zap-Logger` | `os`
+
+---
+
+### 5. Photo-Service
+**Назначение**: Управление фотографиями пользователей.
+
+**gRPC методы**:
+- LoadPhoto
+- DeletePhoto
+- GetPhoto
+- GetPhotos
+
+**Особенности**:
+- Хранение ID пользователей и метаданных в PostgreSQL (каскадное удаление)
+- Интеграция с хранилищем Mega.nz
+- Получение событий от UserManagement
+- Отправка логов в Logs-Service
+
+**Технологии**: 
+`gRPC-Server` | `PostgreSQL` | `Rabbit-Consumer` | `Mega.nz`
+
+---
+
+## Общая архитектура
+
+### Конфигурация
+- Единый `config.yml` (Viper) для всех сервисов
+
+### Логирование
+- Стандартная библиотека/Zap
+- Централизованный сбор через Logs-Service
+
+### Особенности реализации
+```mermaid
+graph TD
+    A[API-Service] -->|gRPC| B[SessionManagement]
+    A -->|HTTP| C[UserManagement]
+    C -->|gRPC| D[Photo-Service]
+    C -->|Kafka| E[Logs-Service]
+    A -->|Prometheus| F[Monitoring]
+
+### Ключевые характеристики:
+- Модульная структура (разделение на пакеты)
+- Retry-логика для внешних вызовов
+- Обработка таймаутов
+- Graceful shutdown во всех сервисах
+- Разделение ошибок на клиентские/серверные
