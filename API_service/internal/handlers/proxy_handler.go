@@ -21,7 +21,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context, place string) {
 	normalizedPath := metrics.NormalizePath(reqpath)
 	targetURL, ok := h.Routes[normalizedPath]
 	if !ok {
-		response.BadResponse(c, http.StatusBadRequest, erro.PageNotFound, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusBadRequest, erro.ClientError(erro.PageNotFound), traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return
 	}
@@ -29,13 +29,13 @@ func (h *Handler) ProxyHTTP(c *gin.Context, place string) {
 	if err != nil {
 		strerr := fmt.Sprintf("URL-Parse Error: %s", err)
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		response.BadResponse(c, http.StatusInternalServerError, erro.APIServiceUnavalaible, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.APIServiceUnavalaible), traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
 	}
 	err = response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
-		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.RequestTimedOut), traceID, place, h.logproducer)
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
@@ -64,7 +64,7 @@ func (h *Handler) ProxyHTTP(c *gin.Context, place string) {
 		traceID := c.MustGet("traceID").(string)
 		strerr := fmt.Sprintf("Proxy error: %s", err)
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, strerr)
-		response.BadResponse(c, http.StatusInternalServerError, erro.APIServiceUnavalaible, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.APIServiceUnavalaible), traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 	}
 	h.logproducer.NewAPILog(c.Request, kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Successful Proxy-HTTP-request to %s", targetURL))

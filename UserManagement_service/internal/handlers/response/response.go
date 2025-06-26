@@ -26,12 +26,8 @@ const KeyMessage = "message"
 func OkResponse(r *http.Request, w http.ResponseWriter, status int, data map[string]any, traceid, place string, logproducer LogProducer) {
 	sendResponse(r, w, status, HTTPResponse{Data: data, Success: true}, traceid, place, logproducer)
 }
-func BadResponse(r *http.Request, w http.ResponseWriter, status int, errormessage string, traceid string, place string, logproducer LogProducer) {
-	if status >= 400 && status < 500 {
-		sendResponse(r, w, status, HTTPResponse{Success: false, Errors: erro.ClientError(errormessage)}, traceid, place, logproducer)
-	} else if status >= 500 {
-		sendResponse(r, w, status, HTTPResponse{Success: false, Errors: erro.ServerError(errormessage)}, traceid, place, logproducer)
-	}
+func BadResponse(r *http.Request, w http.ResponseWriter, status int, err *erro.CustomError, traceid string, place string, logproducer LogProducer) {
+	sendResponse(r, w, status, HTTPResponse{Success: false, Errors: err}, traceid, place, logproducer)
 }
 func sendResponse(r *http.Request, w http.ResponseWriter, status int, resp HTTPResponse, traceid string, place string, logproducer LogProducer) {
 	ctx := r.Context()

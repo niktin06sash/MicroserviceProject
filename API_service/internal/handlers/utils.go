@@ -22,27 +22,27 @@ func (h *Handler) badGrpcResponse(c *gin.Context, traceID, place string, err err
 	switch st.Code() {
 	case codes.Canceled, codes.Unavailable:
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, st.Message(), traceID, place)
-		response.BadResponse(c, http.StatusInternalServerError, erro.PhotoServiceUnavalaible, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.PhotoServiceUnavalaible), traceID, place, h.logproducer)
 	case codes.Internal:
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, st.Message(), traceID, place)
-		response.BadResponse(c, http.StatusInternalServerError, st.Message(), traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(st.Message()), traceID, place, h.logproducer)
 	default:
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, st.Message(), traceID, place)
-		response.BadResponse(c, http.StatusBadRequest, st.Message(), traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusBadRequest, erro.ClientError(st.Message()), traceID, place, h.logproducer)
 	}
 }
 func (h *Handler) badHttpResponse(c *gin.Context, traceID, place string, userresponse response.HTTPResponse) bool {
 	if !userresponse.Success {
 		if userresponse.Errors.Type == erro.ServerErrorType {
-			response.BadResponse(c, http.StatusInternalServerError, userresponse.Errors.Message, traceID, place, h.logproducer)
+			response.BadResponse(c, http.StatusInternalServerError, userresponse.Errors, traceID, place, h.logproducer)
 		} else {
-			response.BadResponse(c, http.StatusBadRequest, userresponse.Errors.Message, traceID, place, h.logproducer)
+			response.BadResponse(c, http.StatusBadRequest, userresponse.Errors, traceID, place, h.logproducer)
 		}
 		return true
 	}
 	return false
 }
-func (h *Handler) httpRequest(c *gin.Context, target string, place string, httpresponseChan chan response.HTTPResponse) error {
+func (h *Handler) asyncHTTPRequest(c *gin.Context, target string, place string, httpresponseChan chan response.HTTPResponse) error {
 	traceID := c.MustGet("traceID").(string)
 	userid := c.MustGet("userID").(string)
 	sessionid := c.MustGet("sessionID").(string)
@@ -85,7 +85,7 @@ func (h *Handler) httpRequest(c *gin.Context, target string, place string, httpr
 	return nil
 }
 
-func GrpcRequest[T any](context context.Context, operation func(context.Context) (T, error), protoresponseChan chan T) error {
+func asyncgRPCRequest[T any](context context.Context, operation func(context.Context) (T, error), protoresponseChan chan T) error {
 	protoresponse, err := operation(context)
 	if err != nil {
 		st, _ := status.FromError(err)
@@ -104,5 +104,5 @@ func (h *Handler) asyncBadResponse(c *gin.Context, traceID string, place string,
 		h.badGrpcResponse(c, traceID, place, err)
 		return
 	}
-	response.BadResponse(c, http.StatusInternalServerError, err.Error(), traceID, place, h.logproducer)
+	response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(err.Error()), traceID, place, h.logproducer)
 }

@@ -115,13 +115,13 @@ func (h *Handler) GetMyProfile(c *gin.Context) {
 	ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 	target, ok := h.Routes[c.Request.URL.Path]
 	if !ok {
-		response.BadResponse(c, http.StatusBadRequest, erro.PageNotFound, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusBadRequest, erro.ClientError(erro.PageNotFound), traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return
 	}
 	err := response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
-		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.RequestTimedOut), traceID, place, h.logproducer)
 		return
 	}
 	g, ctx := errgroup.WithContext(ctx)
@@ -129,9 +129,9 @@ func (h *Handler) GetMyProfile(c *gin.Context) {
 	protoresponseChan := make(chan *pb.GetPhotosResponse, 1)
 	defer close(httpresponseChan)
 	defer close(protoresponseChan)
-	g.Go(func() error { return h.httpRequest(c, target, place, httpresponseChan) })
+	g.Go(func() error { return h.asyncHTTPRequest(c, target, place, httpresponseChan) })
 	g.Go(func() error {
-		return GrpcRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
+		return asyncgRPCRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
 			return h.photoclient.GetPhotos(ctx, userid)
 		}, protoresponseChan)
 	})
@@ -169,7 +169,7 @@ func (h *Handler) GetUserProfileById(c *gin.Context) {
 	normalizedPath := metrics.NormalizePath(c.Request.URL.Path)
 	target, ok := h.Routes[normalizedPath]
 	if !ok {
-		response.BadResponse(c, http.StatusBadRequest, erro.PageNotFound, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusBadRequest, erro.ClientError(erro.PageNotFound), traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return
 	}
@@ -177,7 +177,7 @@ func (h *Handler) GetUserProfileById(c *gin.Context) {
 	targetid := target + "/" + paramuserid
 	err := response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
-		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.RequestTimedOut), traceID, place, h.logproducer)
 		return
 	}
 	g, ctx := errgroup.WithContext(ctx)
@@ -185,9 +185,9 @@ func (h *Handler) GetUserProfileById(c *gin.Context) {
 	protoresponseChan := make(chan *pb.GetPhotosResponse, 1)
 	defer close(httpresponseChan)
 	defer close(protoresponseChan)
-	g.Go(func() error { return h.httpRequest(c, targetid, place, httpresponseChan) })
+	g.Go(func() error { return h.asyncHTTPRequest(c, targetid, place, httpresponseChan) })
 	g.Go(func() error {
-		return GrpcRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
+		return asyncgRPCRequest(ctx, func(ctx context.Context) (*proto.GetPhotosResponse, error) {
 			return h.photoclient.GetPhotos(ctx, paramuserid)
 		}, protoresponseChan)
 	})
@@ -227,7 +227,7 @@ func (h *Handler) GetPhotoById(c *gin.Context) {
 	ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 	err := response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
-		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.RequestTimedOut), traceID, place, h.logproducer)
 		return
 	}
 	protoresponse, err := h.photoclient.GetPhoto(ctx, userid, photoid)
@@ -259,7 +259,7 @@ func (h *Handler) DeletePhoto(c *gin.Context) {
 	ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 	err := response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
-		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.RequestTimedOut), traceID, place, h.logproducer)
 		return
 	}
 	protoresponse, err := h.photoclient.DeletePhoto(ctx, userid, photoid)
@@ -292,20 +292,20 @@ func (h *Handler) LoadPhoto(c *gin.Context) {
 	file, _, err := c.Request.FormFile("photo")
 	if err != nil {
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, erro.RequiredFormPhoto)
-		response.BadResponse(c, http.StatusBadRequest, erro.RequiredFormPhoto, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusBadRequest, erro.ClientError(erro.RequiredFormPhoto), traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 		return
 	}
 	bytes, err := io.ReadAll(file)
 	if err != nil {
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, fmt.Sprintf("Failed readAll: %v", err))
-		response.BadResponse(c, http.StatusBadRequest, erro.APIServiceUnavalaible, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusBadRequest, erro.ServerError(erro.APIServiceUnavalaible), traceID, place, h.logproducer)
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return
 	}
 	err = response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
-		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.RequestTimedOut), traceID, place, h.logproducer)
 		return
 	}
 	protoresponse, err := h.photoclient.LoadPhoto(ctx, userid, bytes)
@@ -337,7 +337,7 @@ func (h *Handler) GetMyPhotoById(c *gin.Context) {
 	ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 	err := response.CheckContext(c, place, traceID, h.logproducer)
 	if err != nil {
-		response.BadResponse(c, http.StatusInternalServerError, erro.RequestTimedOut, traceID, place, h.logproducer)
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.RequestTimedOut), traceID, place, h.logproducer)
 		return
 	}
 	protoresponse, err := h.photoclient.GetPhoto(ctx, userid, photoid)
