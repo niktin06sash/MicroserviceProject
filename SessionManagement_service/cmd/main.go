@@ -29,6 +29,7 @@ func main() {
 	service := service.NewSessionService(repository, kafkaProducer)
 	api := handlers.NewSessionAPI(service, kafkaProducer)
 	srv := server.NewGrpcServer(api)
+	kafkaProducer.LogStart()
 	serverError := make(chan error, 1)
 	go func() {
 		if err := srv.Run(config.Server.Port); err != nil {
@@ -46,8 +47,7 @@ func main() {
 		log.Printf("[DEBUG] [Session-Service] Service startup failed: %v", err)
 		return
 	}
-	shutdownTimeout := 5 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	log.Println("[DEBUG] [Session-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
@@ -57,6 +57,7 @@ func main() {
 	log.Println("[DEBUG] [Session-Service] Service has shutted down successfully")
 	defer func() {
 		redis.Close()
+		kafkaProducer.LogClose()
 		kafkaProducer.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)

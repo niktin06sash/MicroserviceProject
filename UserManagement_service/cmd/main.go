@@ -48,10 +48,11 @@ func main() {
 	service := service.NewUserService(postgredb, tx, redisdb, kafkaProducer, rabbitproducer, grpcclient)
 	middleware := middleware.NewMiddleware(kafkaProducer)
 	handlers := handlers.NewHandler(service, middleware, kafkaProducer)
-	srv := &server.Server{}
+	srv := server.NewServer(config.Server, handlers.InitRoutes())
+	kafkaProducer.LogStart()
 	serverError := make(chan error, 1)
 	go func() {
-		if err := srv.Run(config.Server.Port, handlers.InitRoutes()); err != nil {
+		if err := srv.Run(); err != nil {
 			serverError <- fmt.Errorf("server run failed: %w", err)
 			return
 		}
@@ -66,8 +67,7 @@ func main() {
 		log.Printf("[DEBUG] [User-Service] Service startup failed: %v", err)
 		return
 	}
-	shutdownTimeout := 5 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	log.Println("[DEBUG] [User-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
@@ -77,10 +77,11 @@ func main() {
 	log.Println("[DEBUG] [User-Service] Service has shutted down successfully")
 	defer func() {
 		metrics.Stop()
-		kafkaProducer.Close()
 		rabbitproducer.Close()
 		db.Close()
 		grpcclient.Close()
+		kafkaProducer.LogClose()
+		kafkaProducer.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
 		log.Printf("[DEBUG] [User-Service] Active goroutines:\n%s", buf[:n])

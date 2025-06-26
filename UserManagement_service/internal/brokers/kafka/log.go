@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
@@ -42,6 +41,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 	for {
 		select {
 		case <-kf.context.Done():
+			log.Printf("[WARN] [User-Service] [Worker: %v] Context canceled", num)
 			return
 		case logg, ok := <-kf.logchan:
 			if !ok {
@@ -51,7 +51,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			metrics.UserKafkaProducerBufferSize.Set(float64(len(kf.logchan)))
 			ctx, cancel := context.WithTimeout(kf.context, 5*time.Second)
 			defer cancel()
-			topic := "user-" + strings.ToLower(logg.Level) + "-log-topic"
+			topic := "user-" + logg.Level + "-log-topic"
 			data, err := json.Marshal(logg)
 			if err != nil {
 				log.Printf("[ERROR] [User-Service] [Worker: %v] Failed to marshal log: %v", num, err)
@@ -81,6 +81,39 @@ func (kf *KafkaProducer) sendLogs(num int) {
 				log.Printf("[ERROR] [User-Service] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
 				metrics.UserKafkaProducerErrorsTotal.WithLabelValues(topic).Inc()
 				metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+			}
+		}
+	}
+}
+
+type serviceLog struct {
+	Message string `json:"service_log"`
+}
+
+func (kf *KafkaProducer) LogStart() {
+	kf.sendServiceLog(serviceLog{Message: logStartService})
+}
+func (kf *KafkaProducer) LogClose() {
+	kf.sendServiceLog(serviceLog{Message: logCloseService})
+}
+func (kf *KafkaProducer) sendServiceLog(logg serviceLog) {
+	for _, topic := range kf.topics {
+		select {
+		case <-kf.context.Done():
+			log.Printf("[DEBUG] [User-Service] Context canceled or expired before send Service Log")
+			return
+		default:
+			data, err := json.Marshal(logg)
+			if err != nil {
+				log.Printf("[DEBUG] [User-Service] Failed to marshal log: %v", err)
+				return
+			}
+			err = kf.writer.WriteMessages(kf.context, kafka.Message{
+				Topic: topic,
+				Value: data,
+			})
+			if err != nil {
+				log.Printf("[DEBUG] [User-Service] Failed to send Service Log(%v): %v", logg, err)
 			}
 		}
 	}
