@@ -12,9 +12,11 @@ import (
 )
 
 const (
-	LogLevelInfo  = "INFO"
-	LogLevelWarn  = "WARN"
-	LogLevelError = "ERROR"
+	LogLevelInfo    = "info"
+	LogLevelWarn    = "warn"
+	LogLevelError   = "error"
+	logCloseService = "----------CLOSE SERVICE----------"
+	logStartService = "----------START SERVICE----------"
 )
 
 type KafkaProducer struct {
@@ -23,6 +25,7 @@ type KafkaProducer struct {
 	wg      *sync.WaitGroup
 	context context.Context
 	cancel  context.CancelFunc
+	topics  map[string]string
 }
 
 func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
@@ -56,6 +59,7 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 		wg:      &sync.WaitGroup{},
 		context: ctx,
 		cancel:  cancel,
+		topics:  config.Topics,
 	}
 	for i := 1; i <= 3; i++ {
 		producer.wg.Add(1)

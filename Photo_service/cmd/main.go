@@ -38,6 +38,7 @@ func main() {
 	service := service.NewPhotoService(postgres, mega, kafkaProducer)
 	api := handlers.NewPhotoAPI(service, kafkaProducer)
 	srv := server.NewGrpcServer(api)
+	kafkaProducer.LogStart()
 	serverError := make(chan error, 1)
 	go func() {
 		if err := srv.Run(config.Server.Port); err != nil {
@@ -55,8 +56,7 @@ func main() {
 		log.Printf("[DEBUG] [Photo-Service] Service startup failed: %v", err)
 		return
 	}
-	shutdownTimeout := 5 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	log.Println("[DEBUG] [Photo-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
@@ -65,11 +65,12 @@ func main() {
 	}
 	log.Println("[DEBUG] [Photo-Service] Service has shutted down successfully")
 	defer func() {
-		db.Close()
 		service.WaitGoroutines()
-		kafkaProducer.Close()
 		rabbitconsumer.Close()
+		db.Close()
 		mega.Close()
+		kafkaProducer.LogClose()
+		kafkaProducer.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
 		log.Printf("[DEBUG] [Photo-Service] Active goroutines:\n%s", buf[:n])

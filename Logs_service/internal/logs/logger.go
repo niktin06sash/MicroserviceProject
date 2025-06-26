@@ -18,14 +18,6 @@ type Logger struct {
 }
 
 func (logg *Logger) Sync() {
-	switch logg.Level {
-	case "info":
-		logg.ZapLogger.Info("----------CLOSE SERVICE----------")
-	case "error":
-		logg.ZapLogger.Error("----------CLOSE SERVICE----------")
-	case "warn":
-		logg.ZapLogger.Warn("----------CLOSE SERVICE----------")
-	}
 	logg.ZapLogger.Sync()
 	logg.File.Close()
 	log.Printf("[DEBUG] [Logs-Service] [Logger: %s] Successful sync and close Logger", logg.Topic)
@@ -54,14 +46,6 @@ func NewLogger(config configs.LoggerConfig, topic string) (*Logger, error) {
 	core := zapcore.NewCore(encoder, zapcore.AddSync(file), levelEnabler)
 	logger := zap.New(core)
 	log.Printf("[DEBUG] [Logs-Service] [Logger: %s] Successful connect to Logger", topic)
-	switch level {
-	case "info":
-		logger.Info("----------START SERVICE----------")
-	case "error":
-		logger.Error("----------START SERVICE----------")
-	case "warn":
-		logger.Warn("----------START SERVICE----------")
-	}
 	return &Logger{
 		ZapLogger: logger,
 		File:      file,

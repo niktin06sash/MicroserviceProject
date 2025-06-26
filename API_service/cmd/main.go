@@ -42,10 +42,11 @@ func main() {
 	}
 	middleware := middleware.NewMiddleware(sessionclient, kafkaprod)
 	handler := handlers.NewHandler(middleware, photoclient, kafkaprod, config.Routes)
-	srv := &server.Server{}
+	srv := server.NewServer(config.Server, handler.InitRoutes())
+	kafkaprod.LogStart()
 	serverError := make(chan error, 1)
 	go func() {
-		if err := srv.Run(config.Server.Port, handler.InitRoutes()); err != nil {
+		if err := srv.Run(); err != nil {
 			serverError <- fmt.Errorf("server run failed: %w", err)
 			return
 		}
@@ -60,8 +61,7 @@ func main() {
 		log.Printf("[DEBUG] [API-Service] Service startup failed: %v", err)
 		return
 	}
-	shutdownTimeout := 5 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	log.Println("[DEBUG] [API-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
@@ -74,6 +74,7 @@ func main() {
 		middleware.Stop()
 		sessionclient.Close()
 		photoclient.Close()
+		kafkaprod.LogClose()
 		kafkaprod.Close()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)

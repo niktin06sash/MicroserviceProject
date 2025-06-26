@@ -47,17 +47,11 @@ type RabbitMQConfig struct {
 }
 
 type KafkaConfig struct {
-	BootstrapServers string      `mapstructure:"bootstrap_servers"`
-	RetryBackoffMs   int         `mapstructure:"retry_backoff_ms"`
-	BatchSize        int         `mapstructure:"batch_size"`
-	Acks             string      `mapstructure:"acks"`
-	Topics           KafkaTopics `mapstructure:"topics"`
-}
-
-type KafkaTopics struct {
-	InfoLog  string `mapstructure:"info_log"`
-	ErrorLog string `mapstructure:"error_log"`
-	WarnLog  string `mapstructure:"warn_log"`
+	BootstrapServers string            `mapstructure:"bootstrap_servers"`
+	RetryBackoffMs   int               `mapstructure:"retry_backoff_ms"`
+	BatchSize        int               `mapstructure:"batch_size"`
+	Acks             string            `mapstructure:"acks"`
+	Topics           map[string]string `mapstructure:"topics"`
 }
 type MegaConfig struct {
 	Email         string `mapstructure:"email"`
