@@ -3,6 +3,7 @@ package configs
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -17,7 +18,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port string `mapstructure:"port"`
+	Port             string        `mapstructure:"port"`
+	MaxRecvMsgSize   int           `mapstructure:"max_recv_msg_size"`
+	MaxSendMsgSize   int           `mapstructure:"max_send_msg_size"`
+	GracefulShutdown time.Duration `mapstructure:"graceful_shutdown"`
 }
 
 type DatabaseConfig struct {

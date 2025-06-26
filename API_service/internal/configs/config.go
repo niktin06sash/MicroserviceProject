@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -18,7 +19,11 @@ type Config struct {
 	SSL            SSLConfig            `mapstructure:"ssl"`
 }
 type ServerConfig struct {
-	Port string `mapstructure:"port"`
+	Port             string        `mapstructure:"port"`
+	MaxHeaderBytes   int           `mapstructure:"max_header_bytes"`
+	ReadTimeout      time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout     time.Duration `mapstructure:"write_timeout"`
+	GracefulShutdown time.Duration `mapstructure:"graceful_shutdown"`
 }
 type SessionServiceConfig struct {
 	GrpcAddress string `mapstructure:"grpc_address"`

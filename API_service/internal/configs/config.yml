@@ -1,5 +1,9 @@
 server:
   port: "8083"
+  max_header_bytes: 1048576 
+  read_timeout: "10s"
+  write_timeout: "10s"
+  graceful_shutdown: "10s"
 session_service:
   grpc_address: "localhost:50052"
 photo_service:

@@ -16,11 +16,11 @@ type PhotoService struct {
 	repo        DBPhotoRepos
 	cloud       CloudPhotoStorage
 	logProducer LogProducer
-	wg          sync.WaitGroup
+	wg          *sync.WaitGroup
 }
 
 func NewPhotoService(repo DBPhotoRepos, cloud CloudPhotoStorage, logproducer LogProducer) *PhotoService {
-	return &PhotoService{repo: repo, logProducer: logproducer, cloud: cloud}
+	return &PhotoService{repo: repo, logProducer: logproducer, cloud: cloud, wg: &sync.WaitGroup{}}
 }
 
 func (use *PhotoService) DeletePhoto(ctx context.Context, userid string, photoid string) *ServiceResponse {

@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/configs"
@@ -28,11 +27,11 @@ func main() {
 	repository := repository.NewSessionRepos(redis)
 	service := service.NewSessionService(repository, kafkaProducer)
 	api := handlers.NewSessionAPI(service, kafkaProducer)
-	srv := server.NewGrpcServer(api)
+	srv := server.NewGrpcServer(config.Server, api)
 	kafkaProducer.LogStart()
 	serverError := make(chan error, 1)
 	go func() {
-		if err := srv.Run(config.Server.Port); err != nil {
+		if err := srv.Run(config.Server); err != nil {
 			serverError <- fmt.Errorf("server run failed: %w", err)
 			return
 		}
@@ -47,7 +46,7 @@ func main() {
 		log.Printf("[DEBUG] [Session-Service] Service startup failed: %v", err)
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.Server.GracefulShutdown)
 	defer cancel()
 	log.Println("[DEBUG] [Session-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {

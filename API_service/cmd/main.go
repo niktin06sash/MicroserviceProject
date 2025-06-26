@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/client"
@@ -61,7 +60,7 @@ func main() {
 		log.Printf("[DEBUG] [API-Service] Service startup failed: %v", err)
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.Server.GracefulShutdown)
 	defer cancel()
 	log.Println("[DEBUG] [API-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {
