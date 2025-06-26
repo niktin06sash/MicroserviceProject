@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/configs"
 )
@@ -18,9 +17,9 @@ func NewServer(config configs.ServerConfig, handler http.Handler) *Server {
 	server.httpServer = &http.Server{
 		Addr:           ":" + config.Port,
 		Handler:        handler,
-		MaxHeaderBytes: 1 << 20,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: config.MaxHeaderBytes,
+		ReadTimeout:    config.ReadTimeout,
+		WriteTimeout:   config.WriteTimeout,
 	}
 	return server
 }

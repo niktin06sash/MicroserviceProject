@@ -5,27 +5,34 @@ import (
 	"log"
 	"net"
 
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/configs"
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 
 	"google.golang.org/grpc"
 )
 
 type GrpcServer struct {
-	server  *grpc.Server
-	service pb.PhotoServiceServer
+	server *grpc.Server
 }
 
-func NewGrpcServer(service pb.PhotoServiceServer) *GrpcServer {
-	return &GrpcServer{service: service}
+func NewGrpcServer(config configs.ServerConfig, service pb.PhotoServiceServer) *GrpcServer {
+	opts := []grpc.ServerOption{
+		grpc.MaxRecvMsgSize(config.MaxRecvMsgSize),
+		grpc.MaxSendMsgSize(config.MaxSendMsgSize),
+	}
+	s := &GrpcServer{}
+	s.server = grpc.NewServer(opts...)
+	pb.RegisterPhotoServiceServer(s.server, service)
+	return s
 }
-func (s *GrpcServer) Run(port string) error {
-	lis, err := net.Listen("tcp", ":"+port)
+func (s *GrpcServer) Run(config configs.ServerConfig) error {
+	lis, err := net.Listen("tcp", ":"+config.Port)
 	if err != nil {
+		log.Printf("[DEBUG] [Photo-Service] Error create connection on port %s: %v", config.Port, err)
 		return err
 	}
 	s.server = grpc.NewServer()
-	pb.RegisterPhotoServiceServer(s.server, s.service)
-	log.Println("[DEBUG] [Photo-Service] Starting gRPC-server on port:", port)
+	log.Printf("[DEBUG] [Photo-Service] Starting gRPC-server on port %s", config.Port)
 	return s.server.Serve(lis)
 }
 func (s *GrpcServer) Shutdown(ctx context.Context) error {

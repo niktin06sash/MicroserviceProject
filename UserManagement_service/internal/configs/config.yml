@@ -1,5 +1,9 @@
 server:
   port: "8082"
+  max_header_bytes: 1048576 
+  read_timeout: "10s"
+  write_timeout: "10s"
+  graceful_shutdown: "10s"
 redis:  
   host: localhost
   port: 6380        

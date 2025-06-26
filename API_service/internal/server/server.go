@@ -4,22 +4,27 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"time"
+
+	"github.com/niktin06sash/MicroserviceProject/API_service/internal/configs"
 )
 
 type Server struct {
 	httpServer *http.Server
 }
 
-func (s *Server) Run(port string, handler http.Handler) error {
-	s.httpServer = &http.Server{
-		Addr:           ":" + port,
+func NewServer(config configs.ServerConfig, handler http.Handler) *Server {
+	server := &Server{}
+	server.httpServer = &http.Server{
+		Addr:           ":" + config.Port,
 		Handler:        handler,
-		MaxHeaderBytes: 1 << 20,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: config.MaxHeaderBytes,
+		ReadTimeout:    config.ReadTimeout,
+		WriteTimeout:   config.WriteTimeout,
 	}
-	log.Println("[DEBUG] [API-Service] Starting server on port:", port)
+	return server
+}
+func (s *Server) Run() error {
+	log.Printf("[DEBUG] [API-Service] Starting server on port %s", s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()
 }
 

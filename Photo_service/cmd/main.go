@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/rabbitmq"
@@ -37,11 +36,11 @@ func main() {
 	}
 	service := service.NewPhotoService(postgres, mega, kafkaProducer)
 	api := handlers.NewPhotoAPI(service, kafkaProducer)
-	srv := server.NewGrpcServer(api)
+	srv := server.NewGrpcServer(config.Server, api)
 	kafkaProducer.LogStart()
 	serverError := make(chan error, 1)
 	go func() {
-		if err := srv.Run(config.Server.Port); err != nil {
+		if err := srv.Run(config.Server); err != nil {
 			serverError <- fmt.Errorf("server run failed: %w", err)
 			return
 		}
@@ -56,7 +55,7 @@ func main() {
 		log.Printf("[DEBUG] [Photo-Service] Service startup failed: %v", err)
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.Server.GracefulShutdown)
 	defer cancel()
 	log.Println("[DEBUG] [Photo-Service] Service is shutting down...")
 	if err := srv.Shutdown(ctx); err != nil {

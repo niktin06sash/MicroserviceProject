@@ -5,27 +5,34 @@ import (
 	"log"
 	"net"
 
+	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/configs"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 
 	"google.golang.org/grpc"
 )
 
 type GrpcServer struct {
-	server  *grpc.Server
-	service pb.SessionServiceServer
+	server *grpc.Server
 }
 
-func NewGrpcServer(service pb.SessionServiceServer) *GrpcServer {
-	return &GrpcServer{service: service}
+func NewGrpcServer(config configs.ServerConfig, service pb.SessionServiceServer) *GrpcServer {
+	opts := []grpc.ServerOption{
+		grpc.MaxRecvMsgSize(config.MaxRecvMsgSize),
+		grpc.MaxSendMsgSize(config.MaxSendMsgSize),
+	}
+	s := &GrpcServer{}
+	s.server = grpc.NewServer(opts...)
+	pb.RegisterSessionServiceServer(s.server, service)
+	return s
 }
-func (s *GrpcServer) Run(port string) error {
-	lis, err := net.Listen("tcp", ":"+port)
+func (s *GrpcServer) Run(config configs.ServerConfig) error {
+	lis, err := net.Listen("tcp", ":"+config.Port)
 	if err != nil {
+		log.Printf("[DEBUG] [Session-Service] Error create connection on port %s: %v", config.Port, err)
 		return err
 	}
 	s.server = grpc.NewServer()
-	pb.RegisterSessionServiceServer(s.server, s.service)
-	log.Println("[DEBUG] [Session-Service] Starting gRPC-server on port:", port)
+	log.Printf("[DEBUG] [Session-Service] Starting gRPC-server on port %s", config.Port)
 	return s.server.Serve(lis)
 }
 func (s *GrpcServer) Shutdown(ctx context.Context) error {

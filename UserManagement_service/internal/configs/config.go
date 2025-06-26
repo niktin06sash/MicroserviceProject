@@ -3,6 +3,7 @@ package configs
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -17,9 +18,12 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port string `mapstructure:"port"`
+	Port             string        `mapstructure:"port"`
+	MaxHeaderBytes   int           `mapstructure:"max_header_bytes"`
+	ReadTimeout      time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout     time.Duration `mapstructure:"write_timeout"`
+	GracefulShutdown time.Duration `mapstructure:"graceful_shutdown"`
 }
-
 type DatabaseConfig struct {
 	Driver   string `mapstructure:"driver"`
 	Host     string `mapstructure:"host"`
