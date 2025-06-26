@@ -17,14 +17,14 @@ func (m *Middleware) Authorized(next http.Handler) http.Handler {
 		userID := r.Header.Get("X-User-ID")
 		if userID == "" {
 			m.LogProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Required User-ID")
-			response.BadResponse(r, w, http.StatusInternalServerError, erro.UserServiceUnavalaible, traceID, place, m.LogProducer)
+			response.BadResponse(r, w, http.StatusInternalServerError, erro.ServerError(erro.UserServiceUnavalaible), traceID, place, m.LogProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID == "" {
 			m.LogProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Required Session-ID")
-			response.BadResponse(r, w, http.StatusInternalServerError, erro.UserServiceUnavalaible, traceID, place, m.LogProducer)
+			response.BadResponse(r, w, http.StatusInternalServerError, erro.ServerError(erro.UserServiceUnavalaible), traceID, place, m.LogProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			return
 		}
@@ -42,14 +42,14 @@ func (m *Middleware) AuthorizedNot(next http.Handler) http.Handler {
 		userID := r.Header.Get("X-User-ID")
 		if userID != "" {
 			m.LogProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Not-Required User-ID")
-			response.BadResponse(r, w, http.StatusInternalServerError, erro.UserServiceUnavalaible, traceID, place, m.LogProducer)
+			response.BadResponse(r, w, http.StatusInternalServerError, erro.ServerError(erro.UserServiceUnavalaible), traceID, place, m.LogProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			return
 		}
 		sessionID := r.Header.Get("X-Session-ID")
 		if sessionID != "" {
 			m.LogProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Not-Required Session-ID")
-			response.BadResponse(r, w, http.StatusInternalServerError, erro.UserServiceUnavalaible, traceID, place, m.LogProducer)
+			response.BadResponse(r, w, http.StatusInternalServerError, erro.ServerError(erro.UserServiceUnavalaible), traceID, place, m.LogProducer)
 			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			return
 		}

@@ -23,7 +23,7 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		sessionID, err := c.Cookie("session")
 		if err != nil {
 			m.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Required session in cookie")
-			response.BadResponse(c, http.StatusUnauthorized, erro.RequiredSession, traceID, place, m.logproducer)
+			response.BadResponse(c, http.StatusUnauthorized, erro.ClientError(erro.RequiredSession), traceID, place, m.logproducer)
 			c.Abort()
 			metrics.APIErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
 			return
@@ -32,12 +32,12 @@ func (m *Middleware) Authorized() gin.HandlerFunc {
 		if grpcerr != nil {
 			switch grpcerr.Type {
 			case erro.ClientErrorType:
-				response.BadResponse(c, http.StatusUnauthorized, grpcerr.Message, traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusUnauthorized, grpcerr, traceID, place, m.logproducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				response.BadResponse(c, http.StatusInternalServerError, grpcerr.Message, traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusInternalServerError, grpcerr, traceID, place, m.logproducer)
 				c.Abort()
 				return
 			}
@@ -63,12 +63,12 @@ func (m *Middleware) AuthorizedNot() gin.HandlerFunc {
 		if grpcerr != nil {
 			switch grpcerr.Type {
 			case erro.ClientErrorType:
-				response.BadResponse(c, http.StatusForbidden, grpcerr.Message, traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusForbidden, grpcerr, traceID, place, m.logproducer)
 				c.Abort()
 				return
 
 			case erro.ServerErrorType:
-				response.BadResponse(c, http.StatusInternalServerError, grpcerr.Message, traceID, place, m.logproducer)
+				response.BadResponse(c, http.StatusInternalServerError, grpcerr, traceID, place, m.logproducer)
 				c.Abort()
 				return
 			}

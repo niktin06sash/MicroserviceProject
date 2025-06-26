@@ -55,12 +55,8 @@ const KeyPhotos = "photos"
 func OkResponse(c *gin.Context, status int, data map[string]any, traceid, place string, logproducer LogProducer) {
 	sendResponse(c, status, HTTPResponse{Data: data, Success: true}, traceid, place, logproducer)
 }
-func BadResponse(c *gin.Context, status int, errormessage string, traceid string, place string, logproducer LogProducer) {
-	if status >= 400 && status < 500 {
-		sendResponse(c, status, HTTPResponse{Success: false, Errors: erro.ClientError(errormessage)}, traceid, place, logproducer)
-	} else {
-		sendResponse(c, status, HTTPResponse{Success: false, Errors: erro.ServerError(errormessage)}, traceid, place, logproducer)
-	}
+func BadResponse(c *gin.Context, status int, err *erro.CustomError, traceid string, place string, logproducer LogProducer) {
+	sendResponse(c, status, HTTPResponse{Success: false, Errors: err}, traceid, place, logproducer)
 }
 func sendResponse(c *gin.Context, status int, response HTTPResponse, traceid string, place string, logproducer LogProducer) {
 	start := c.MustGet("starttime").(time.Time)
