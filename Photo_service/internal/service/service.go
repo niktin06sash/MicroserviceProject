@@ -15,6 +15,13 @@ type DBPhotoRepos interface {
 	GetPhotos(ctx context.Context, userid string) *repository.RepositoryResponse
 	GetPhoto(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
 }
+type CachePhotoRepos interface {
+	AddPhotoCache(ctx context.Context, userid string, photo *pb.Photo) *repository.RepositoryResponse
+	AddPhotosCache(ctx context.Context, userid string, photosslice []*pb.Photo) *repository.RepositoryResponse
+	GetPhotoCache(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
+	GetPhotosCache(ctx context.Context, userid string) *repository.RepositoryResponse
+	DeletePhotoCache(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
+}
 type CloudPhotoStorage interface {
 	UploadFile(ctx context.Context, localfilepath string, photoid string, ext string) *repository.RepositoryResponse
 	DeleteFile(ctx context.Context, id, contenttype string) *repository.RepositoryResponse
@@ -23,12 +30,12 @@ type LogProducer interface {
 	NewPhotoLog(level, place, traceid, msg string)
 }
 
-const UseCase_LoadPhoto = "UseCase_LoadPhoto"
+const UseCase_LoadPhoto = "UseCase-LoadPhoto"
 const MaxFileSize = 10 << 20
 const UnloadPhotoCloud = "UnloadPhotoCloud"
 const DeletePhotoCloud = "DeletePhotoCloud"
-const UseCase_GetPhotos = "UseCase_GetPhotos"
-const UseCase_GetPhoto = "UseCase_GetPhoto"
+const UseCase_GetPhotos = "UseCase-GetPhotos"
+const UseCase_GetPhoto = "UseCase-GetPhoto"
 
 type ServiceResponse struct {
 	Success bool

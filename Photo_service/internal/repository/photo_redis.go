@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/model"
+	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 )
 
 type PhotoRedisRepo struct {
@@ -21,19 +21,19 @@ func NewPhotoRedisRepo(red *RedisObject) *PhotoRedisRepo {
 const KeyPhoto = "photo:%s:%s"
 const KeyPhotos = "photos:%s"
 
-func (ph *PhotoRedisRepo) AddPhotoCache(ctx context.Context, userid string, photo *model.Photo) *RepositoryResponse {
+func (ph *PhotoRedisRepo) AddPhotoCache(ctx context.Context, userid string, photo *pb.Photo) *RepositoryResponse {
 	const place = AddPhotoCache
 	jsondata, err := json.Marshal(photo)
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorMarshal, err)), Place: place}
 	}
-	err = ph.Client.RedisClient.Set(ctx, fmt.Sprintf(KeyPhoto, userid, photo.ID), jsondata, 1*time.Hour).Err()
+	err = ph.Client.RedisClient.Set(ctx, fmt.Sprintf(KeyPhoto, userid, photo.PhotoId), jsondata, 1*time.Hour).Err()
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorSetPhotos, err)), Place: place}
 	}
-	return &RepositoryResponse{Success: true, SuccessMessage: "Successful add photo in cache", Place: place}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successful add photo metadata in cache", Place: place}
 }
-func (ph *PhotoRedisRepo) AddPhotosCache(ctx context.Context, userid string, photosslice []*model.Photo) *RepositoryResponse {
+func (ph *PhotoRedisRepo) AddPhotosCache(ctx context.Context, userid string, photosslice []*pb.Photo) *RepositoryResponse {
 	const place = AddPhotosCache
 	jsondata_photos, err := json.Marshal(photosslice)
 	if err != nil {
@@ -47,13 +47,13 @@ func (ph *PhotoRedisRepo) AddPhotosCache(ctx context.Context, userid string, pho
 		if err != nil {
 			return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorMarshal, err)), Place: place}
 		}
-		pipe.Set(ctx, fmt.Sprintf(KeyPhoto, userid, photo.ID), jsondata_photo, 1*time.Hour)
+		pipe.Set(ctx, fmt.Sprintf(KeyPhoto, userid, photo.PhotoId), jsondata_photo, 1*time.Hour)
 	}
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorPipeExec, err)), Place: place}
 	}
-	return &RepositoryResponse{Success: true, SuccessMessage: "Successful add photos in cache", Place: place}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successful add photos metadata in cache", Place: place}
 }
 func (ph *PhotoRedisRepo) GetPhotoCache(ctx context.Context, userid string, photoid string) *RepositoryResponse {
 	const place = GetPhotoCache
@@ -62,14 +62,14 @@ func (ph *PhotoRedisRepo) GetPhotoCache(ctx context.Context, userid string, phot
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGetPhotos, err)), Place: place}
 	}
 	if len(result) == 0 {
-		return &RepositoryResponse{Success: false, SuccessMessage: "Photo was not found in the cache", Place: place}
+		return &RepositoryResponse{Success: false, SuccessMessage: "Photo metadata was not found in the cache", Place: place}
 	}
-	var photo model.Photo
+	var photo pb.Photo
 	err = json.Unmarshal([]byte(result), &photo)
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorUnmarshal, err)), Place: place}
 	}
-	return &RepositoryResponse{Success: true, Data: Data{Photo: &photo}, SuccessMessage: "Successful get photo from cache", Place: place}
+	return &RepositoryResponse{Success: true, Data: Data{GrpcPhoto: &photo}, SuccessMessage: "Successful get photo metadata from cache", Place: place}
 }
 func (ph *PhotoRedisRepo) GetPhotosCache(ctx context.Context, userid string) *RepositoryResponse {
 	const place = GetPhotosCache
@@ -78,43 +78,58 @@ func (ph *PhotoRedisRepo) GetPhotosCache(ctx context.Context, userid string) *Re
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGetPhotos, err)), Place: place}
 	}
 	if len(result) == 0 {
-		return &RepositoryResponse{Success: false, SuccessMessage: "Photos was not found in the cache", Place: place}
+		return &RepositoryResponse{Success: false, SuccessMessage: "Photos metadata was not found in the cache", Place: place}
 	}
-	var photoslice []*model.Photo
+	var photoslice []*pb.Photo
 	err = json.Unmarshal([]byte(result), &photoslice)
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorUnmarshal, err)), Place: place}
 	}
 	if len(photoslice) == 0 {
-		return &RepositoryResponse{Success: true, Data: Data{Photos: photoslice}, SuccessMessage: "Get empty photos list in cache", Place: place}
+		return &RepositoryResponse{Success: true, Data: Data{GrpcPhotos: photoslice}, SuccessMessage: "Successful get empty photos metadata in cache", Place: place}
 	}
-	return &RepositoryResponse{Success: true, Data: Data{Photos: photoslice}, SuccessMessage: "Successful get photos from cache", Place: place}
+	return &RepositoryResponse{Success: true, Data: Data{GrpcPhotos: photoslice}, SuccessMessage: "Successful get photos metadata from cache", Place: place}
 }
 
 func (ph *PhotoRedisRepo) DeletePhotosCache(ctx context.Context, userid string) *RepositoryResponse {
 	const place = DeletePhotosCache
 	iter := ph.Client.RedisClient.Scan(ctx, 0, fmt.Sprintf(KeyPhoto, userid, "*"), 0).Iterator()
-	pipe := ph.Client.RedisClient.TxPipeline()
-	defer pipe.Discard()
-	pipe.Del(ctx, fmt.Sprintf(KeyPhotos, userid))
-	for iter.Next(ctx) {
-		pipe.Del(ctx, iter.Val())
-	}
-	err := iter.Err()
+	var count int64
+	num, err := ph.Client.RedisClient.Del(ctx, fmt.Sprintf(KeyPhotos, userid)).Result()
 	if err != nil {
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorDelPhotos, err)), Place: place}
+	}
+	count += num
+	for iter.Next(ctx) {
+		num, err := ph.Client.RedisClient.Del(ctx, iter.Val()).Result()
+		if err != nil {
+			return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorDelPhotos, err)), Place: place}
+		}
+		count += num
+	}
+	if err := iter.Err(); err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorScan, err)), Place: place}
 	}
-	_, err = pipe.Exec(ctx)
-	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorPipeExec, err)), Place: place}
+	if count == 0 {
+		return &RepositoryResponse{Success: false, SuccessMessage: "Photos metadata was not found in the cache", Place: place}
 	}
-	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete photos from cache", Place: place}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete photos metadata from cache", Place: place}
 }
 func (ph *PhotoRedisRepo) DeletePhotoCache(ctx context.Context, userid string, photoid string) *RepositoryResponse {
 	const place = DeletePhotoCache
-	err := ph.Client.RedisClient.Del(ctx, fmt.Sprintf(KeyPhoto, userid, photoid)).Err()
+	num, err := ph.Client.RedisClient.Del(ctx, fmt.Sprintf(KeyPhoto, userid, photoid)).Result()
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorDelPhotos, err)), Place: place}
+	}
+	if num == 0 {
+		return &RepositoryResponse{Success: false, SuccessMessage: "Photo metadata was not found in the cache", Place: place}
+	}
+	num, err = ph.Client.RedisClient.Del(ctx, fmt.Sprintf(KeyPhotos, userid)).Result()
+	if err != nil {
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorDelPhotos, err)), Place: place}
+	}
+	if num == 0 {
+		return &RepositoryResponse{Success: false, SuccessMessage: "Photos metadata was not found in the cache", Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete photo from cache", Place: place}
 }

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
@@ -74,6 +75,15 @@ func (use *PhotoService) deletePhotoCloud(photoid string, ext string, traceid st
 		return
 	}
 	use.logProducer.NewPhotoLog(kafka.LogLevelInfo, place, traceid, fmt.Sprintf("The photo(id = %s) has been successfully deleted from cloud and database", photoid))
+}
+func (use *PhotoService) parsingIDs(id string, traceid string, place string) error {
+	_, err := uuid.Parse(id)
+	if err != nil {
+		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
+		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
+		return err
+	}
+	return nil
 }
 func (use *PhotoService) WaitGoroutines() {
 	use.wg.Wait()
