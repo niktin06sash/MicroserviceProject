@@ -15,6 +15,14 @@ const LargeFile = "File too large - max 10 MB"
 const InvalidFileFormat = "Invalid file format"
 const ErrorAfterReqPhotos = "Error after request into photos: %v"
 const ErrorAfterReqUsersID = "Error after request into usersid: %v"
+const ErrorSetPhotos = "Set photos-cache error: %v"
+const ErrorGetPhotos = "Get photos-cache error: %v"
+const ErrorExpirePhotos = "Expire photos-cache error: %v"
+const ErrorDelPhotos = "Del photos-cache error: %v"
+const ErrorMarshal = "Data marshal error: %v"
+const ErrorUnmarshal = "Data unmarshal error: %v"
+const ErrorPipeExec = "Pipe-Exec error: %v"
+const ErrorScan = "Scan error: %v"
 
 type CustomError struct {
 	Message string
