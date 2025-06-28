@@ -16,11 +16,12 @@ type PhotoService struct {
 	repo        DBPhotoRepos
 	cloud       CloudPhotoStorage
 	logProducer LogProducer
+	cache       CachePhotoRepos
 	wg          *sync.WaitGroup
 }
 
-func NewPhotoService(repo DBPhotoRepos, cloud CloudPhotoStorage, logproducer LogProducer) *PhotoService {
-	return &PhotoService{repo: repo, logProducer: logproducer, cloud: cloud, wg: &sync.WaitGroup{}}
+func NewPhotoService(repo DBPhotoRepos, cloud CloudPhotoStorage, cache CachePhotoRepos, logproducer LogProducer) *PhotoService {
+	return &PhotoService{repo: repo, logProducer: logproducer, cloud: cloud, cache: cache, wg: &sync.WaitGroup{}}
 }
 
 func (use *PhotoService) DeletePhoto(ctx context.Context, userid string, photoid string) *ServiceResponse {
@@ -30,6 +31,10 @@ func (use *PhotoService) DeletePhoto(ctx context.Context, userid string, photoid
 		return serviceresponse
 	}
 	bdresponse, serviceresponse = use.requestToDB(use.repo.DeletePhoto(ctx, userid, bdresponse.Data.Photo.ID), traceid)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	_, serviceresponse = use.requestToDB(use.cache.DeletePhotoCache(ctx, userid, photoid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -77,28 +82,46 @@ func (use *PhotoService) LoadPhoto(ctx context.Context, userid string, filedata 
 func (use *PhotoService) GetPhoto(ctx context.Context, photoid string, userid string) *ServiceResponse {
 	traceid := ctx.Value("traceID").(string)
 	const place = UseCase_GetPhoto
-	_, err := uuid.Parse(userid)
+	err := use.parsingIDs(userid, traceid, place)
 	if err != nil {
-		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
-		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
 		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidUserIDFormat)}
+	}
+	err = use.parsingIDs(photoid, traceid, place)
+	if err != nil {
+		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidPhotoIDFormat)}
+	}
+	cacheresponse, serviceresponse := use.requestToDB(use.cache.GetPhotoCache(ctx, userid, photoid), traceid)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	if cacheresponse.Success {
+		return &ServiceResponse{Success: cacheresponse.Success, Data: Data{Photo: cacheresponse.Data.GrpcPhoto}}
 	}
 	bdresponse, serviceresponse := use.requestToDB(use.repo.GetPhoto(ctx, userid, photoid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	photo := bdresponse.Data.Photo
-	grpcphoto := &pb.Photo{PhotoId: photo.ID, Url: photo.URL, CreatedAt: photo.CreatedAt.String()}
+	photo_bd := bdresponse.Data.Photo
+	grpcphoto := &pb.Photo{PhotoId: photo_bd.ID, Url: photo_bd.URL, CreatedAt: photo_bd.CreatedAt.String()}
+	_, serviceresponse = use.requestToDB(use.cache.AddPhotoCache(ctx, userid, grpcphoto), traceid)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
 	return &ServiceResponse{Success: true, Data: Data{Photo: grpcphoto}}
 }
 func (use *PhotoService) GetPhotos(ctx context.Context, userid string) *ServiceResponse {
 	traceid := ctx.Value("traceID").(string)
 	const place = UseCase_GetPhotos
-	_, err := uuid.Parse(userid)
+	err := use.parsingIDs(userid, traceid, place)
 	if err != nil {
-		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
-		use.logProducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
 		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidUserIDFormat)}
+	}
+	cacheresponse, serviceresponse := use.requestToDB(use.cache.GetPhotosCache(ctx, userid), traceid)
+	if serviceresponse != nil {
+		return serviceresponse
+	}
+	if cacheresponse.Success {
+		return &ServiceResponse{Success: cacheresponse.Success, Data: Data{Photos: cacheresponse.Data.GrpcPhotos}}
 	}
 	bdresponse, serviceresponse := use.requestToDB(use.repo.GetPhotos(ctx, userid), traceid)
 	if serviceresponse != nil {
@@ -109,6 +132,10 @@ func (use *PhotoService) GetPhotos(ctx context.Context, userid string) *ServiceR
 	for _, p := range photos {
 		grpcphoto := &pb.Photo{PhotoId: p.ID, Url: p.URL, CreatedAt: p.CreatedAt.String()}
 		grpcphotos = append(grpcphotos, grpcphoto)
+	}
+	_, serviceresponse = use.requestToDB(use.cache.AddPhotosCache(ctx, userid, grpcphotos), traceid)
+	if serviceresponse != nil {
+		return serviceresponse
 	}
 	return &ServiceResponse{Success: true, Data: Data{Photos: grpcphotos}}
 }
