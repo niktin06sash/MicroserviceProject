@@ -20,6 +20,9 @@ type DBUserRepos interface {
 	DeleteUserData(ctx context.Context, userid string) *repository.RepositoryResponse
 	GetPhotos(ctx context.Context, userid string) *repository.RepositoryResponse
 }
+type CachePhotoRepos interface {
+	DeletePhotosCache(ctx context.Context, userid string) *repository.RepositoryResponse
+}
 type PhotoCloudRepos interface {
 	DeleteFile(ctx context.Context, id, ext string) *repository.RepositoryResponse
 }
@@ -30,12 +33,13 @@ type RabbitConsumer struct {
 	userrepo    DBUserRepos
 	logproducer LogProducer
 	photocloud  PhotoCloudRepos
+	cache       CachePhotoRepos
 	wg          *sync.WaitGroup
 	ctx         context.Context
 	cancel      context.CancelFunc
 }
 
-func NewRabbitConsumer(config configs.RabbitMQConfig, logproducer LogProducer, dbrepo DBUserRepos, photocloud PhotoCloudRepos) (*RabbitConsumer, error) {
+func NewRabbitConsumer(config configs.RabbitMQConfig, logproducer LogProducer, dbrepo DBUserRepos, photocloud PhotoCloudRepos, cache CachePhotoRepos) (*RabbitConsumer, error) {
 	connstr := fmt.Sprintf("amqp://%s:%s@%s:%s/", config.Name, config.Password, config.Host, strconv.Itoa(config.Port))
 	conn, err := amqp.Dial(connstr)
 	if err != nil {
@@ -94,6 +98,7 @@ func NewRabbitConsumer(config configs.RabbitMQConfig, logproducer LogProducer, d
 		userrepo:    dbrepo,
 		ctx:         ctx,
 		cancel:      cancel,
+		cache:       cache,
 		wg:          &sync.WaitGroup{},
 		photocloud:  photocloud,
 		logproducer: logproducer,

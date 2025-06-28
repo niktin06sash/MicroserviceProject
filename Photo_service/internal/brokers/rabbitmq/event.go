@@ -95,6 +95,11 @@ func (rc *RabbitConsumer) deleteAllUserData(userid string, traceid string) {
 		rc.logproducer.NewPhotoLog(kafka.LogLevelError, delresp.Place, traceid, delresp.Errors.Message)
 		return
 	}
+	cacheresp := rc.cache.DeletePhotosCache(deluserctx, userid)
+	if cacheresp.Errors != nil {
+		rc.logproducer.NewPhotoLog(kafka.LogLevelError, cacheresp.Place, traceid, cacheresp.Errors.Message)
+		return
+	}
 	rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, delresp.Place, traceid, delresp.SuccessMessage)
 	for _, photo := range photos {
 		photodelresp := rc.photocloud.DeleteFile(rc.ctx, photo.ID, photo.ContentType)
