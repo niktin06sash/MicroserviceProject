@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
@@ -30,16 +30,16 @@ type ServiceResponse struct {
 
 //go:generate mockgen -source=service.go -destination=mocks/mock.go
 type DBUserRepos interface {
-	CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *repository.RepositoryResponse
+	CreateUser(ctx context.Context, tx pgx.Tx, user *model.User) *repository.RepositoryResponse
 	GetUser(ctx context.Context, useremail, password string) *repository.RepositoryResponse
-	DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *repository.RepositoryResponse
-	UpdateUserData(ctx context.Context, tx *sql.Tx, userId uuid.UUID, updateType string, args ...interface{}) *repository.RepositoryResponse
+	DeleteUser(ctx context.Context, tx pgx.Tx, userId uuid.UUID, password string) *repository.RepositoryResponse
+	UpdateUserData(ctx context.Context, tx pgx.Tx, userId uuid.UUID, updateType string, args ...interface{}) *repository.RepositoryResponse
 	GetProfileById(ctx context.Context, userid uuid.UUID) *repository.RepositoryResponse
 }
 type DBTransactionManager interface {
-	BeginTx(ctx context.Context) (*sql.Tx, error)
-	RollbackTx(tx *sql.Tx) error
-	CommitTx(tx *sql.Tx) error
+	BeginTx(ctx context.Context) (pgx.Tx, error)
+	RollbackTx(ctx context.Context, tx pgx.Tx) error
+	CommitTx(ctx context.Context, tx pgx.Tx) error
 }
 type CacheUserRepos interface {
 	AddProfileCache(ctx context.Context, id string, data map[string]any) *repository.RepositoryResponse

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
@@ -47,7 +48,7 @@ func validateData[T any](val *validator.Validate, data T, traceid string, place 
 	}
 	return nil
 }
-func (as *UserService) beginTransaction(ctx context.Context, place, traceid string) (*sql.Tx, *ServiceResponse) {
+func (as *UserService) beginTransaction(ctx context.Context, place, traceid string) (pgx.Tx, *ServiceResponse) {
 	tx, err := as.Dbtxmanager.BeginTx(ctx)
 	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	if err != nil {
@@ -60,7 +61,7 @@ func (as *UserService) beginTransaction(ctx context.Context, place, traceid stri
 	metrics.UserDBQueriesTotal.WithLabelValues("Begin Transaction").Inc()
 	return tx, nil
 }
-func (as *UserService) rollbackTransaction(tx *sql.Tx, traceid string, place string) {
+func (as *UserService) rollbackTransaction(ctx context.Context, tx pgx.Tx, traceid string, place string) {
 	if tx == nil {
 		return
 	}
@@ -68,7 +69,7 @@ func (as *UserService) rollbackTransaction(tx *sql.Tx, traceid string, place str
 	attempt := 0
 	for attempt < maxAttempts {
 		attempt++
-		err := as.Dbtxmanager.RollbackTx(tx)
+		err := as.Dbtxmanager.RollbackTx(ctx, tx)
 		metrics.UserDBQueriesTotal.WithLabelValues("Rollback Transaction").Inc()
 		if err == nil {
 			msg := fmt.Sprintf("Successful rollback on attempt %d", attempt)
@@ -90,7 +91,7 @@ func (as *UserService) rollbackTransaction(tx *sql.Tx, traceid string, place str
 		time.Sleep(100 * time.Millisecond)
 	}
 }
-func (as *UserService) commitTransaction(tx *sql.Tx, traceid string, place string) error {
+func (as *UserService) commitTransaction(ctx context.Context, tx pgx.Tx, traceid string, place string) error {
 	if tx == nil {
 		return fmt.Errorf("Transaction is not active")
 	}
@@ -98,7 +99,7 @@ func (as *UserService) commitTransaction(tx *sql.Tx, traceid string, place strin
 	attempt := 0
 	for attempt < maxAttempts {
 		attempt++
-		err := as.Dbtxmanager.CommitTx(tx)
+		err := as.Dbtxmanager.CommitTx(ctx, tx)
 		metrics.UserDBQueriesTotal.WithLabelValues("Commit Transaction").Inc()
 		if err == nil {
 			msg := fmt.Sprintf("Successful commit on attempt %d", attempt)
@@ -198,20 +199,20 @@ func (as *UserService) parsingUserId(useridstr string, traceid string, place str
 	}
 	return userid, nil
 }
-func (as *UserService) updateAndCommit(ctx context.Context, tx *sql.Tx, userid uuid.UUID, updateType string, traceid string, place string, args ...interface{}) *ServiceResponse {
+func (as *UserService) updateAndCommit(ctx context.Context, tx pgx.Tx, userid uuid.UUID, updateType string, traceid string, place string, args ...interface{}) *ServiceResponse {
 	bdresponse, serviceresponse := as.requestToDB(as.Dbrepo.UpdateUserData(ctx, tx, userid, updateType, args...), traceid)
 	if serviceresponse != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return serviceresponse
 	}
 	_, serviceresponse = as.requestToDB(as.CacheUserRepos.DeleteProfileCache(ctx, userid.String()), traceid)
 	if serviceresponse != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return serviceresponse
 	}
-	err := as.commitTransaction(tx, traceid, place)
+	err := as.commitTransaction(ctx, tx, traceid, place)
 	if err != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.UserServiceUnavalaible)}
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and user's data updates")

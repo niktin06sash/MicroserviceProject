@@ -96,7 +96,7 @@ func TestDeleteAccount_Success(t *testing.T) {
 		gomock.Any(),
 		fixedTraceID,
 	).Return(nil)
-	mockTransactionRepo.EXPECT().CommitTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().CommitTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
 	require.True(t, response.Success)
@@ -243,7 +243,7 @@ func TestDeleteAccount_DataBaseError_ClientError(t *testing.T) {
 		Place:   repository.DeleteUser,
 		Errors:  &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorIncorrectPassword},
 	})
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
 	require.False(t, response.Success)
@@ -294,7 +294,7 @@ func TestDeleteAccount_DataBaseError_InternalServerError(t *testing.T) {
 		Place:   repository.DeleteUser,
 		Errors:  &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorAfterReqUsers},
 	})
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
 	require.False(t, response.Success)
@@ -375,7 +375,7 @@ func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
 			NewUserLog(kafka.LogLevelWarn, gomock.Any(), fixedTraceID, "Session-Service is unavailable, retrying..."),
 		mockLogProducer.EXPECT().
 			NewUserLog(kafka.LogLevelError, gomock.Any(), fixedTraceID, "All retry attempts failed"))
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
 	require.False(t, response.Success)
@@ -433,7 +433,7 @@ func TestDeleteAccount_DeleteCacheError(t *testing.T) {
 	}),
 		fixedUserId.String(),
 	).Return(&repository.RepositoryResponse{Success: false, Place: repository.DeleteProfileCache, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorDelProfiles}})
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
 	require.False(t, response.Success)
@@ -510,7 +510,7 @@ func TestDeleteAccount_EventProducerError(t *testing.T) {
 		gomock.Any(),
 		fixedTraceID,
 	).Return(fmt.Errorf("rabbitMQ error"))
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
 	require.False(t, response.Success)
@@ -588,8 +588,8 @@ func TestDeleteAccount_CommitTransactionError(t *testing.T) {
 		gomock.Any(),
 		fixedTraceID,
 	).Return(nil)
-	mockTransactionRepo.EXPECT().CommitTx(tx).Return(fmt.Errorf("Failed to commit transaction after all attempts")).Times(3)
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().CommitTx(ctx, tx).Return(fmt.Errorf("Failed to commit transaction after all attempts")).Times(3)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
 	require.False(t, response.Success)

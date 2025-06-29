@@ -6,11 +6,11 @@ package mock_service
 
 import (
 	context "context"
-	sql "database/sql"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
 	uuid "github.com/google/uuid"
+	pgx "github.com/jackc/pgx/v5"
 	proto "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	model "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	repository "github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
@@ -40,7 +40,7 @@ func (m *MockDBUserRepos) EXPECT() *MockDBUserReposMockRecorder {
 }
 
 // CreateUser mocks base method.
-func (m *MockDBUserRepos) CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *repository.RepositoryResponse {
+func (m *MockDBUserRepos) CreateUser(ctx context.Context, tx pgx.Tx, user *model.User) *repository.RepositoryResponse {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateUser", ctx, tx, user)
 	ret0, _ := ret[0].(*repository.RepositoryResponse)
@@ -54,7 +54,7 @@ func (mr *MockDBUserReposMockRecorder) CreateUser(ctx, tx, user interface{}) *go
 }
 
 // DeleteUser mocks base method.
-func (m *MockDBUserRepos) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *repository.RepositoryResponse {
+func (m *MockDBUserRepos) DeleteUser(ctx context.Context, tx pgx.Tx, userId uuid.UUID, password string) *repository.RepositoryResponse {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteUser", ctx, tx, userId, password)
 	ret0, _ := ret[0].(*repository.RepositoryResponse)
@@ -96,7 +96,7 @@ func (mr *MockDBUserReposMockRecorder) GetUser(ctx, useremail, password interfac
 }
 
 // UpdateUserData mocks base method.
-func (m *MockDBUserRepos) UpdateUserData(ctx context.Context, tx *sql.Tx, userId uuid.UUID, updateType string, args ...interface{}) *repository.RepositoryResponse {
+func (m *MockDBUserRepos) UpdateUserData(ctx context.Context, tx pgx.Tx, userId uuid.UUID, updateType string, args ...interface{}) *repository.RepositoryResponse {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, tx, userId, updateType}
 	for _, a := range args {
@@ -138,10 +138,10 @@ func (m *MockDBTransactionManager) EXPECT() *MockDBTransactionManagerMockRecorde
 }
 
 // BeginTx mocks base method.
-func (m *MockDBTransactionManager) BeginTx(ctx context.Context) (*sql.Tx, error) {
+func (m *MockDBTransactionManager) BeginTx(ctx context.Context) (pgx.Tx, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BeginTx", ctx)
-	ret0, _ := ret[0].(*sql.Tx)
+	ret0, _ := ret[0].(pgx.Tx)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -153,31 +153,31 @@ func (mr *MockDBTransactionManagerMockRecorder) BeginTx(ctx interface{}) *gomock
 }
 
 // CommitTx mocks base method.
-func (m *MockDBTransactionManager) CommitTx(tx *sql.Tx) error {
+func (m *MockDBTransactionManager) CommitTx(ctx context.Context, tx pgx.Tx) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CommitTx", tx)
+	ret := m.ctrl.Call(m, "CommitTx", ctx, tx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CommitTx indicates an expected call of CommitTx.
-func (mr *MockDBTransactionManagerMockRecorder) CommitTx(tx interface{}) *gomock.Call {
+func (mr *MockDBTransactionManagerMockRecorder) CommitTx(ctx, tx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitTx", reflect.TypeOf((*MockDBTransactionManager)(nil).CommitTx), tx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitTx", reflect.TypeOf((*MockDBTransactionManager)(nil).CommitTx), ctx, tx)
 }
 
 // RollbackTx mocks base method.
-func (m *MockDBTransactionManager) RollbackTx(tx *sql.Tx) error {
+func (m *MockDBTransactionManager) RollbackTx(ctx context.Context, tx pgx.Tx) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RollbackTx", tx)
+	ret := m.ctrl.Call(m, "RollbackTx", ctx, tx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RollbackTx indicates an expected call of RollbackTx.
-func (mr *MockDBTransactionManagerMockRecorder) RollbackTx(tx interface{}) *gomock.Call {
+func (mr *MockDBTransactionManagerMockRecorder) RollbackTx(ctx, tx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackTx", reflect.TypeOf((*MockDBTransactionManager)(nil).RollbackTx), tx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackTx", reflect.TypeOf((*MockDBTransactionManager)(nil).RollbackTx), ctx, tx)
 }
 
 // MockCacheUserRepos is a mock of CacheUserRepos interface.
