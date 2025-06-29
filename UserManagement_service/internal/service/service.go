@@ -42,7 +42,7 @@ type DBTransactionManager interface {
 	CommitTx(ctx context.Context, tx pgx.Tx) error
 }
 type CacheUserRepos interface {
-	AddProfileCache(ctx context.Context, id string, data map[string]any) *repository.RepositoryResponse
+	AddProfileCache(ctx context.Context, user *model.User) *repository.RepositoryResponse
 	DeleteProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
 	GetProfileCache(ctx context.Context, id string) *repository.RepositoryResponse
 }

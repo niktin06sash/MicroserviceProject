@@ -206,7 +206,7 @@ func (as *UserService) GetProfileById(ctx context.Context, getidstr string) *Ser
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	_, serviceresponse = as.requestToDB(as.CacheUserRepos.AddProfileCache(ctx, getidstr, bdresponse.Data), traceid)
+	_, serviceresponse = as.requestToDB(as.CacheUserRepos.AddProfileCache(ctx, bdresponse.Data[repository.KeyUser].(*model.User)), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}

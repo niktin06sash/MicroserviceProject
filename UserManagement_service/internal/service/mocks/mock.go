@@ -204,17 +204,17 @@ func (m *MockCacheUserRepos) EXPECT() *MockCacheUserReposMockRecorder {
 }
 
 // AddProfileCache mocks base method.
-func (m *MockCacheUserRepos) AddProfileCache(ctx context.Context, id string, data map[string]any) *repository.RepositoryResponse {
+func (m *MockCacheUserRepos) AddProfileCache(ctx context.Context, user *model.User) *repository.RepositoryResponse {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddProfileCache", ctx, id, data)
+	ret := m.ctrl.Call(m, "AddProfileCache", ctx, user)
 	ret0, _ := ret[0].(*repository.RepositoryResponse)
 	return ret0
 }
 
 // AddProfileCache indicates an expected call of AddProfileCache.
-func (mr *MockCacheUserReposMockRecorder) AddProfileCache(ctx, id, data interface{}) *gomock.Call {
+func (mr *MockCacheUserReposMockRecorder) AddProfileCache(ctx, user interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddProfileCache", reflect.TypeOf((*MockCacheUserRepos)(nil).AddProfileCache), ctx, id, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddProfileCache", reflect.TypeOf((*MockCacheUserRepos)(nil).AddProfileCache), ctx, user)
 }
 
 // DeleteProfileCache mocks base method.

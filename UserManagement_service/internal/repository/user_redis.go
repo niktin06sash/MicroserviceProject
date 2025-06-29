@@ -2,11 +2,13 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 )
 
 type UserRedisRepo struct {
@@ -21,23 +23,18 @@ func CacheMetrics(place string, start time.Time) {
 	duration := time.Since(start).Seconds()
 	metrics.UserCacheQueryDuration.WithLabelValues(place).Observe(duration)
 }
-func (redisrepo *UserRedisRepo) AddProfileCache(ctx context.Context, id string, data map[string]any) *RepositoryResponse {
+func (redisrepo *UserRedisRepo) AddProfileCache(ctx context.Context, user *model.User) *RepositoryResponse {
 	const place = AddProfileCache
 	start := time.Now()
-	defer CacheMetrics(place, start)
-	err := redisrepo.Client.RedisClient.HSet(ctx, id, map[string]interface{}{
-		KeyUserID:    data[KeyUserID],
-		KeyUserEmail: data[KeyUserEmail],
-		KeyUserName:  data[KeyUserName],
-	}).Err()
+	jsondata, err := json.Marshal(user)
 	if err != nil {
-		metrics.UserCacheErrorsTotal.WithLabelValues("HSET").Inc()
-		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorHsetProfiles, err)), Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorMarshal, err)), Place: place}
 	}
-	err = redisrepo.Client.RedisClient.Expire(ctx, id, time.Until(time.Now().Add(1*time.Hour))).Err()
+	defer CacheMetrics(place, start)
+	err = redisrepo.Client.RedisClient.Set(ctx, user.Id.String(), jsondata, 1*time.Hour).Err()
 	if err != nil {
-		metrics.UserCacheErrorsTotal.WithLabelValues("EXPIRE").Inc()
-		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorExpireProfiles, err)), Place: place}
+		metrics.UserCacheErrorsTotal.WithLabelValues("SET").Inc()
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorSetProfiles, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful add profile in cache", Place: place}
 }
@@ -59,16 +56,18 @@ func (redisrepo *UserRedisRepo) GetProfileCache(ctx context.Context, id string) 
 	const place = GetProfileCache
 	start := time.Now()
 	defer CacheMetrics(place, start)
-	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, id).Result()
+	result, err := redisrepo.Client.RedisClient.Get(ctx, id).Result()
 	if err != nil {
-		metrics.UserCacheErrorsTotal.WithLabelValues("HGETALL").Inc()
+		metrics.UserCacheErrorsTotal.WithLabelValues("GET").Inc()
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorHgetAllProfiles, err)), Place: place}
 	}
 	if len(result) == 0 {
 		return &RepositoryResponse{Success: false, SuccessMessage: "Profile was not found in the cache", Place: place}
 	}
-	userIDstr := result[KeyUserID]
-	userEmail := result[KeyUserEmail]
-	userName := result[KeyUserName]
-	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userIDstr, KeyUserEmail: userEmail, KeyUserName: userName}, SuccessMessage: "Successful get profile from cache", Place: place}
+	var user model.User
+	err = json.Unmarshal([]byte(result), &user)
+	if err != nil {
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorUnmarshal, err)), Place: place}
+	}
+	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUser: &user}, SuccessMessage: "Successful get profile from cache", Place: place}
 }

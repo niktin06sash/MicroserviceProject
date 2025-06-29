@@ -19,7 +19,7 @@ const (
 	ErrorPasswordEmpty                = "Password is missing or empty"
 	ErrorGetEnvDBConst                = "DB get environment error"
 	ErrorReadAllConst                 = "ReadAll error"
-	ErrorUnmarshalConst               = "Unmarshal error"
+	ErrorUnmarshal                    = "Data unmarshal error: %v"
 	ErrorRequiredUserIDConst          = "UserID in request is required!"
 	ErrorNotRequiredUserIDConst       = "UserID in request is not-required!"
 	ErrorRequiredSessionIDConst       = "SessionID in request is required!"
@@ -52,10 +52,11 @@ const (
 	ErrorIDNotRegisterConst           = "Unregistered id has been entered"
 	ErrorAfterReqUsers                = "Error after request into users: %v"
 	ErrorGenerateHashPassword         = "Generate HashPassword : %v"
-	ErrorHsetProfiles                 = "Hset profiles-cache error: %v"
+	ErrorSetProfiles                  = "Set profiles-cache error: %v"
 	ErrorHgetAllProfiles              = "HGetAll profiles-cache error: %v"
 	ErrorExpireProfiles               = "Expire profiles-cache error: %v"
 	ErrorDelProfiles                  = "Del profiles-cache error: %v"
+	ErrorMarshal                      = "Data marshal error: %v"
 )
 
 type CustomError struct {
