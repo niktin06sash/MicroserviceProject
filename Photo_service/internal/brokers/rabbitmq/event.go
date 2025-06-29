@@ -56,19 +56,16 @@ func (rc *RabbitConsumer) readEvent() {
 			switch msg.RoutingKey {
 			case userRegistrationKey:
 				rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, newmsg.Traceid, fmt.Sprintf("Received user registration event for userID: %s", newmsg.UserID))
-				resp := rc.userrepo.AddUserId(ctx, newmsg.UserID)
+				resp := rc.userservice.AddUserId(ctx, newmsg.UserID, newmsg.Traceid)
 				if resp.Errors != nil {
-					rc.logproducer.NewPhotoLog(kafka.LogLevelError, resp.Place, newmsg.Traceid, resp.Errors.Message)
 					continue
 				}
-				rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, resp.Place, newmsg.Traceid, resp.SuccessMessage)
-
 			case userDeleteKey:
 				rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, newmsg.Traceid, fmt.Sprintf("Received user delete account event for userID: %s", newmsg.UserID))
 				rc.wg.Add(1)
 				go func() {
 					defer rc.wg.Done()
-					rc.deleteAllUserData(newmsg.UserID, newmsg.Traceid)
+					rc.userservice.DeleteAllUserData(ctx, newmsg.UserID, newmsg.Traceid)
 				}()
 			}
 			err = msg.Ack(false)
@@ -76,36 +73,5 @@ func (rc *RabbitConsumer) readEvent() {
 				rc.logproducer.NewPhotoLog(kafka.LogLevelError, place, newmsg.Traceid, fmt.Sprintf("Failed to acknowledge message: %v", err))
 			}
 		}
-	}
-}
-func (rc *RabbitConsumer) deleteAllUserData(userid string, traceid string) {
-	getctx, cancel := context.WithTimeout(rc.ctx, 5*time.Second)
-	defer cancel()
-	getresp := rc.userrepo.GetPhotos(getctx, userid)
-	if getresp.Errors != nil {
-		rc.logproducer.NewPhotoLog(kafka.LogLevelError, getresp.Place, traceid, getresp.Errors.Message)
-		return
-	}
-	rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, getresp.Place, traceid, getresp.SuccessMessage)
-	photos := getresp.Data.Photos
-	deluserctx, cancel := context.WithTimeout(rc.ctx, 15*time.Second)
-	defer cancel()
-	delresp := rc.userrepo.DeleteUserData(deluserctx, userid)
-	if delresp.Errors != nil {
-		rc.logproducer.NewPhotoLog(kafka.LogLevelError, delresp.Place, traceid, delresp.Errors.Message)
-		return
-	}
-	cacheresp := rc.cache.DeletePhotosCache(deluserctx, userid)
-	if cacheresp.Errors != nil {
-		rc.logproducer.NewPhotoLog(kafka.LogLevelError, cacheresp.Place, traceid, cacheresp.Errors.Message)
-		return
-	}
-	rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, delresp.Place, traceid, delresp.SuccessMessage)
-	for _, photo := range photos {
-		photodelresp := rc.photocloud.DeleteFile(rc.ctx, photo.ID, photo.ContentType)
-		if photodelresp.Errors != nil {
-			rc.logproducer.NewPhotoLog(kafka.LogLevelError, photodelresp.Place, traceid, photodelresp.Errors.Message)
-		}
-		rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, photodelresp.Place, traceid, photodelresp.SuccessMessage)
 	}
 }

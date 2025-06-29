@@ -8,38 +8,29 @@ import (
 	"sync"
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/configs"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/service"
 	"github.com/streadway/amqp"
 )
 
 type LogProducer interface {
 	NewPhotoLog(level, place, traceid, msg string)
 }
-type DBUserRepos interface {
-	AddUserId(ctx context.Context, userid string) *repository.RepositoryResponse
-	DeleteUserData(ctx context.Context, userid string) *repository.RepositoryResponse
-	GetPhotos(ctx context.Context, userid string) *repository.RepositoryResponse
-}
-type CachePhotoRepos interface {
-	DeletePhotosCache(ctx context.Context, userid string) *repository.RepositoryResponse
-}
-type PhotoCloudRepos interface {
-	DeleteFile(ctx context.Context, id, ext string) *repository.RepositoryResponse
+type UserIDService interface {
+	DeleteAllUserData(ctx context.Context, userid string, traceid string)
+	AddUserId(ctx context.Context, userid string, traceid string) *service.ServiceResponse
 }
 type RabbitConsumer struct {
 	conn        *amqp.Connection
 	channel     *amqp.Channel
 	queue       amqp.Queue
-	userrepo    DBUserRepos
+	userservice UserIDService
 	logproducer LogProducer
-	photocloud  PhotoCloudRepos
-	cache       CachePhotoRepos
 	wg          *sync.WaitGroup
 	ctx         context.Context
 	cancel      context.CancelFunc
 }
 
-func NewRabbitConsumer(config configs.RabbitMQConfig, logproducer LogProducer, dbrepo DBUserRepos, photocloud PhotoCloudRepos, cache CachePhotoRepos) (*RabbitConsumer, error) {
+func NewRabbitConsumer(config configs.RabbitMQConfig, logproducer LogProducer, userservice UserIDService) (*RabbitConsumer, error) {
 	connstr := fmt.Sprintf("amqp://%s:%s@%s:%s/", config.Name, config.Password, config.Host, strconv.Itoa(config.Port))
 	conn, err := amqp.Dial(connstr)
 	if err != nil {
@@ -95,12 +86,10 @@ func NewRabbitConsumer(config configs.RabbitMQConfig, logproducer LogProducer, d
 		conn:        conn,
 		channel:     channel,
 		queue:       queue,
-		userrepo:    dbrepo,
+		userservice: userservice,
 		ctx:         ctx,
 		cancel:      cancel,
-		cache:       cache,
 		wg:          &sync.WaitGroup{},
-		photocloud:  photocloud,
 		logproducer: logproducer,
 	}
 	rc.wg.Add(1)
