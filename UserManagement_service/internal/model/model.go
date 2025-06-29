@@ -5,10 +5,10 @@ import (
 )
 
 type User struct {
-	Id       uuid.UUID
-	Name     string
-	Email    string
-	Password string
+	Id       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	Email    string    `json:"email"`
+	Password string    `json:"-"`
 }
 type RegistrationRequest struct {
 	Name     string `json:"name" validate:"required,min=3,max=30"`

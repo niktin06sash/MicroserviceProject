@@ -123,7 +123,7 @@ func (repoap *UserPostgresRepo) GetProfileById(ctx context.Context, userid uuid.
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorAfterReqUsers, err)), Place: place}
 	}
-	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userid.String(), KeyUserName: name, KeyUserEmail: email}, SuccessMessage: "Successful get profile by id from database", Place: place}
+	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUser: &model.User{Id: userid, Name: name, Email: email}}, SuccessMessage: "Successful get profile by id from database", Place: place}
 }
 func (repoap *UserPostgresRepo) UpdateUserData(ctx context.Context, tx pgx.Tx, userId uuid.UUID, updateType string, args ...interface{}) *RepositoryResponse {
 	const place = UpdateUserData

@@ -18,12 +18,17 @@ const GetMyProfile = "Repository-GetMyProfile"
 const GetProfileById = "Repository-GetProfileById"
 const UpdateUserData = "Repository-UpdateUserData"
 const (
-	KeyUserID       = "userid"
-	KeyUserEmail    = "useremail"
-	KeyUserName     = "username"
-	KeyUserPassword = "userpassword"
-	KeyUserTable    = "users"
+	KeyUserID    = "id"
+	KeyUserTable = "users"
+	KeyUser      = "user"
 )
+
+func BadRepositoryResponse(erro *erro.CustomError, place string) *RepositoryResponse {
+	return &RepositoryResponse{Errors: erro, Success: false, Place: place}
+}
+func SuccessRepositoryResponse(data map[string]any, place string, succmessage string) *RepositoryResponse {
+	return &RepositoryResponse{Data: data, Place: place, Success: true, SuccessMessage: succmessage}
+}
 
 type RepositoryResponse struct {
 	Success        bool
