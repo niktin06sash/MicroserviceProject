@@ -114,7 +114,7 @@ func TestUpdateAccount_Success(t *testing.T) {
 				fixedUserId.String(),
 			).Return(&repository.RepositoryResponse{Success: true, Place: repository.DeleteProfileCache, SuccessMessage: "Successful delete profile from cache"})
 			mockLogProducer.EXPECT().NewUserLog(kafka.LogLevelInfo, gomock.Any(), fixedTraceID, gomock.Any()).AnyTimes()
-			mockTransactionRepo.EXPECT().CommitTx(tx).Return(nil)
+			mockTransactionRepo.EXPECT().CommitTx(ctx, tx).Return(nil)
 			response := as.UpdateAccount(ctx, tt.req, fixedUserId.String(), tt.updateType)
 			require.True(t, response.Success)
 		})
@@ -305,7 +305,7 @@ func TestUpdateAccount_DataBaseError_ClientError(t *testing.T) {
 		Place:   repository.UpdatePassword,
 		Errors:  &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorIncorrectPassword},
 	})
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), fixedTraceID, gomock.Any()).AnyTimes()
 	response := as.UpdateAccount(ctx, req, fixedUserId.String(), "password")
 	require.False(t, response.Success)
@@ -358,7 +358,7 @@ func TestUpdateAccount_DataBaseError_InternalServerError(t *testing.T) {
 		Place:   repository.UpdatePassword,
 		Errors:  &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorAfterReqUsers},
 	})
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), fixedTraceID, gomock.Any()).AnyTimes()
 	response := as.UpdateAccount(ctx, req, fixedUserId.String(), "password")
 	require.False(t, response.Success)
@@ -416,7 +416,7 @@ func TestUpdateAccount_DeleteCacheError(t *testing.T) {
 	}),
 		fixedUserId.String(),
 	).Return(&repository.RepositoryResponse{Success: false, Place: repository.DeleteProfileCache, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorDelProfiles}})
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), fixedTraceID, gomock.Any()).AnyTimes()
 	response := as.UpdateAccount(ctx, req, fixedUserId.String(), "name")
 	require.False(t, response.Success)
@@ -475,8 +475,8 @@ func TestUpdateAccount_CommitTransactionError(t *testing.T) {
 	}),
 		fixedUserId.String(),
 	).Return(&repository.RepositoryResponse{Success: true, Place: repository.DeleteProfileCache, SuccessMessage: "Successful delete profile from cache"})
-	mockTransactionRepo.EXPECT().CommitTx(tx).Return(fmt.Errorf("Failed to commit transaction after all attempts")).Times(3)
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().CommitTx(ctx, tx).Return(fmt.Errorf("Failed to commit transaction after all attempts")).Times(3)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.UpdateAccount(ctx, req, fixedUserId.String(), "email")
 	require.False(t, response.Success)

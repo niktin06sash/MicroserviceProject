@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/rabbitmq"
@@ -45,35 +45,35 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.UserServiceUnavalaible)}
 	}
 	user := &model.User{Id: uuid.New(), Password: string(hashpass), Email: req.Email, Name: req.Name}
-	var tx *sql.Tx
+	var tx pgx.Tx
 	tx, resp := as.beginTransaction(ctx, place, traceid)
 	if resp != nil {
 		return resp
 	}
 	_, serviceresponse := as.requestToDB(as.Dbrepo.CreateUser(ctx, tx, user), traceid)
 	if serviceresponse != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return serviceresponse
 	}
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.CreateSessionResponse, error) {
 		return as.GrpcSessionClient.CreateSession(ctx, user.Id.String())
 	}, traceid, place, as.LogProducer)
 	if serviceresponse != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return serviceresponse
 	}
 	err = as.EventProducer.NewUserEvent(ctx, rabbitmq.UserRegistrationKey, user.Id.String(), place, traceid)
 	if err != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.UserServiceUnavalaible)}
 	}
-	err = as.commitTransaction(tx, traceid, place)
+	err = as.commitTransaction(ctx, tx, traceid, place)
 	if err != nil {
 		_, _ = retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 			return as.GrpcSessionClient.DeleteSession(ctx, grpcresponse.SessionID)
 		}, traceid, place, as.LogProducer)
 		_ = as.EventProducer.NewUserEvent(ctx, rabbitmq.UserDeleteKey, user.Id.String(), place, traceid)
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.UserServiceUnavalaible)}
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and session received")
@@ -111,36 +111,36 @@ func (as *UserService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 	if errorvalidate != nil {
 		return &ServiceResponse{Success: false, Errors: errorvalidate}
 	}
-	var tx *sql.Tx
+	var tx pgx.Tx
 	tx, resp := as.beginTransaction(ctx, place, traceid)
 	if resp != nil {
 		return resp
 	}
 	_, serviceresponse := as.requestToDB(as.Dbrepo.DeleteUser(ctx, tx, userid, req.Password), traceid)
 	if serviceresponse != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return serviceresponse
 	}
 	_, serviceresponse = as.requestToDB(as.CacheUserRepos.DeleteProfileCache(ctx, useridstr), traceid)
 	if serviceresponse != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return serviceresponse
 	}
 	grpcresponse, serviceresponse := retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
 		return as.GrpcSessionClient.DeleteSession(ctx, sessionID)
 	}, traceid, place, as.LogProducer)
 	if serviceresponse != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return serviceresponse
 	}
 	err = as.EventProducer.NewUserEvent(ctx, rabbitmq.UserDeleteKey, useridstr, place, traceid)
 	if err != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.UserServiceUnavalaible)}
 	}
-	err = as.commitTransaction(tx, traceid, place)
+	err = as.commitTransaction(ctx, tx, traceid, place)
 	if err != nil {
-		as.rollbackTransaction(tx, traceid, place)
+		as.rollbackTransaction(ctx, tx, traceid, place)
 		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.UserServiceUnavalaible)}
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, "Transaction was successfully committed and user has successfully deleted his account with all data")
@@ -169,7 +169,7 @@ func (as *UserService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 	if errorvalidate != nil {
 		return &ServiceResponse{Success: false, Errors: errorvalidate}
 	}
-	var tx *sql.Tx
+	var tx pgx.Tx
 	tx, resp := as.beginTransaction(ctx, place, traceid)
 	if resp != nil {
 		return resp
@@ -185,7 +185,7 @@ func (as *UserService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 	}
 	as.LogProducer.NewUserLog(kafka.LogLevelWarn, UpdateAccount, traceid, erro.ErrorInvalidCountDinamicParameter)
 	metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
-	as.rollbackTransaction(tx, traceid, place)
+	as.rollbackTransaction(ctx, tx, traceid, place)
 	return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.ErrorInvalidCountDinamicParameter)}
 }
 func (as *UserService) GetProfileById(ctx context.Context, getidstr string) *ServiceResponse {

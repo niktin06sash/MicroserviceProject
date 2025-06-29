@@ -95,7 +95,7 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 		gomock.Any(),
 		fixedTraceID,
 	).Return(nil)
-	mockTransactionRepo.EXPECT().CommitTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().CommitTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.RegistrateAndLogin(ctx, req)
 	require.True(t, response.Success)
@@ -259,7 +259,7 @@ func TestRegistrateAndLogin_DataBaseError_ClientError(t *testing.T) {
 	})).Return(
 		&repository.RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ClientErrorType, Message: erro.ErrorUniqueEmailConst}, Place: repository.CreateUser},
 	)
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)
@@ -303,7 +303,7 @@ func TestRegistrateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
 	})).Return(
 		&repository.RepositoryResponse{Success: false, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorAfterReqUsers}, Place: repository.CreateUser},
 	)
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)
@@ -383,7 +383,7 @@ func TestRegistrateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
 		mockLogProducer.EXPECT().
 			NewUserLog(kafka.LogLevelError, gomock.Any(), fixedTraceID, "All retry attempts failed"),
 	)
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)
 	require.Equal(t, response.Errors, &erro.CustomError{Type: erro.ServerErrorType, Message: erro.SessionServiceUnavalaible})
@@ -459,7 +459,7 @@ func TestRegistrateAndLogin_EventProducerError(t *testing.T) {
 		gomock.Any(),
 		fixedTraceID,
 	).Return(fmt.Errorf("rabbitMQ error"))
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)
@@ -536,7 +536,7 @@ func TestRegistrateAndLogin_CommitTransactionError(t *testing.T) {
 		gomock.Any(),
 		fixedTraceID,
 	).Return(nil)
-	mockTransactionRepo.EXPECT().CommitTx(tx).Return(fmt.Errorf("Failed to commit transaction after all attempts")).Times(3)
+	mockTransactionRepo.EXPECT().CommitTx(ctx, tx).Return(fmt.Errorf("Failed to commit transaction after all attempts")).Times(3)
 	mockSessionClient.EXPECT().DeleteSession(mock.MatchedBy(func(ctx context.Context) bool {
 		traceID := ctx.Value("traceID")
 		return traceID != nil && traceID.(string) == fixedTraceID
@@ -555,7 +555,7 @@ func TestRegistrateAndLogin_CommitTransactionError(t *testing.T) {
 		gomock.Any(),
 		fixedTraceID,
 	).Return(nil)
-	mockTransactionRepo.EXPECT().RollbackTx(tx).Return(nil)
+	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.RegistrateAndLogin(ctx, req)
 	require.False(t, response.Success)

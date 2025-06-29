@@ -2,17 +2,19 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
-
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type UserPostgresRepo struct {
@@ -40,16 +42,14 @@ const (
 	selectEmailCount        = `SELECT COUNT(*) FROM users WHERE useremail = $1`
 )
 
-func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx *sql.Tx, user *model.User) *RepositoryResponse {
+func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx pgx.Tx, user *model.User) *RepositoryResponse {
 	const place = CreateUser
 	start := time.Now()
 	defer DBMetrics(place, start)
-	var createdUserID uuid.UUID
-	stmt := tx.StmtContext(ctx, repoap.db.mapstmt[insertUserQuery])
-	err := stmt.QueryRowContext(ctx, user.Id, user.Name, user.Email, user.Password).Scan(&createdUserID)
+	_, err := tx.Exec(ctx, insertUserQuery, user.Id, user.Name, user.Email, user.Password)
 	metrics.UserDBQueriesTotal.WithLabelValues("INSERT").Inc()
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "INSERT").Inc()
 			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorUniqueEmailConst), Place: place}
 		}
@@ -64,10 +64,10 @@ func (repoap *UserPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 	defer DBMetrics(place, start)
 	var hashpass string
 	var userId uuid.UUID
-	err := repoap.db.mapstmt[selectUserGetQuery].QueryRowContext(ctx, useremail).Scan(&userId, &hashpass)
+	err := repoap.db.pool.QueryRow(ctx, selectUserGetQuery, useremail).Scan(&userId, &hashpass)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
 			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorEmailNotRegisterConst), Place: place}
 		}
@@ -82,13 +82,12 @@ func (repoap *UserPostgresRepo) GetUser(ctx context.Context, useremail, userpass
 	}
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userId.String()}, SuccessMessage: "Successful get user from database", Place: place}
 }
-func (repoap *UserPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, userId uuid.UUID, password string) *RepositoryResponse {
+func (repoap *UserPostgresRepo) DeleteUser(ctx context.Context, tx pgx.Tx, userId uuid.UUID, password string) *RepositoryResponse {
 	const place = DeleteUser
 	start := time.Now()
 	defer DBMetrics(place, start)
 	var hashpass string
-	stmt := tx.StmtContext(ctx, repoap.db.mapstmt[selectUserPasswordQuery])
-	err := stmt.QueryRowContext(ctx, userId).Scan(&hashpass)
+	err := tx.QueryRow(ctx, selectUserPasswordQuery, userId).Scan(&hashpass)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
@@ -100,8 +99,7 @@ func (repoap *UserPostgresRepo) DeleteUser(ctx context.Context, tx *sql.Tx, user
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "CompareHashAndPassword").Inc()
 		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorIncorrectPassword), Place: place}
 	}
-	stmt = tx.StmtContext(ctx, repoap.db.mapstmt[deleteUserQuery])
-	_, err = stmt.ExecContext(ctx, userId)
+	_, err = tx.Exec(ctx, deleteUserQuery, userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("DELETE").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "DELETE").Inc()
@@ -115,10 +113,10 @@ func (repoap *UserPostgresRepo) GetProfileById(ctx context.Context, userid uuid.
 	defer DBMetrics(place, start)
 	var email string
 	var name string
-	err := repoap.db.mapstmt[selectUserGetProfile].QueryRowContext(ctx, userid).Scan(&email, &name)
+	err := repoap.db.pool.QueryRow(ctx, selectUserGetProfile, userid).Scan(&email, &name)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
 			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorIDNotRegisterConst), Place: place}
 		}
@@ -127,7 +125,7 @@ func (repoap *UserPostgresRepo) GetProfileById(ctx context.Context, userid uuid.
 	}
 	return &RepositoryResponse{Success: true, Data: map[string]any{KeyUserID: userid.String(), KeyUserName: name, KeyUserEmail: email}, SuccessMessage: "Successful get profile by id from database", Place: place}
 }
-func (repoap *UserPostgresRepo) UpdateUserData(ctx context.Context, tx *sql.Tx, userId uuid.UUID, updateType string, args ...interface{}) *RepositoryResponse {
+func (repoap *UserPostgresRepo) UpdateUserData(ctx context.Context, tx pgx.Tx, userId uuid.UUID, updateType string, args ...interface{}) *RepositoryResponse {
 	const place = UpdateUserData
 	switch updateType {
 	case "name":
@@ -144,12 +142,11 @@ func (repoap *UserPostgresRepo) UpdateUserData(ctx context.Context, tx *sql.Tx, 
 	}
 	return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorInvalidCountDinamicParameter), Place: place}
 }
-func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, userId uuid.UUID, name string) *RepositoryResponse {
+func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx pgx.Tx, userId uuid.UUID, name string) *RepositoryResponse {
 	const place = UpdateName
 	start := time.Now()
 	defer DBMetrics(place, start)
-	stmt := tx.StmtContext(ctx, repoap.db.mapstmt[updateUserName])
-	_, err := stmt.ExecContext(ctx, name, userId)
+	_, err := tx.Exec(ctx, updateUserName, name, userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
@@ -157,13 +154,12 @@ func (repoap *UserPostgresRepo) updateUserName(ctx context.Context, tx *sql.Tx, 
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful update username in database", Place: place}
 }
-func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx, userId uuid.UUID, email string, password string) *RepositoryResponse {
+func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx pgx.Tx, userId uuid.UUID, email string, password string) *RepositoryResponse {
 	const place = UpdateEmail
 	start := time.Now()
 	defer DBMetrics(place, start)
 	var hashpass string
-	stmt := tx.StmtContext(ctx, repoap.db.mapstmt[selectUserPasswordQuery])
-	err := stmt.QueryRowContext(ctx, userId).Scan(&hashpass)
+	err := tx.QueryRow(ctx, selectUserPasswordQuery, userId).Scan(&hashpass)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
@@ -176,8 +172,7 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorIncorrectPassword), Place: place}
 	}
 	var count int
-	stmt = tx.StmtContext(ctx, repoap.db.mapstmt[selectEmailCount])
-	err = stmt.QueryRowContext(ctx, email).Scan(&count)
+	err = tx.QueryRow(ctx, selectEmailCount, email).Scan(&count)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
@@ -187,8 +182,7 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "SELECT").Inc()
 		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorUniqueEmailConst), Place: place}
 	}
-	stmt = tx.StmtContext(ctx, repoap.db.mapstmt[updateUserEmail])
-	_, err = stmt.ExecContext(ctx, email, userId)
+	_, err = tx.Exec(ctx, updateUserEmail, email, userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
@@ -196,13 +190,12 @@ func (repoap *UserPostgresRepo) updateUserEmail(ctx context.Context, tx *sql.Tx,
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful update useremail in database", Place: place}
 }
-func (repoap *UserPostgresRepo) updateUserPassword(ctx context.Context, tx *sql.Tx, userId uuid.UUID, lastpassword string, newpassword string) *RepositoryResponse {
+func (repoap *UserPostgresRepo) updateUserPassword(ctx context.Context, tx pgx.Tx, userId uuid.UUID, lastpassword string, newpassword string) *RepositoryResponse {
 	const place = UpdatePassword
 	start := time.Now()
 	defer DBMetrics(place, start)
 	var hashpass string
-	stmt := tx.StmtContext(ctx, repoap.db.mapstmt[selectUserPasswordQuery])
-	err := stmt.QueryRowContext(ctx, userId).Scan(&hashpass)
+	err := tx.QueryRow(ctx, selectUserPasswordQuery, userId).Scan(&hashpass)
 	metrics.UserDBQueriesTotal.WithLabelValues("SELECT").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "SELECT").Inc()
@@ -220,8 +213,7 @@ func (repoap *UserPostgresRepo) updateUserPassword(ctx context.Context, tx *sql.
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "GenerateHashPassword").Inc()
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGenerateHashPassword, err)), Place: place}
 	}
-	stmt = tx.StmtContext(ctx, repoap.db.mapstmt[UpdatePassword])
-	_, err = stmt.ExecContext(ctx, hashnewpass, userId)
+	_, err = tx.Exec(ctx, updateUserPassword, hashnewpass, userId)
 	metrics.UserDBQueriesTotal.WithLabelValues("UPDATE").Inc()
 	if err != nil {
 		metrics.UserDBErrorsTotal.WithLabelValues(erro.ServerErrorType, "UPDATE").Inc()
