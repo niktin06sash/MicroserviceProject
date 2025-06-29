@@ -27,10 +27,12 @@ const (
 	ErrorRequiredUserIdConst           = "UserId is required"
 	ErrorRequiredSessionIdConst        = "SessionId is required"
 	ErrorInvalidSessionIdFormat        = "Invalid SessionId format"
-	ErrorHset                          = "Hset session error: %v"
+	ErrorSet                           = "Set session error: %v"
 	ErrorExpire                        = "Expire session error: %v"
-	ErrorHgetAll                       = "HGetAll session error: %v"
+	ErrorGet                           = "Get session error: %v"
 	ErrorDelSession                    = "Del session error: %v"
+	ErrorMarshal                       = "Data marshal error: %v"
+	ErrorUnmarshal                     = "Data unmarshal error: %v"
 	InvalidSession                     = "Session is invalid"
 )
 

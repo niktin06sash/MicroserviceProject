@@ -113,7 +113,7 @@ func TestValidateSession_DataBaseError_InternalServerError(t *testing.T) {
 		Repo:        mockSessionRepo,
 		Logproducer: mockLogProducer,
 	}
-	mockSessionRepo.EXPECT().GetSession(ctx, fixedSessionId, flag).Return(&repository.RepositoryResponse{Success: false, Place: repository.GetSession, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorHgetAll}})
+	mockSessionRepo.EXPECT().GetSession(ctx, fixedSessionId, flag).Return(&repository.RepositoryResponse{Success: false, Place: repository.GetSession, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorGet}})
 	mockLogProducer.EXPECT().NewSessionLog(gomock.Any(), gomock.Any(), fixedTraceID, gomock.Any()).AnyTimes()
 	response := as.ValidateSession(ctx, fixedSessionId, flag)
 	require.False(t, response.Success)

@@ -59,7 +59,7 @@ func (redisrepo *UserRedisRepo) GetProfileCache(ctx context.Context, id string) 
 	result, err := redisrepo.Client.RedisClient.Get(ctx, id).Result()
 	if err != nil {
 		metrics.UserCacheErrorsTotal.WithLabelValues("GET").Inc()
-		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorHgetAllProfiles, err)), Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGetProfiles, err)), Place: place}
 	}
 	if len(result) == 0 {
 		return &RepositoryResponse{Success: false, SuccessMessage: "Profile was not found in the cache", Place: place}

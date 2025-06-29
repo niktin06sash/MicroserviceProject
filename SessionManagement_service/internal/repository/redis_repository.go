@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -19,17 +20,13 @@ func NewSessionRepos(client *RedisObject) *SessionRedis {
 
 func (redisrepo *SessionRedis) SetSession(ctx context.Context, session *model.Session) *RepositoryResponse {
 	const place = SetSession
-	err := redisrepo.Client.RedisClient.HSet(ctx, session.SessionID, map[string]interface{}{
-		KeyUserId:    session.UserID,
-		KeySessionId: session.ExpirationTime.Format(time.RFC3339),
-	}).Err()
+	jsondata, err := json.Marshal(session)
 	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorHset, err)), Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorMarshal, err)), Place: place}
 	}
-	expiration := time.Until(session.ExpirationTime)
-	err = redisrepo.Client.RedisClient.Expire(ctx, session.SessionID, expiration).Err()
+	err = redisrepo.Client.RedisClient.Set(ctx, session.SessionID, jsondata, 1*time.Hour).Err()
 	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorExpire, err)), Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorSet, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successfull session installation", Place: place}
 }
@@ -39,9 +36,9 @@ func (redisrepo *SessionRedis) GetSession(ctx context.Context, sessionID string,
 	return redisrepo.getSessionData(ctx, sessionID, place, flag)
 }
 func (redisrepo *SessionRedis) getSessionData(ctx context.Context, sessionID string, place string, flag string) *RepositoryResponse {
-	result, err := redisrepo.Client.RedisClient.HGetAll(ctx, sessionID).Result()
+	result, err := redisrepo.Client.RedisClient.Get(ctx, sessionID).Result()
 	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorHgetAll, err)), Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGet, err)), Place: place}
 	}
 	if len(result) == 0 {
 		if flag == "true" {
@@ -52,8 +49,12 @@ func (redisrepo *SessionRedis) getSessionData(ctx context.Context, sessionID str
 	if flag == "false" {
 		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.AlreadyAuthorized), Place: place}
 	}
-	userIDString := result[KeyUserId]
-	return &RepositoryResponse{Success: true, Data: Data{UserID: userIDString}, SuccessMessage: "Successfull get session", Place: place}
+	var session model.Session
+	err = json.Unmarshal([]byte(result), &session)
+	if err != nil {
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorUnmarshal, err)), Place: place}
+	}
+	return &RepositoryResponse{Success: true, Data: Data{UserID: session.UserID}, SuccessMessage: "Successfull get session", Place: place}
 }
 func (redisrepo *SessionRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
 	const place = DeleteSession

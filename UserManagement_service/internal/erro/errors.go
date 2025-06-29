@@ -53,7 +53,7 @@ const (
 	ErrorAfterReqUsers                = "Error after request into users: %v"
 	ErrorGenerateHashPassword         = "Generate HashPassword : %v"
 	ErrorSetProfiles                  = "Set profiles-cache error: %v"
-	ErrorHgetAllProfiles              = "HGetAll profiles-cache error: %v"
+	ErrorGetProfiles                  = "Get profiles-cache error: %v"
 	ErrorExpireProfiles               = "Expire profiles-cache error: %v"
 	ErrorDelProfiles                  = "Del profiles-cache error: %v"
 	ErrorMarshal                      = "Data marshal error: %v"
