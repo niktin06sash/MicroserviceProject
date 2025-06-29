@@ -14,6 +14,8 @@ type DBPhotoRepos interface {
 	DeletePhoto(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
 	GetPhotos(ctx context.Context, userid string) *repository.RepositoryResponse
 	GetPhoto(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
+	AddUserId(ctx context.Context, userid string) *repository.RepositoryResponse
+	DeleteUserData(ctx context.Context, userid string) *repository.RepositoryResponse
 }
 type CachePhotoRepos interface {
 	AddPhotoCache(ctx context.Context, userid string, photo *pb.Photo) *repository.RepositoryResponse
@@ -21,6 +23,7 @@ type CachePhotoRepos interface {
 	GetPhotoCache(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
 	GetPhotosCache(ctx context.Context, userid string) *repository.RepositoryResponse
 	DeletePhotoCache(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
+	DeletePhotosCache(ctx context.Context, userid string) *repository.RepositoryResponse
 }
 type CloudPhotoStorage interface {
 	UploadFile(ctx context.Context, localfilepath string, photoid string, ext string) *repository.RepositoryResponse

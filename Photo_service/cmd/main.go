@@ -35,11 +35,11 @@ func main() {
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
 	postgres := repository.NewPhotoPostgresRepo(db)
 	redis := repository.NewPhotoRedisRepo(cache)
-	rabbitconsumer, err := rabbitmq.NewRabbitConsumer(config.RabbitMQ, kafkaProducer, postgres, mega, redis)
+	service := service.NewPhotoService(postgres, mega, redis, kafkaProducer)
+	rabbitconsumer, err := rabbitmq.NewRabbitConsumer(config.RabbitMQ, kafkaProducer, service)
 	if err != nil {
 		return
 	}
-	service := service.NewPhotoService(postgres, mega, redis, kafkaProducer)
 	api := handlers.NewPhotoAPI(service, kafkaProducer)
 	srv := server.NewGrpcServer(config.Server, api)
 	kafkaProducer.LogStart()
