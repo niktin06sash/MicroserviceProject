@@ -154,7 +154,7 @@ func TestGetProfileById_CacheGet_InternalServerError(t *testing.T) {
 		return traceID != nil && traceID.(string) == fixedTraceID
 	}),
 		fixedUserId.String(),
-	).Return(&repository.RepositoryResponse{Success: false, Place: repository.GetProfileCache, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorHgetAllProfiles}})
+	).Return(&repository.RepositoryResponse{Success: false, Place: repository.GetProfileCache, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorGetProfiles}})
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), fixedTraceID, gomock.Any()).AnyTimes()
 	response := as.GetProfileById(ctx, fixedUserId.String())
 	require.False(t, response.Success)

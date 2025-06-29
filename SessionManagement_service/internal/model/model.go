@@ -5,7 +5,7 @@ import (
 )
 
 type Session struct {
-	SessionID      string
-	UserID         string
-	ExpirationTime time.Time
+	SessionID      string    `json:"sessionid"`
+	UserID         string    `json:"userid"`
+	ExpirationTime time.Time `json:"expiration_time"`
 }

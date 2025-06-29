@@ -68,7 +68,7 @@ func TestCreateSession_DataBaseError_InternalServerError(t *testing.T) {
 		Repo:        mockSessionRepo,
 		Logproducer: mockLogProducer,
 	}
-	mockSessionRepo.EXPECT().SetSession(ctx, gomock.Any()).Return(&repository.RepositoryResponse{Success: false, Place: repository.SetSession, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorHset}})
+	mockSessionRepo.EXPECT().SetSession(ctx, gomock.Any()).Return(&repository.RepositoryResponse{Success: false, Place: repository.SetSession, Errors: &erro.CustomError{Type: erro.ServerErrorType, Message: erro.ErrorSet}})
 	mockLogProducer.EXPECT().NewSessionLog(gomock.Any(), gomock.Any(), fixedTraceID, gomock.Any()).AnyTimes()
 	response := as.CreateSession(ctx, fixedUserId)
 	require.False(t, response.Success)
