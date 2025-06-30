@@ -9,6 +9,7 @@ import (
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 )
 
+//go:generate mockgen -source=service.go -destination=mocks/mock.go
 type DBPhotoRepos interface {
 	LoadPhoto(ctx context.Context, photo *model.Photo) *repository.RepositoryResponse
 	DeletePhoto(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse

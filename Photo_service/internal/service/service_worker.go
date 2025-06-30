@@ -8,7 +8,7 @@ func (use *PhotoServiceImplement) taskWorker(i int) {
 	defer use.wg.Done()
 	for {
 		select {
-		case task, ok := <-use.task_queue:
+		case task, ok := <-use.Task_queue:
 			if !ok {
 				log.Printf("[INFO] [Photo-Service] [Worker: %v] Task channel closed, stopping worker", i)
 				return
@@ -22,7 +22,7 @@ func (use *PhotoServiceImplement) taskWorker(i int) {
 }
 func (use *PhotoServiceImplement) StopWorkers() {
 	close(use.closechan)
-	close(use.task_queue)
+	close(use.Task_queue)
 	use.wg.Wait()
 	log.Printf("[DEBUG] [Photo-Service] Successful stop task-workers")
 }
