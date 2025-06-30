@@ -1,11 +1,9 @@
 package rabbitmq
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/kafka"
 )
@@ -51,22 +49,21 @@ func (rc *RabbitConsumer) readEvent() {
 				msg.Nack(false, false)
 				continue
 			}
-			ctx, cancel := context.WithTimeout(rc.ctx, 5*time.Second)
-			defer cancel()
 			switch msg.RoutingKey {
 			case userRegistrationKey:
 				rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, newmsg.Traceid, fmt.Sprintf("Received user registration event for userID: %s", newmsg.UserID))
-				resp := rc.userservice.AddUserId(ctx, newmsg.UserID, newmsg.Traceid)
+				resp := rc.userservice.AddUserId(rc.ctx, newmsg.UserID, newmsg.Traceid)
 				if resp.Errors != nil {
+					msg.Nack(false, true)
 					continue
 				}
 			case userDeleteKey:
 				rc.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, newmsg.Traceid, fmt.Sprintf("Received user delete account event for userID: %s", newmsg.UserID))
-				rc.wg.Add(1)
-				go func() {
-					defer rc.wg.Done()
-					rc.userservice.DeleteAllUserData(ctx, newmsg.UserID, newmsg.Traceid)
-				}()
+				resp := rc.userservice.DeleteAllUserData(rc.ctx, newmsg.UserID, newmsg.Traceid)
+				if resp.Errors != nil {
+					msg.Nack(false, true)
+					continue
+				}
 			}
 			err = msg.Ack(false)
 			if err != nil {

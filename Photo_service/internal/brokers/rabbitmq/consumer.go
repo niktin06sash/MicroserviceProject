@@ -16,7 +16,7 @@ type LogProducer interface {
 	NewPhotoLog(level, place, traceid, msg string)
 }
 type UserIDService interface {
-	DeleteAllUserData(ctx context.Context, userid string, traceid string)
+	DeleteAllUserData(ctx context.Context, userid string, traceid string) *service.ServiceResponse
 	AddUserId(ctx context.Context, userid string, traceid string) *service.ServiceResponse
 }
 type RabbitConsumer struct {

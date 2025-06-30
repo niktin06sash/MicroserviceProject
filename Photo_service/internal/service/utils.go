@@ -13,7 +13,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
 )
 
-func (use *PhotoServiceImplement) requestToDB(response *repository.RepositoryResponse, traceid string) (*repository.RepositoryResponse, *ServiceResponse) {
+func (use *PhotoServiceImplement) requestToRepository(response *repository.RepositoryResponse, traceid string) (*repository.RepositoryResponse, *ServiceResponse) {
 	if !response.Success && response.Errors != nil {
 		switch response.Errors.Type {
 		case erro.ServerErrorType:
@@ -29,7 +29,7 @@ func (use *PhotoServiceImplement) requestToDB(response *repository.RepositoryRes
 	use.logproducer.NewPhotoLog(kafka.LogLevelInfo, response.Place, traceid, response.SuccessMessage)
 	return response, nil
 }
-func (use *PhotoServiceImplement) unloadPhotoCloud(file []byte, photoid string, ext string, userid string, traceid string) {
+func (use *PhotoServiceImplement) unloadPhotoCloud(ctx context.Context, file []byte, photoid string, ext string, userid string, traceid string) {
 	const place = UnloadPhotoCloud
 	filename := photoid + ext
 	tmpDir := os.TempDir()
@@ -44,9 +44,7 @@ func (use *PhotoServiceImplement) unloadPhotoCloud(file []byte, photoid string, 
 			use.logproducer.NewPhotoLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Failed to remove temp file: %v", err))
 		}
 	}()
-	cloudctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	cloudresponse := use.cloud.UploadFile(cloudctx, tempFile, photoid, ext)
+	cloudresponse := use.cloud.UploadFile(ctx, tempFile, photoid, ext)
 	if !cloudresponse.Success && cloudresponse.Errors != nil {
 		use.logproducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, cloudresponse.Errors.Message)
 		return
@@ -54,9 +52,7 @@ func (use *PhotoServiceImplement) unloadPhotoCloud(file []byte, photoid string, 
 	use.logproducer.NewPhotoLog(kafka.LogLevelInfo, cloudresponse.Place, traceid, cloudresponse.SuccessMessage)
 	photo := cloudresponse.Data.Photo
 	photo.UserID = userid
-	databasectx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	bdresponse := use.photorepo.LoadPhoto(databasectx, photo)
+	bdresponse := use.photorepo.LoadPhoto(ctx, photo)
 	if !bdresponse.Success && bdresponse.Errors != nil {
 		use.logproducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors.Message)
 		return
@@ -65,11 +61,9 @@ func (use *PhotoServiceImplement) unloadPhotoCloud(file []byte, photoid string, 
 	use.logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceid, fmt.Sprintf("The photo(id = %s) has been successfully uploaded to cloud and database", photoid))
 
 }
-func (use *PhotoServiceImplement) deletePhotoCloud(photoid string, ext string, traceid string) {
+func (use *PhotoServiceImplement) deletePhotoCloud(ctx context.Context, photoid string, ext string, traceid string) {
 	const place = DeletePhotoCloud
-	newctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	cloudresponse := use.cloud.DeleteFile(newctx, photoid, ext)
+	cloudresponse := use.cloud.DeleteFile(ctx, photoid, ext)
 	if !cloudresponse.Success && cloudresponse.Errors != nil {
 		use.logproducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, cloudresponse.Errors.Message)
 		return
@@ -85,6 +79,20 @@ func (use *PhotoServiceImplement) parsingIDs(id string, traceid string, place st
 	}
 	return nil
 }
-func (use *PhotoServiceImplement) WaitGoroutines() {
-	use.wg.Wait()
+func (use *PhotoServiceImplement) enqueueTask(ctx context.Context, task func(context.Context), timeout time.Duration, place string, traceid string) *ServiceResponse {
+	select {
+	case use.task_queue <- func() {
+		taskCtx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		task(taskCtx)
+	}:
+		return &ServiceResponse{Success: true}
+	case <-ctx.Done():
+		use.logproducer.NewPhotoLog(kafka.LogLevelError, place, traceid, erro.ContextCanceled)
+		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.PhotoServiceUnavalaible)}
+
+	default:
+		use.logproducer.NewPhotoLog(kafka.LogLevelError, place, traceid, erro.ErrorOverflowTaskQ)
+		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.PhotoServiceUnavalaible)}
+	}
 }

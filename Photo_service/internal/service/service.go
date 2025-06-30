@@ -34,6 +34,8 @@ type LogProducer interface {
 }
 
 const UseCase_LoadPhoto = "UseCase-LoadPhoto"
+const UseCase_DeletePhoto = "UseCase-DeletePhoto"
+const UseCase_DeleteAllUserData = "UseCase-DeleteAllUserData"
 const MaxFileSize = 10 << 20
 const UnloadPhotoCloud = "UnloadPhotoCloud"
 const DeletePhotoCloud = "DeletePhotoCloud"
