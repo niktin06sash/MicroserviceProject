@@ -24,6 +24,7 @@ const ErrorMarshal = "Data marshal error: %v"
 const ErrorUnmarshal = "Data unmarshal error: %v"
 const ErrorPipeExec = "Pipe-Exec error: %v"
 const ErrorScan = "Scan error: %v"
+const ErrorOverflowTaskQ = "Task queue overflow"
 
 type CustomError struct {
 	Message string

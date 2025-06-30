@@ -35,7 +35,7 @@ func main() {
 	kafkaProducer := kafka.NewKafkaProducer(config.Kafka)
 	postgres := repository.NewPhotoPostgresRepo(db)
 	redis := repository.NewPhotoRedisRepo(cache)
-	service := service.NewPhotoService(postgres, mega, redis, kafkaProducer)
+	service := service.NewPhotoServiceImplement(postgres, mega, redis, kafkaProducer)
 	rabbitconsumer, err := rabbitmq.NewRabbitConsumer(config.RabbitMQ, kafkaProducer, service)
 	if err != nil {
 		return
@@ -69,7 +69,7 @@ func main() {
 	}
 	log.Println("[DEBUG] [Photo-Service] Service has shutted down successfully")
 	defer func() {
-		service.WaitGoroutines()
+		service.StopWorkers()
 		rabbitconsumer.Close()
 		db.Close()
 		mega.Close()
