@@ -131,5 +131,5 @@ func (ph *PhotoRedisRepo) DeletePhotoCache(ctx context.Context, userid string, p
 	if num == 0 {
 		return &RepositoryResponse{Success: false, SuccessMessage: "Photos metadata was not found in the cache", Place: place}
 	}
-	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete photo from cache", Place: place}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete photo metadata from cache", Place: place}
 }

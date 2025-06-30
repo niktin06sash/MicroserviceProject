@@ -14,17 +14,17 @@ import (
 )
 
 type PhotoServiceImplement struct {
-	photorepo   DBPhotoRepos
-	cloud       CloudPhotoStorage
-	logproducer LogProducer
-	cache       CachePhotoRepos
-	task_queue  chan func()
+	Photorepo   DBPhotoRepos
+	Cloud       CloudPhotoStorage
+	Logproducer LogProducer
+	Cache       CachePhotoRepos
+	Task_queue  chan func()
 	closechan   chan struct{}
 	wg          *sync.WaitGroup
 }
 
 func NewPhotoServiceImplement(repo DBPhotoRepos, cloud CloudPhotoStorage, cache CachePhotoRepos, logproducer LogProducer) *PhotoServiceImplement {
-	service := &PhotoServiceImplement{photorepo: repo, logproducer: logproducer, cloud: cloud, cache: cache, task_queue: make(chan func(), 1000), wg: &sync.WaitGroup{}}
+	service := &PhotoServiceImplement{Photorepo: repo, Logproducer: logproducer, Cloud: cloud, Cache: cache, Task_queue: make(chan func(), 1000), wg: &sync.WaitGroup{}}
 	for i := 1; i <= 5; i++ {
 		service.wg.Add(1)
 		go service.taskWorker(i)
@@ -35,15 +35,15 @@ func NewPhotoServiceImplement(repo DBPhotoRepos, cloud CloudPhotoStorage, cache 
 func (use *PhotoServiceImplement) DeletePhoto(ctx context.Context, userid string, photoid string) *ServiceResponse {
 	const place = UseCase_DeletePhoto
 	traceid := ctx.Value("traceID").(string)
-	bdresponse, serviceresponse := use.requestToRepository(use.photorepo.GetPhoto(ctx, userid, photoid), traceid)
+	bdresponse, serviceresponse := use.requestToRepository(use.Photorepo.GetPhoto(ctx, userid, photoid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	_, serviceresponse = use.requestToRepository(use.photorepo.DeletePhoto(ctx, userid, bdresponse.Data.Photo.ID), traceid)
+	_, serviceresponse = use.requestToRepository(use.Photorepo.DeletePhoto(ctx, userid, bdresponse.Data.Photo.ID), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	_, serviceresponse = use.requestToRepository(use.cache.DeletePhotoCache(ctx, userid, photoid), traceid)
+	_, serviceresponse = use.requestToRepository(use.Cache.DeletePhotoCache(ctx, userid, photoid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -58,16 +58,16 @@ func (use *PhotoServiceImplement) LoadPhoto(ctx context.Context, userid string, 
 	_, err := uuid.Parse(userid)
 	if err != nil {
 		fmterr := fmt.Sprintf("UUID-parse Error: %v", err)
-		use.logproducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
+		use.Logproducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmterr)
 		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidUserIDFormat)}
 	}
 	if len(filedata) > MaxFileSize {
-		use.logproducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("File too large: %v bytes", len(filedata)))
+		use.Logproducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("File too large: %v bytes", len(filedata)))
 		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.LargeFile)}
 	}
 	contentType := http.DetectContentType(filedata)
 	if contentType != "image/jpeg" && contentType != "image/png" {
-		use.logproducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("Invalid file format: %s", contentType))
+		use.Logproducer.NewPhotoLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("Invalid file format: %s", contentType))
 		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidFileFormat)}
 	}
 	photoid := uuid.New().String()
@@ -97,20 +97,20 @@ func (use *PhotoServiceImplement) GetPhoto(ctx context.Context, photoid string, 
 	if err != nil {
 		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidPhotoIDFormat)}
 	}
-	cacheresponse, serviceresponse := use.requestToRepository(use.cache.GetPhotoCache(ctx, userid, photoid), traceid)
+	cacheresponse, serviceresponse := use.requestToRepository(use.Cache.GetPhotoCache(ctx, userid, photoid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	if cacheresponse.Success {
 		return &ServiceResponse{Success: cacheresponse.Success, Data: Data{Photo: cacheresponse.Data.GrpcPhoto}}
 	}
-	bdresponse, serviceresponse := use.requestToRepository(use.photorepo.GetPhoto(ctx, userid, photoid), traceid)
+	bdresponse, serviceresponse := use.requestToRepository(use.Photorepo.GetPhoto(ctx, userid, photoid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	photo_bd := bdresponse.Data.Photo
 	grpcphoto := &pb.Photo{PhotoId: photo_bd.ID, Url: photo_bd.URL, CreatedAt: photo_bd.CreatedAt.String()}
-	_, serviceresponse = use.requestToRepository(use.cache.AddPhotoCache(ctx, userid, grpcphoto), traceid)
+	_, serviceresponse = use.requestToRepository(use.Cache.AddPhotoCache(ctx, userid, grpcphoto), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -123,14 +123,14 @@ func (use *PhotoServiceImplement) GetPhotos(ctx context.Context, userid string) 
 	if err != nil {
 		return &ServiceResponse{Success: false, Errors: erro.ClientError(erro.InvalidUserIDFormat)}
 	}
-	cacheresponse, serviceresponse := use.requestToRepository(use.cache.GetPhotosCache(ctx, userid), traceid)
+	cacheresponse, serviceresponse := use.requestToRepository(use.Cache.GetPhotosCache(ctx, userid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
 	if cacheresponse.Success {
 		return &ServiceResponse{Success: cacheresponse.Success, Data: Data{Photos: cacheresponse.Data.GrpcPhotos}}
 	}
-	bdresponse, serviceresponse := use.requestToRepository(use.photorepo.GetPhotos(ctx, userid), traceid)
+	bdresponse, serviceresponse := use.requestToRepository(use.Photorepo.GetPhotos(ctx, userid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -140,7 +140,7 @@ func (use *PhotoServiceImplement) GetPhotos(ctx context.Context, userid string) 
 		grpcphoto := &pb.Photo{PhotoId: p.ID, Url: p.URL, CreatedAt: p.CreatedAt.String()}
 		grpcphotos = append(grpcphotos, grpcphoto)
 	}
-	_, serviceresponse = use.requestToRepository(use.cache.AddPhotosCache(ctx, userid, grpcphotos), traceid)
+	_, serviceresponse = use.requestToRepository(use.Cache.AddPhotosCache(ctx, userid, grpcphotos), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -150,7 +150,7 @@ func (use *PhotoServiceImplement) DeleteAllUserData(ctx context.Context, userid 
 	const place = UseCase_DeleteAllUserData
 	getctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	getresp, serviceresponse := use.requestToRepository(use.photorepo.GetPhotos(getctx, userid), traceid)
+	getresp, serviceresponse := use.requestToRepository(use.Photorepo.GetPhotos(getctx, userid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -165,11 +165,11 @@ func (use *PhotoServiceImplement) DeleteAllUserData(ctx context.Context, userid 
 	}
 	deluserctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	_, serviceresponse = use.requestToRepository(use.cache.DeletePhotosCache(deluserctx, userid), traceid)
+	_, serviceresponse = use.requestToRepository(use.Cache.DeletePhotosCache(deluserctx, userid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
-	_, serviceresponse = use.requestToRepository(use.photorepo.DeleteUserData(deluserctx, userid), traceid)
+	_, serviceresponse = use.requestToRepository(use.Photorepo.DeleteUserData(deluserctx, userid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -178,7 +178,7 @@ func (use *PhotoServiceImplement) DeleteAllUserData(ctx context.Context, userid 
 func (use *PhotoServiceImplement) AddUserId(ctx context.Context, userid string, traceid string) *ServiceResponse {
 	addctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	_, serviceresponse := use.requestToRepository(use.photorepo.AddUserId(addctx, userid), traceid)
+	_, serviceresponse := use.requestToRepository(use.Photorepo.AddUserId(addctx, userid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
