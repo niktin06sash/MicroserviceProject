@@ -64,6 +64,9 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 	}
 	err = as.EventProducer.NewUserEvent(ctx, rabbitmq.UserRegistrationKey, user.Id.String(), place, traceid)
 	if err != nil {
+		_, _ = retryOperationGrpc(ctx, func(ctx context.Context) (*proto.DeleteSessionResponse, error) {
+			return as.GrpcSessionClient.DeleteSession(ctx, grpcresponse.SessionID)
+		}, traceid, place, as.LogProducer)
 		as.rollbackTransaction(ctx, tx, traceid, place)
 		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.UserServiceUnavalaible)}
 	}
