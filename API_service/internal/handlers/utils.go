@@ -27,7 +27,6 @@ func (h *Handler) badGrpcResponse(c *gin.Context, traceID, place string, err err
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, st.Message(), traceID, place)
 		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(st.Message()), traceID, place, h.logproducer)
 	default:
-		h.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, st.Message(), traceID, place)
 		response.BadResponse(c, http.StatusBadRequest, erro.ClientError(st.Message()), traceID, place, h.logproducer)
 	}
 }

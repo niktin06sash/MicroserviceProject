@@ -41,12 +41,13 @@ func (db *DBObject) Open(driverName, connectionString string) error {
 	}
 	db.mapstmt = make(map[string]*sql.Stmt)
 	queries := map[string]string{
-		insertUserQuery:   "Prepare insert userid",
-		deletePhotoQuery:  "Prepare delete photo",
-		insertPhotoQuery:  "Prepare insert photo",
-		deleteUserQuery:   "Prepare delete userid",
-		selectPhotoQuery:  "Prepare select photo",
-		selectPhotosQuery: "Prepare select photos",
+		insertUserQuery:        "Prepare insert userid",
+		deletePhotoQuery:       "Prepare delete photo",
+		insertPhotoQuery:       "Prepare insert photo",
+		deleteUserQuery:        "Prepare delete userid",
+		selectPhotoQuery:       "Prepare select photo",
+		selectPhotosQuery:      "Prepare select photos",
+		selectContentTypeQuery: "Prepare select content_type",
 	}
 	for query, errv := range queries {
 		stmt, err := db.connect.Prepare(query)

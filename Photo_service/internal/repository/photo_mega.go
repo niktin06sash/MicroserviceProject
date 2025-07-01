@@ -74,5 +74,5 @@ func (client *MegaClient) findFileByName(node *mega.Node, name string) (*mega.No
 			return child, nil
 		}
 	}
-	return nil, err
+	return nil, fmt.Errorf("Photo file was not found in directory")
 }

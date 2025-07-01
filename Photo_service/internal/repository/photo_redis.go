@@ -8,6 +8,7 @@ import (
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
+	"github.com/redis/go-redis/v9"
 )
 
 type PhotoRedisRepo struct {
@@ -59,10 +60,10 @@ func (ph *PhotoRedisRepo) GetPhotoCache(ctx context.Context, userid string, phot
 	const place = GetPhotoCache
 	result, err := ph.Client.RedisClient.Get(ctx, fmt.Sprintf(KeyPhoto, userid, photoid)).Result()
 	if err != nil {
+		if err == redis.Nil {
+			return &RepositoryResponse{Success: false, SuccessMessage: "Photo metadata was not found in the cache", Place: place}
+		}
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGetPhotos, err)), Place: place}
-	}
-	if len(result) == 0 {
-		return &RepositoryResponse{Success: false, SuccessMessage: "Photo metadata was not found in the cache", Place: place}
 	}
 	var photo pb.Photo
 	err = json.Unmarshal([]byte(result), &photo)
@@ -75,10 +76,10 @@ func (ph *PhotoRedisRepo) GetPhotosCache(ctx context.Context, userid string) *Re
 	const place = GetPhotosCache
 	result, err := ph.Client.RedisClient.Get(ctx, fmt.Sprintf(KeyPhotos, userid)).Result()
 	if err != nil {
+		if err == redis.Nil {
+			return &RepositoryResponse{Success: false, SuccessMessage: "Photos metadata was not found in the cache", Place: place}
+		}
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGetPhotos, err)), Place: place}
-	}
-	if len(result) == 0 {
-		return &RepositoryResponse{Success: false, SuccessMessage: "Photos metadata was not found in the cache", Place: place}
 	}
 	var photoslice []*pb.Photo
 	err = json.Unmarshal([]byte(result), &photoslice)
@@ -91,15 +92,15 @@ func (ph *PhotoRedisRepo) GetPhotosCache(ctx context.Context, userid string) *Re
 	return &RepositoryResponse{Success: true, Data: Data{GrpcPhotos: photoslice}, SuccessMessage: "Successful get photos metadata from cache", Place: place}
 }
 
-func (ph *PhotoRedisRepo) DeletePhotosCache(ctx context.Context, userid string) *RepositoryResponse {
-	const place = DeletePhotosCache
-	iter := ph.Client.RedisClient.Scan(ctx, 0, fmt.Sprintf(KeyPhoto, userid, "*"), 0).Iterator()
+func (ph *PhotoRedisRepo) DeleteAllPhotosCache(ctx context.Context, userid string) *RepositoryResponse {
+	const place = DeleteAllPhotosCache
 	var count int64
 	num, err := ph.Client.RedisClient.Del(ctx, fmt.Sprintf(KeyPhotos, userid)).Result()
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorDelPhotos, err)), Place: place}
 	}
 	count += num
+	iter := ph.Client.RedisClient.Scan(ctx, 0, fmt.Sprintf(KeyPhoto, userid, "*"), 0).Iterator()
 	for iter.Next(ctx) {
 		num, err := ph.Client.RedisClient.Del(ctx, iter.Val()).Result()
 		if err != nil {
@@ -113,23 +114,28 @@ func (ph *PhotoRedisRepo) DeletePhotosCache(ctx context.Context, userid string) 
 	if count == 0 {
 		return &RepositoryResponse{Success: false, SuccessMessage: "Photos metadata was not found in the cache", Place: place}
 	}
-	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete photos metadata from cache", Place: place}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete all photos metadata from cache", Place: place}
 }
-func (ph *PhotoRedisRepo) DeletePhotoCache(ctx context.Context, userid string, photoid string) *RepositoryResponse {
-	const place = DeletePhotoCache
-	num, err := ph.Client.RedisClient.Del(ctx, fmt.Sprintf(KeyPhoto, userid, photoid)).Result()
-	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorDelPhotos, err)), Place: place}
-	}
-	if num == 0 {
-		return &RepositoryResponse{Success: false, SuccessMessage: "Photo metadata was not found in the cache", Place: place}
-	}
-	num, err = ph.Client.RedisClient.Del(ctx, fmt.Sprintf(KeyPhotos, userid)).Result()
+func (ph *PhotoRedisRepo) DeletePhotosCache(ctx context.Context, userid string) *RepositoryResponse {
+	const place = DeletePhotosCache
+	num, err := ph.Client.RedisClient.Del(ctx, fmt.Sprintf(KeyPhotos, userid)).Result()
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorDelPhotos, err)), Place: place}
 	}
 	if num == 0 {
 		return &RepositoryResponse{Success: false, SuccessMessage: "Photos metadata was not found in the cache", Place: place}
+	}
+	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete photos metadata from cache", Place: place}
+}
+func (ph *PhotoRedisRepo) DeletePhotoCache(ctx context.Context, userid string, photoid string) *RepositoryResponse {
+	const place = DeletePhotoCache
+	_, err := ph.Client.RedisClient.Del(ctx, fmt.Sprintf(KeyPhoto, userid, photoid)).Result()
+	if err != nil {
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorDelPhotos, err)), Place: place}
+	}
+	_, err = ph.Client.RedisClient.Del(ctx, fmt.Sprintf(KeyPhotos, userid)).Result()
+	if err != nil {
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorDelPhotos, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successful delete photo metadata from cache", Place: place}
 }

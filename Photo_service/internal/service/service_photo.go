@@ -31,11 +31,7 @@ func NewPhotoServiceImplement(repo DBPhotoRepos, cloud CloudPhotoStorage, cache 
 func (use *PhotoServiceImplement) DeletePhoto(ctx context.Context, userid string, photoid string) *ServiceResponse {
 	const place = UseCase_DeletePhoto
 	traceid := ctx.Value("traceID").(string)
-	bdresponse, serviceresponse := use.requestToRepository(use.Photorepo.GetPhoto(ctx, userid, photoid), traceid)
-	if serviceresponse != nil {
-		return serviceresponse
-	}
-	_, serviceresponse = use.requestToRepository(use.Photorepo.DeletePhoto(ctx, userid, bdresponse.Data.Photo.ID), traceid)
+	bdresponse, serviceresponse := use.requestToRepository(use.Photorepo.DeletePhoto(ctx, userid, photoid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
@@ -161,7 +157,7 @@ func (use *PhotoServiceImplement) DeleteAllUserData(ctx context.Context, userid 
 	}
 	deluserctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	_, serviceresponse = use.requestToRepository(use.Cache.DeletePhotosCache(deluserctx, userid), traceid)
+	_, serviceresponse = use.requestToRepository(use.Cache.DeleteAllPhotosCache(deluserctx, userid), traceid)
 	if serviceresponse != nil {
 		return serviceresponse
 	}
