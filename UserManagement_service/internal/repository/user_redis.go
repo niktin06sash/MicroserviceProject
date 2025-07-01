@@ -9,6 +9,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
+	"github.com/redis/go-redis/v9"
 )
 
 type UserRedisRepo struct {
@@ -58,11 +59,11 @@ func (redisrepo *UserRedisRepo) GetProfileCache(ctx context.Context, id string) 
 	defer CacheMetrics(place, start)
 	result, err := redisrepo.Client.RedisClient.Get(ctx, id).Result()
 	if err != nil {
+		if err == redis.Nil {
+			return &RepositoryResponse{Success: false, SuccessMessage: "Profile was not found in the cache", Place: place}
+		}
 		metrics.UserCacheErrorsTotal.WithLabelValues("GET").Inc()
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGetProfiles, err)), Place: place}
-	}
-	if len(result) == 0 {
-		return &RepositoryResponse{Success: false, SuccessMessage: "Profile was not found in the cache", Place: place}
 	}
 	var user model.User
 	err = json.Unmarshal([]byte(result), &user)

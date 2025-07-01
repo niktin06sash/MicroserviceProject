@@ -13,7 +13,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -31,7 +30,7 @@ func DBMetrics(place string, start time.Time) {
 }
 
 const (
-	insertUserQuery         = `INSERT INTO users (userid, username, useremail, userpassword) VALUES ($1, $2, $3, $4) ON CONFLICT (useremail) DO NOTHING`
+	insertUserQuery         = `INSERT INTO users (userid, username, useremail, userpassword) VALUES ($1, $2, $3, $4) ON CONFLICT (useremail) DO NOTHING RETURNING userid`
 	selectUserGetQuery      = `SELECT userid, userpassword FROM users WHERE useremail = $1`
 	selectUserPasswordQuery = `SELECT userpassword FROM users WHERE userid = $1`
 	deleteUserQuery         = `DELETE FROM users WHERE userid = $1`
@@ -46,10 +45,11 @@ func (repoap *UserPostgresRepo) CreateUser(ctx context.Context, tx pgx.Tx, user 
 	const place = CreateUser
 	start := time.Now()
 	defer DBMetrics(place, start)
-	_, err := tx.Exec(ctx, insertUserQuery, user.Id, user.Name, user.Email, user.Password)
+	var insertedID string
+	err := tx.QueryRow(ctx, insertUserQuery, user.Id, user.Name, user.Email, user.Password).Scan(&insertedID)
 	metrics.UserDBQueriesTotal.WithLabelValues("INSERT").Inc()
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+		if err == pgx.ErrNoRows {
 			metrics.UserDBErrorsTotal.WithLabelValues(erro.ClientErrorType, "INSERT").Inc()
 			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.ErrorUniqueEmailConst), Place: place}
 		}

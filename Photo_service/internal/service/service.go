@@ -25,6 +25,7 @@ type CachePhotoRepos interface {
 	GetPhotosCache(ctx context.Context, userid string) *repository.RepositoryResponse
 	DeletePhotoCache(ctx context.Context, userid string, photoid string) *repository.RepositoryResponse
 	DeletePhotosCache(ctx context.Context, userid string) *repository.RepositoryResponse
+	DeleteAllPhotosCache(ctx context.Context, userid string) *repository.RepositoryResponse
 }
 type CloudPhotoStorage interface {
 	UploadFile(ctx context.Context, localfilepath string, photoid string, ext string) *repository.RepositoryResponse

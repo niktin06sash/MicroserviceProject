@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -32,8 +33,7 @@ func (use *PhotoServiceImplement) requestToRepository(response *repository.Repos
 func (use *PhotoServiceImplement) unloadPhotoCloud(ctx context.Context, file []byte, photoid string, ext string, userid string, traceid string) {
 	const place = UnloadPhotoCloud
 	filename := photoid + ext
-	tmpDir := os.TempDir()
-	tempFile := filepath.Join(tmpDir, filename)
+	tempFile := filepath.Join(os.TempDir(), filename)
 	err := os.WriteFile(tempFile, file, 0644)
 	if err != nil {
 		use.Logproducer.NewPhotoLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Failed to create temp file: %v", err))
@@ -58,10 +58,17 @@ func (use *PhotoServiceImplement) unloadPhotoCloud(ctx context.Context, file []b
 		return
 	}
 	use.Logproducer.NewPhotoLog(kafka.LogLevelInfo, bdresponse.Place, traceid, bdresponse.SuccessMessage)
+	cacheresponse := use.Cache.DeletePhotosCache(ctx, userid)
+	if !cacheresponse.Success && cacheresponse.Errors != nil {
+		use.Logproducer.NewPhotoLog(kafka.LogLevelError, cacheresponse.Place, traceid, cacheresponse.Errors.Message)
+		return
+	}
+	use.Logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceid, cacheresponse.SuccessMessage)
 	use.Logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceid, fmt.Sprintf("The photo(id = %s) has been successfully uploaded to cloud and database", photoid))
 
 }
 func (use *PhotoServiceImplement) deletePhotoCloud(ctx context.Context, photoid string, ext string, traceid string) {
+	log.Println(ext)
 	const place = DeletePhotoCloud
 	cloudresponse := use.Cloud.DeleteFile(ctx, photoid, ext)
 	if !cloudresponse.Success && cloudresponse.Errors != nil {

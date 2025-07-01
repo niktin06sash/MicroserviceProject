@@ -44,22 +44,22 @@ func getAllData[T any](r *http.Request, w http.ResponseWriter, traceID string, p
 	return true
 }
 func (h *Handler) getPersonality(r *http.Request, w http.ResponseWriter, traceID string, place string, personmapa map[string]string) bool {
-	sessionID, ok := r.Context().Value(sessionID).(string)
+	sessionid, ok := r.Context().Value(sessionID).(string)
 	if !ok {
 		h.LogProducer.NewUserLog(kafka.LogLevelError, place, traceID, "Session ID not found in context")
 		response.BadResponse(r, w, http.StatusInternalServerError, erro.ServerError(erro.UserServiceUnavalaible), traceID, place, h.LogProducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return false
 	}
-	personmapa[sessionID] = sessionID
-	userID, ok := r.Context().Value(userID).(string)
+	personmapa[sessionID] = sessionid
+	userid, ok := r.Context().Value(userID).(string)
 	if !ok {
 		h.LogProducer.NewUserLog(kafka.LogLevelError, place, traceID, "User ID not found in context")
 		response.BadResponse(r, w, http.StatusInternalServerError, erro.ServerError(erro.UserServiceUnavalaible), traceID, place, h.LogProducer)
 		metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return false
 	}
-	personmapa[userID] = userID
+	personmapa[userID] = userid
 	return true
 }
 func (h *Handler) serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.ResponseWriter, traceID string, place string) bool {

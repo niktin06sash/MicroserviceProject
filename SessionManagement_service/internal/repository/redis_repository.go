@@ -8,6 +8,7 @@ import (
 
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
+	"github.com/redis/go-redis/v9"
 )
 
 type SessionRedis struct {
@@ -38,13 +39,13 @@ func (redisrepo *SessionRedis) GetSession(ctx context.Context, sessionID string,
 func (redisrepo *SessionRedis) getSessionData(ctx context.Context, sessionID string, place string, flag string) *RepositoryResponse {
 	result, err := redisrepo.Client.RedisClient.Get(ctx, sessionID).Result()
 	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGet, err)), Place: place}
-	}
-	if len(result) == 0 {
-		if flag == "true" {
-			return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.InvalidSession), Place: place}
+		if err == redis.Nil {
+			if flag == "true" {
+				return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.InvalidSession), Place: place}
+			}
+			return &RepositoryResponse{Success: true, SuccessMessage: "Request for an unauthorized page with invalid session", Place: place}
 		}
-		return &RepositoryResponse{Success: true, SuccessMessage: "Request for an unauthorized page with invalid session", Place: place}
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorGet, err)), Place: place}
 	}
 	if flag == "false" {
 		return &RepositoryResponse{Success: false, Errors: erro.ClientError(erro.AlreadyAuthorized), Place: place}
