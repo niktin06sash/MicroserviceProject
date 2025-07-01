@@ -69,8 +69,8 @@ func NewKafkaProducer(config configs.KafkaConfig) *KafkaProducer {
 	return producer
 }
 func (kf *KafkaProducer) Close() {
-	close(kf.logchan)
 	kf.cancel()
+	close(kf.logchan)
 	kf.wg.Wait()
 	kf.writer.Close()
 	log.Println("[DEBUG] [Photo-Service] Successful close Kafka-Producer")

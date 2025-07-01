@@ -2,13 +2,13 @@ package service_test
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/golang/mock/gomock"
+	"github.com/jackc/pgx/v5"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
@@ -47,7 +47,7 @@ func TestRegistrateAndLogin_Success(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.RegistrationRequest{
 		Name:     "tester",
 		Email:    "test@example.com",
@@ -243,7 +243,7 @@ func TestRegistrateAndLogin_DataBaseError_ClientError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.RegistrationRequest{
 		Name:     "tester",
 		Email:    "test@example.com",
@@ -287,7 +287,7 @@ func TestRegistrateAndLogin_DataBaseError_InternalServerError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.RegistrationRequest{
 		Name:     "tester",
 		Email:    "test@example.com",
@@ -332,7 +332,7 @@ func TestRegistrateAndLogin_RetryGrpc_InternalServerError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.RegistrationRequest{
 		Name:     "tester",
 		Email:    "test@example.com",
@@ -411,7 +411,7 @@ func TestRegistrateAndLogin_EventProducerError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.RegistrationRequest{
 		Name:     "tester",
 		Email:    "test@example.com",
@@ -459,6 +459,15 @@ func TestRegistrateAndLogin_EventProducerError(t *testing.T) {
 		gomock.Any(),
 		fixedTraceID,
 	).Return(fmt.Errorf("rabbitMQ error"))
+	mockSessionClient.EXPECT().DeleteSession(
+		mock.MatchedBy(func(ctx context.Context) bool {
+			traceID := ctx.Value("traceID")
+			return traceID != nil && traceID.(string) == fixedTraceID
+		}),
+		gomock.Any(),
+	).Return(&proto.DeleteSessionResponse{
+		Success: true,
+	}, nil)
 	mockTransactionRepo.EXPECT().RollbackTx(ctx, tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.RegistrateAndLogin(ctx, req)
@@ -488,7 +497,7 @@ func TestRegistrateAndLogin_CommitTransactionError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.RegistrationRequest{
 		Name:     "tester",
 		Email:    "test@example.com",

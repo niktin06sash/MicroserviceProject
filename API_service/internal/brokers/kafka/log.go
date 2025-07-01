@@ -25,10 +25,6 @@ type APILog struct {
 }
 
 func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg string) {
-	if err := c.Context().Err(); err != nil {
-		log.Printf("[WARN] [API-Service] Context canceled or expired, dropping log: %v", err)
-		return
-	}
 	newlog := APILog{
 		Level:     level,
 		Service:   "API-Service",
@@ -41,6 +37,9 @@ func (kf *KafkaProducer) NewAPILog(c *http.Request, level, place, traceid, msg s
 		Message:   msg,
 	}
 	select {
+	case <-kf.context.Done():
+		log.Printf("[WARN] [API-Service] Producer closing, dropping log: %+v", newlog)
+		return
 	case kf.logchan <- newlog:
 		metrics.APIKafkaProducerBufferSize.Set(float64(len(kf.logchan)))
 	default:
@@ -52,11 +51,10 @@ func (kf *KafkaProducer) sendLogs(num int) {
 	for {
 		select {
 		case <-kf.context.Done():
-			log.Printf("[WARN] [API-Service] [Worker: %v] Context canceled", num)
+			log.Printf("[DEBUG] [API-Service] [Worker: %v] Context canceled, stopping Kafka-worker...", num)
 			return
 		case logg, ok := <-kf.logchan:
 			if !ok {
-				log.Printf("[INFO] [API-Service] [Worker: %v] Log channel closed, stopping worker", num)
 				return
 			}
 			metrics.APIKafkaProducerBufferSize.Set(float64(len(kf.logchan)))

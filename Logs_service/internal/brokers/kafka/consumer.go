@@ -12,6 +12,12 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+const (
+	LogLevelInfo  = "info"
+	LogLevelWarn  = "warn"
+	LogLevelError = "error"
+)
+
 type KafkaConsumer struct {
 	reader  *kafka.Reader
 	wg      *sync.WaitGroup

@@ -28,6 +28,9 @@ func (kf *KafkaProducer) NewPhotoLog(level, place, traceid, msg string) {
 		Message:   msg,
 	}
 	select {
+	case <-kf.context.Done():
+		log.Printf("[WARN] [Photo-Service] Producer closing, dropping log: %+v", newlog)
+		return
 	case kf.logchan <- newlog:
 	default:
 		log.Printf("[WARN] [Photo-Service] Log channel is full, dropping log: %+v", newlog)
@@ -38,11 +41,10 @@ func (kf *KafkaProducer) sendLogs(num int) {
 	for {
 		select {
 		case <-kf.context.Done():
-			log.Printf("[WARN] [Photo-Service] [Worker: %v] Context canceled", num)
+			log.Printf("[DEBUG] [Photo-Service] [Worker: %v] Context canceled, stopping Kafka-worker...", num)
 			return
 		case logg, ok := <-kf.logchan:
 			if !ok {
-				log.Printf("[INFO] [Photo-Service] [Worker: %v] Log channel closed, stopping worker", num)
 				return
 			}
 			ctx, cancel := context.WithTimeout(kf.context, 5*time.Second)

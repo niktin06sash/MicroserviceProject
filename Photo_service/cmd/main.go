@@ -69,7 +69,7 @@ func main() {
 	}
 	log.Println("[DEBUG] [Photo-Service] Service has shutted down successfully")
 	defer func() {
-		service.StopWorkers()
+		service.Stop()
 		rabbitconsumer.Close()
 		db.Close()
 		mega.Close()

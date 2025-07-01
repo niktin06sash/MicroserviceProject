@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/rabbitmq"
@@ -45,7 +44,6 @@ func (as *UserService) RegistrateAndLogin(ctx context.Context, req *model.Regist
 		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.UserServiceUnavalaible)}
 	}
 	user := &model.User{Id: uuid.New(), Password: string(hashpass), Email: req.Email, Name: req.Name}
-	var tx pgx.Tx
 	tx, resp := as.beginTransaction(ctx, place, traceid)
 	if resp != nil {
 		return resp
@@ -114,7 +112,6 @@ func (as *UserService) DeleteAccount(ctx context.Context, req *model.DeletionReq
 	if errorvalidate != nil {
 		return &ServiceResponse{Success: false, Errors: errorvalidate}
 	}
-	var tx pgx.Tx
 	tx, resp := as.beginTransaction(ctx, place, traceid)
 	if resp != nil {
 		return resp
@@ -172,7 +169,6 @@ func (as *UserService) UpdateAccount(ctx context.Context, req *model.UpdateReque
 	if errorvalidate != nil {
 		return &ServiceResponse{Success: false, Errors: errorvalidate}
 	}
-	var tx pgx.Tx
 	tx, resp := as.beginTransaction(ctx, place, traceid)
 	if resp != nil {
 		return resp

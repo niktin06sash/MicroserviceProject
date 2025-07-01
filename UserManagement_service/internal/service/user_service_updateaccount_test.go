@@ -2,7 +2,6 @@ package service_test
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"testing"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
@@ -86,7 +86,7 @@ func TestUpdateAccount_Success(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tx := &sql.Tx{}
+			var tx pgx.Tx
 			mockTransactionRepo.EXPECT().BeginTx(
 				mock.MatchedBy(func(ctx context.Context) bool {
 					traceID := ctx.Value("traceID")
@@ -281,7 +281,7 @@ func TestUpdateAccount_DataBaseError_ClientError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.UpdateRequest{
 		NewPassword:  "new_password",
 		LastPassword: "last_password",
@@ -334,7 +334,7 @@ func TestUpdateAccount_DataBaseError_InternalServerError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.UpdateRequest{
 		NewPassword:  "new_password",
 		LastPassword: "last_password",
@@ -387,7 +387,7 @@ func TestUpdateAccount_DeleteCacheError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.UpdateRequest{
 		Name: "tester",
 	}
@@ -445,7 +445,7 @@ func TestUpdateAccount_CommitTransactionError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.UpdateRequest{
 		Email:        "new@gmail.com",
 		LastPassword: "last_password",

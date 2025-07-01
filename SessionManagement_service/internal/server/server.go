@@ -20,8 +20,9 @@ func NewGrpcServer(config configs.ServerConfig, service pb.SessionServiceServer)
 		grpc.MaxRecvMsgSize(config.MaxRecvMsgSize),
 		grpc.MaxSendMsgSize(config.MaxSendMsgSize),
 	}
-	s := &GrpcServer{}
-	s.server = grpc.NewServer(opts...)
+	s := &GrpcServer{
+		server: grpc.NewServer(opts...),
+	}
 	pb.RegisterSessionServiceServer(s.server, service)
 	return s
 }
@@ -31,8 +32,7 @@ func (s *GrpcServer) Run(config configs.ServerConfig) error {
 		log.Printf("[DEBUG] [Session-Service] Error create connection on port %s: %v", config.Port, err)
 		return err
 	}
-	s.server = grpc.NewServer()
-	log.Printf("[DEBUG] [Session-Service] Starting gRPC-server on port %s", config.Port)
+	log.Printf("[DEBUG] [Session-Service] Starting gRPC-server on port: %s", config.Port)
 	return s.server.Serve(lis)
 }
 func (s *GrpcServer) Shutdown(ctx context.Context) error {
