@@ -32,6 +32,7 @@ func (m *Middleware) RateLimiter() gin.HandlerFunc {
 }
 func (m *Middleware) Stop() {
 	close(m.stopclean)
+	log.Println("[DEBUG] [API-Service] [RateLimiter] Successful completion of RateLimiter")
 }
 func getLimit(m *Middleware, ip string) *rate.Limiter {
 	if entry, exist := m.rateLimiters.Load(ip); exist {
@@ -52,7 +53,6 @@ func cleanLimit(m *Middleware) {
 	for {
 		select {
 		case <-m.stopclean:
-			log.Println("[INFO] [API-Service] [RateLimiter] Successful completion of RateLimiter")
 			return
 		case <-ticker.C:
 			log.Println("[INFO] [API-Service] [RateLimiter] Successful cleaning has started...")

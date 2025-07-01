@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,18 +17,15 @@ type PhotoServiceImplement struct {
 	Cloud       CloudPhotoStorage
 	Logproducer LogProducer
 	Cache       CachePhotoRepos
-	Task_queue  chan func()
-	closechan   chan struct{}
-	wg          *sync.WaitGroup
+	Worker      *Worker
+	cancel      context.CancelFunc
 }
 
 func NewPhotoServiceImplement(repo DBPhotoRepos, cloud CloudPhotoStorage, cache CachePhotoRepos, logproducer LogProducer) *PhotoServiceImplement {
-	service := &PhotoServiceImplement{Photorepo: repo, Logproducer: logproducer, Cloud: cloud, Cache: cache, Task_queue: make(chan func(), 1000), wg: &sync.WaitGroup{}}
-	for i := 1; i <= 5; i++ {
-		service.wg.Add(1)
-		go service.taskWorker(i)
-	}
-	return service
+	ctx, cancel := context.WithCancel(context.Background())
+	photoworker := NewWorker(ctx)
+	photoworker.Start()
+	return &PhotoServiceImplement{Photorepo: repo, Logproducer: logproducer, Cloud: cloud, Cache: cache, Worker: photoworker, cancel: cancel}
 }
 
 func (use *PhotoServiceImplement) DeletePhoto(ctx context.Context, userid string, photoid string) *ServiceResponse {
@@ -183,4 +179,8 @@ func (use *PhotoServiceImplement) AddUserId(ctx context.Context, userid string, 
 		return serviceresponse
 	}
 	return &ServiceResponse{Success: true}
+}
+func (use *PhotoServiceImplement) Stop() {
+	use.cancel()
+	use.Worker.Stop()
 }

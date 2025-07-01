@@ -20,8 +20,9 @@ func NewGrpcServer(config configs.ServerConfig, service pb.PhotoServiceServer) *
 		grpc.MaxRecvMsgSize(config.MaxRecvMsgSize),
 		grpc.MaxSendMsgSize(config.MaxSendMsgSize),
 	}
-	s := &GrpcServer{}
-	s.server = grpc.NewServer(opts...)
+	s := &GrpcServer{
+		server: grpc.NewServer(opts...),
+	}
 	pb.RegisterPhotoServiceServer(s.server, service)
 	return s
 }
@@ -31,8 +32,7 @@ func (s *GrpcServer) Run(config configs.ServerConfig) error {
 		log.Printf("[DEBUG] [Photo-Service] Error create connection on port %s: %v", config.Port, err)
 		return err
 	}
-	s.server = grpc.NewServer()
-	log.Printf("[DEBUG] [Photo-Service] Starting gRPC-server on port %s", config.Port)
+	log.Printf("[DEBUG] [Photo-Service] Starting gRPC-server on port: %s", config.Port)
 	return s.server.Serve(lis)
 }
 func (s *GrpcServer) Shutdown(ctx context.Context) error {

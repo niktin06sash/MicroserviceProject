@@ -24,7 +24,7 @@ func NewServer(config configs.ServerConfig, handler http.Handler) *Server {
 	return server
 }
 func (s *Server) Run() error {
-	log.Printf("[DEBUG] [API-Service] Starting server on port %s", s.httpServer.Addr)
+	log.Printf("[DEBUG] [API-Service] Starting server on port: %s", s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()
 }
 

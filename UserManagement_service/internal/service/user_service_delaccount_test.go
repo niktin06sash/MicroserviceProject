@@ -2,7 +2,6 @@ package service_test
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"testing"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/brokers/kafka"
@@ -49,7 +49,7 @@ func TestDeleteAccount_Success(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.DeletionRequest{
 		Password: "password123",
 	}
@@ -96,7 +96,10 @@ func TestDeleteAccount_Success(t *testing.T) {
 		gomock.Any(),
 		fixedTraceID,
 	).Return(nil)
-	mockTransactionRepo.EXPECT().CommitTx(ctx, tx).Return(nil)
+	mockTransactionRepo.EXPECT().CommitTx(mock.MatchedBy(func(ctx context.Context) bool {
+		traceID := ctx.Value("traceID")
+		return traceID != nil && traceID.(string) == fixedTraceID
+	}), tx).Return(nil)
 	mockLogProducer.EXPECT().NewUserLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	response := as.DeleteAccount(ctx, req, fixedSessionId, fixedUserId.String())
 	require.True(t, response.Success)
@@ -222,7 +225,7 @@ func TestDeleteAccount_DataBaseError_ClientError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.DeletionRequest{
 		Password: "password123",
 	}
@@ -273,7 +276,7 @@ func TestDeleteAccount_DataBaseError_InternalServerError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.DeletionRequest{
 		Password: "password123",
 	}
@@ -324,7 +327,7 @@ func TestDeleteAccount_RetryGrpc_InternalServerError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.DeletionRequest{
 		Password: "password123",
 	}
@@ -405,7 +408,7 @@ func TestDeleteAccount_DeleteCacheError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.DeletionRequest{
 		Password: "password123",
 	}
@@ -463,7 +466,7 @@ func TestDeleteAccount_EventProducerError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.DeletionRequest{
 		Password: "password123",
 	}
@@ -540,7 +543,7 @@ func TestDeleteAccount_CommitTransactionError(t *testing.T) {
 		Dbtxmanager:       mockTransactionRepo,
 		CacheUserRepos:    mockCacheRepo,
 	}
-	tx := &sql.Tx{}
+	var tx pgx.Tx
 	req := &model.DeletionRequest{
 		Password: "password123",
 	}

@@ -30,6 +30,9 @@ func (kf *KafkaProducer) NewUserLog(level, place, traceid, msg string) {
 		Message:   msg,
 	}
 	select {
+	case <-kf.context.Done():
+		log.Printf("[WARN] [User-Service] Producer closing, dropping log: %+v", newlog)
+		return
 	case kf.logchan <- newlog:
 		metrics.UserKafkaProducerBufferSize.Set(float64(len(kf.logchan)))
 	default:
@@ -41,11 +44,10 @@ func (kf *KafkaProducer) sendLogs(num int) {
 	for {
 		select {
 		case <-kf.context.Done():
-			log.Printf("[WARN] [User-Service] [Worker: %v] Context canceled", num)
+			log.Printf("[DEBUG] [User-Service] [Worker: %v] Context canceled, stopping Kafka-worker...", num)
 			return
 		case logg, ok := <-kf.logchan:
 			if !ok {
-				log.Printf("[INFO] [User-Service] [Worker: %v] Log channel closed, stopping worker", num)
 				return
 			}
 			metrics.UserKafkaProducerBufferSize.Set(float64(len(kf.logchan)))

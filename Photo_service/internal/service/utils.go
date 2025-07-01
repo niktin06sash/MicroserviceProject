@@ -81,7 +81,10 @@ func (use *PhotoServiceImplement) parsingIDs(id string, traceid string, place st
 }
 func (use *PhotoServiceImplement) enqueueTask(ctx context.Context, task func(context.Context), timeout time.Duration, place string, traceid string) *ServiceResponse {
 	select {
-	case use.Task_queue <- func() {
+	case <-use.Worker.ctx.Done():
+		use.Logproducer.NewPhotoLog(kafka.LogLevelError, place, traceid, erro.ContextCanceled)
+		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.PhotoServiceUnavalaible)}
+	case use.Worker.task_queue <- func() {
 		taskCtx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		task(taskCtx)
@@ -90,7 +93,6 @@ func (use *PhotoServiceImplement) enqueueTask(ctx context.Context, task func(con
 	case <-ctx.Done():
 		use.Logproducer.NewPhotoLog(kafka.LogLevelError, place, traceid, erro.ContextCanceled)
 		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.PhotoServiceUnavalaible)}
-
 	default:
 		use.Logproducer.NewPhotoLog(kafka.LogLevelError, place, traceid, erro.ErrorOverflowTaskQ)
 		return &ServiceResponse{Success: false, Errors: erro.ServerError(erro.PhotoServiceUnavalaible)}

@@ -16,9 +16,10 @@ func (kf *KafkaConsumer) readLogs() {
 	for {
 		select {
 		case <-kf.ctx.Done():
+			log.Printf("[DEBUG] [Logs-Service] [KafkaConsumer:%s] Context canceled, stopping worker...", kf.reader.Config().Topic)
 			return
 		default:
-			ctx, cancel := context.WithTimeout(kf.ctx, 2*time.Second)
+			ctx, cancel := context.WithTimeout(kf.ctx, 5*time.Second)
 			defer cancel()
 			msg, err := kf.reader.FetchMessage(ctx)
 			if err != nil {
@@ -31,11 +32,11 @@ func (kf *KafkaConsumer) readLogs() {
 			parts := strings.Split(kf.reader.Config().Topic, "-")
 			level := parts[1]
 			switch level {
-			case "info":
+			case LogLevelInfo:
 				kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter))
-			case "error":
+			case LogLevelError:
 				kf.logger.ZapLogger.Error(string(msg.Value), zap.Int64("number", kf.counter))
-			case "warn":
+			case LogLevelWarn:
 				kf.logger.ZapLogger.Warn(string(msg.Value), zap.Int64("number", kf.counter))
 			}
 			if err := kf.reader.CommitMessages(ctx, msg); err != nil {
