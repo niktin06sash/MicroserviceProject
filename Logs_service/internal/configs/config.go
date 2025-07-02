@@ -39,20 +39,39 @@ type KafkaTopics struct {
 	WPhoto string `mapstructure:"photo_warn_log"`
 }
 
-func (c Config) GetAllTopics() []string {
+func (c LoggerConfig) GetTopicFileMap(Topics KafkaTopics) map[string]string {
+	return map[string]string{
+		Topics.IApi: c.Files["api_info"],
+		Topics.EApi: c.Files["api_error"],
+		Topics.WApi: c.Files["api_warn"],
+
+		Topics.IUser: c.Files["user_info"],
+		Topics.EUser: c.Files["user_error"],
+		Topics.WUser: c.Files["user_warn"],
+
+		Topics.ISess: c.Files["session_info"],
+		Topics.ESess: c.Files["session_error"],
+		Topics.WSess: c.Files["session_warn"],
+
+		Topics.IPhoto: c.Files["photo_info"],
+		Topics.EPhoto: c.Files["photo_error"],
+		Topics.WPhoto: c.Files["photo_warn"],
+	}
+}
+func (c KafkaConfig) GetAllTopics() []string {
 	return []string{
-		c.Kafka.Topics.EApi,
-		c.Kafka.Topics.WApi,
-		c.Kafka.Topics.IApi,
-		c.Kafka.Topics.WUser,
-		c.Kafka.Topics.IUser,
-		c.Kafka.Topics.EUser,
-		c.Kafka.Topics.WSess,
-		c.Kafka.Topics.ISess,
-		c.Kafka.Topics.ESess,
-		c.Kafka.Topics.EPhoto,
-		c.Kafka.Topics.WPhoto,
-		c.Kafka.Topics.IPhoto,
+		c.Topics.EApi,
+		c.Topics.WApi,
+		c.Topics.IApi,
+		c.Topics.WUser,
+		c.Topics.IUser,
+		c.Topics.EUser,
+		c.Topics.WSess,
+		c.Topics.ISess,
+		c.Topics.ESess,
+		c.Topics.EPhoto,
+		c.Topics.WPhoto,
+		c.Topics.IPhoto,
 	}
 }
 
