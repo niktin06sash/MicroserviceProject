@@ -4,19 +4,16 @@ import (
 	"context"
 	"errors"
 	"log"
-	"strings"
 	"sync/atomic"
 	"time"
-
-	"go.uber.org/zap"
 )
 
-func (kf *KafkaConsumer) readLogs() {
+func (kf *KafkaConsumerGroup) readLogs() {
 	defer kf.wg.Done()
 	for {
 		select {
 		case <-kf.ctx.Done():
-			log.Printf("[DEBUG] [Logs-Service] [KafkaConsumer:%s] Context canceled, stopping worker...", kf.reader.Config().Topic)
+			log.Println("[DEBUG] [Logs-Service] Context canceled, stopping working KafkaConsumer-Group...")
 			return
 		default:
 			ctx, cancel := context.WithTimeout(kf.ctx, 5*time.Second)
@@ -24,23 +21,16 @@ func (kf *KafkaConsumer) readLogs() {
 			msg, err := kf.reader.FetchMessage(ctx)
 			if err != nil {
 				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-					log.Printf("[ERROR] [Logs-Service] [KafkaConsumer:%s] Failed to read log: %v", kf.reader.Config().Topic, err)
+					log.Printf("[ERROR] [Logs-Service] Failed to read log: %v", err)
 				}
 				continue
 			}
 			atomic.AddInt64(&kf.counter, 1)
-			parts := strings.Split(kf.reader.Config().Topic, "-")
-			level := parts[1]
-			switch level {
-			case LogLevelInfo:
-				kf.logger.ZapLogger.Info(string(msg.Value), zap.Int64("number", kf.counter))
-			case LogLevelError:
-				kf.logger.ZapLogger.Error(string(msg.Value), zap.Int64("number", kf.counter))
-			case LogLevelWarn:
-				kf.logger.ZapLogger.Warn(string(msg.Value), zap.Int64("number", kf.counter))
+			if err := kf.logger.Log(msg.Topic, string(msg.Value)); err != nil {
+				log.Printf("[ERROR] [Logs-Service] Failed to send log from topic %s: %v", msg.Topic, err)
 			}
 			if err := kf.reader.CommitMessages(ctx, msg); err != nil {
-				log.Printf("[ERROR] [Logs-Service] [KafkaConsumer:%s] Failed to commit offset: %v", kf.reader.Config().Topic, err)
+				log.Printf("[ERROR] [Logs-Service] Failed to commit offset: %v", err)
 			}
 		}
 	}

@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"sync"
 	"syscall"
 
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/brokers/kafka"
@@ -15,35 +14,19 @@ import (
 
 func main() {
 	config := configs.LoadConfig()
-	topics := config.GetAllTopics()
-	consumers := make([]*kafka.KafkaConsumer, 0)
-	var wg sync.WaitGroup
-	var mux sync.Mutex
-	for _, topic := range topics {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			logger, err := logs.NewLogger(config.Logger, topic)
-			if err != nil {
-				return
-			}
-			consumer := kafka.NewKafkaConsumer(config.Kafka, logger, topic)
-			mux.Lock()
-			consumers = append(consumers, consumer)
-			mux.Unlock()
-		}()
+	logger, err := logs.NewLogger(config.Logger, config.Kafka.Topics)
+	if err != nil {
+		return
 	}
+	groupconsumer := kafka.NewKafkaConsumerGroup(config.Kafka, logger)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-quit
 	log.Printf("[DEBUG] [Logs-Service] Service shutting down with signal: %v", sig)
 	log.Println("[DEBUG] [Logs-Service] Shutting down Kafka consumers...")
-	for _, consumer := range consumers {
-		consumer.Close()
-	}
-	wg.Wait()
-	log.Println("[DEBUG] [Logs-Service] All Kafka consumers have been successfully closed")
 	defer func() {
+		groupconsumer.Close()
+		logger.Sync()
 		buf := make([]byte, 10<<20)
 		n := runtime.Stack(buf, true)
 		log.Printf("[DEBUG] [Logs-Service] Active goroutines:\n%s", buf[:n])
