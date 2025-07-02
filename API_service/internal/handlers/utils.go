@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/niktin06sash/MicroserviceProject/API_service/internal/brokers/kafka"
@@ -21,10 +20,8 @@ func (h *Handler) badGrpcResponse(c *gin.Context, traceID, place string, err err
 	st, _ := status.FromError(err)
 	switch st.Code() {
 	case codes.Canceled, codes.Unavailable:
-		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, st.Message(), traceID, place)
 		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.PhotoServiceUnavalaible), traceID, place, h.logproducer)
 	case codes.Internal:
-		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, st.Message(), traceID, place)
 		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(st.Message()), traceID, place, h.logproducer)
 	default:
 		response.BadResponse(c, http.StatusBadRequest, erro.ClientError(st.Message()), traceID, place, h.logproducer)
@@ -45,22 +42,16 @@ func (h *Handler) asyncHTTPRequest(c *gin.Context, target string, place string, 
 	traceID := c.MustGet("traceID").(string)
 	userid := c.MustGet("userID").(string)
 	sessionid := c.MustGet("sessionID").(string)
-	deadline, ok := c.Request.Context().Deadline()
-	if !ok {
-		h.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Failed to get deadline from context")
-		deadline = time.Now().Add(15 * time.Second)
-	}
 	httprequest, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, target, c.Request.Body)
 	if err != nil {
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmt.Sprintf("New http-request create error: %v", err))
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 		return fmt.Errorf(erro.APIServiceUnavalaible)
 	}
-	httprequest.Header.Set("X-Deadline", deadline.Format(time.RFC3339))
 	httprequest.Header.Set("X-User-ID", userid)
 	httprequest.Header.Set("X-Trace-ID", traceID)
 	httprequest.Header.Set("X-Session-ID", sessionid)
-	httpresponse, err := http.DefaultClient.Do(httprequest)
+	httpresponse, err := h.httpclient.Do(httprequest)
 	if err != nil {
 		h.logproducer.NewAPILog(c.Request, kafka.LogLevelError, place, traceID, fmt.Sprintf("Http-request error: %v", err))
 		metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()

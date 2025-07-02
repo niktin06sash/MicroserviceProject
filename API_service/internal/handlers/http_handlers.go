@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/niktin06sash/MicroserviceProject/API_service/docs"
@@ -45,6 +47,7 @@ type Handler struct {
 	Routes      map[string]string
 	logproducer LogProducer
 	photoclient PhotoClient
+	httpclient  *http.Client
 }
 
 func NewHandler(middleware Middleware, photoclient PhotoClient, logproducer LogProducer, routes map[string]string) *Handler {
@@ -53,6 +56,17 @@ func NewHandler(middleware Middleware, photoclient PhotoClient, logproducer LogP
 		Routes:      routes,
 		logproducer: logproducer,
 		photoclient: photoclient,
+		httpclient: &http.Client{
+			Timeout: 15 * time.Second,
+			Transport: &http.Transport{
+				DialContext: (&net.Dialer{
+					Timeout: 5 * time.Second,
+				}).DialContext,
+				TLSHandshakeTimeout:   5 * time.Second,
+				ResponseHeaderTimeout: 10 * time.Second,
+				IdleConnTimeout:       30 * time.Second,
+			},
+		},
 	}
 }
 func (h *Handler) InitRoutes() *gin.Engine {

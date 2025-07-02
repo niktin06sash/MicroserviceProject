@@ -25,6 +25,7 @@ type LogProducer interface {
 const RateLimiter = "Middleware-RateLimiter"
 const Not_Authority = "Middleware-Not-Authority"
 const Authority = "Middleware-Authority"
+const Logging = "Middleware-Logging"
 
 func NewMiddleware(grpcClient SessionClient, logproducer LogProducer) *Middleware {
 	m := &Middleware{
