@@ -5,10 +5,8 @@ import (
 	"log"
 	"strings"
 	"sync"
-	"time"
 
 	configs "github.com/niktin06sash/MicroserviceProject/Logs_service/internal/configs"
-	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/logs"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -18,27 +16,30 @@ const (
 	LogLevelError = "error"
 )
 
-type KafkaConsumer struct {
+type Logger interface {
+	Log(topic string, message string) error
+}
+type KafkaConsumerGroup struct {
 	reader  *kafka.Reader
 	wg      *sync.WaitGroup
-	logger  *logs.Logger
+	logger  Logger
 	ctx     context.Context
 	cancel  context.CancelFunc
 	counter int64
 }
 
-func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic string) *KafkaConsumer {
+func NewKafkaConsumerGroup(config configs.KafkaConfig, logger Logger) *KafkaConsumerGroup {
 	brokersString := config.BootstrapServers
 	brokers := strings.Split(brokersString, ",")
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:           brokers,
-		Topic:             topic,
+		GroupTopics:       config.GetAllTopics(),
 		GroupID:           config.GroupId,
-		SessionTimeout:    30 * time.Second,
-		HeartbeatInterval: 10 * time.Second,
+		SessionTimeout:    config.SessionTimeout,
+		HeartbeatInterval: config.HearbeatInterval,
 	})
 	ctx, cancel := context.WithCancel(context.Background())
-	consumer := &KafkaConsumer{
+	consumer := &KafkaConsumerGroup{
 		reader: r,
 		wg:     &sync.WaitGroup{},
 		logger: logger,
@@ -47,13 +48,12 @@ func NewKafkaConsumer(config configs.KafkaConfig, logger *logs.Logger, topic str
 	}
 	consumer.wg.Add(1)
 	go consumer.readLogs()
-	log.Printf("[DEBUG] [Logs-Service] [KafkaConsumer:%s] Successful connect to Kafka-Consumer", consumer.reader.Config().Topic)
+	log.Println("[DEBUG] [Logs-Service] Successful connect to KafkaConsumer-Group")
 	return consumer
 }
-func (kf *KafkaConsumer) Close() {
+func (kf *KafkaConsumerGroup) Close() {
 	kf.cancel()
 	kf.wg.Wait()
-	kf.logger.Sync()
 	kf.reader.Close()
-	log.Printf("[DEBUG] [Logs-Service] [KafkaConsumer:%s] Successful close Kafka-Consumer[%v logs received]", kf.reader.Config().Topic, kf.counter)
+	log.Printf("[DEBUG] [Logs-Service] Successful close KafkaConsumer-Group[%v logs received]", kf.counter)
 }
