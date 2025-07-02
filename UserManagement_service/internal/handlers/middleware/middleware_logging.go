@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -23,17 +22,8 @@ func (m *Middleware) Logging(next http.Handler) http.Handler {
 			traceID = uuid.New().String()
 		}
 		ctx = context.WithValue(ctx, "traceID", traceID)
-		deadlinectx := r.Header.Get("X-Deadline")
-		var deadline time.Time
-		deadline, err := time.Parse(time.RFC3339, deadlinectx)
-		if err != nil {
-			fmterr := fmt.Sprintf("Failed to parse X-Deadline: %v", err)
-			m.LogProducer.NewUserLog(kafka.LogLevelWarn, place, traceID, fmterr)
-			deadline = time.Now().Add(15 * time.Second)
-		}
-		ctx, cancel := context.WithDeadline(ctx, deadline)
-		defer cancel()
 		r = r.WithContext(ctx)
+		m.LogProducer.NewUserLog(kafka.LogLevelInfo, place, traceID, "New request has been received")
 		next.ServeHTTP(w, r)
 	})
 }

@@ -40,12 +40,6 @@ func (h *Handler) ProxyHTTP(c *gin.Context, place string) {
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.Director = func(req *http.Request) {
-		deadline, ok := c.Request.Context().Deadline()
-		if !ok {
-			h.logproducer.NewAPILog(c.Request, kafka.LogLevelWarn, place, traceID, "Failed to get deadline from context")
-			deadline = time.Now().Add(15 * time.Second)
-		}
-		req.Header.Set("X-Deadline", deadline.Format(time.RFC3339))
 		req.Host = target.Host
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host

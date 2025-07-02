@@ -15,8 +15,8 @@ kafka:
     photo_warn_log: "photo-warn-log-topic"
     photo_error_log: "photo-error-log-topic"
   enable_auto_commit: false 
-  session_timeout: 60000
-  heartbeat_interval: 20000    
+  session_timeout: "60s"
+  heartbeat_interval: "20s"   
 logger:
   files:
     api_info: "internal/logs/api-service/info.log"
