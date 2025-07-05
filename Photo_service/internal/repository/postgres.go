@@ -14,13 +14,14 @@ func NewDatabaseConnection(cfg configs.DatabaseConfig) (*DBObject, error) {
 	connectionString := buildConnectionString(cfg)
 	err := dbObject.Open(cfg.Driver, connectionString)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
+		log.Printf("[DEBUG] [Photo-Service] Failed to connect to Postgre-Client: %v", err)
+		return nil, err
 	}
 
 	err = dbObject.Ping()
 	if err != nil {
 		dbObject.Close()
-		return nil, fmt.Errorf("failed to establish database connection: %w", err)
+		return nil, err
 	}
 
 	log.Println("[DEBUG] [Photo-Service] Successful connect to Postgre-Client")

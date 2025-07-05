@@ -18,16 +18,18 @@ func NewDatabaseConnection(cfg configs.DatabaseConfig) (*DBObject, error) {
 	connectionString := buildConnectionString(cfg)
 	poolConfig, err := pgxpool.ParseConfig(connectionString)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse connection string: %w", err)
+		log.Printf("[DEBUG] [User-Service] Failed to parse Postgreconnection string: %v", err)
+		return nil, err
 	}
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create connection pool: %w", err)
+		log.Printf("[DEBUG] [User-Service] Failed to create Postgre-connection pool: %v", err)
+		return nil, err
 	}
 	err = pool.Ping(ctx)
 	if err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		return nil, err
 	}
 	log.Println("[DEBUG] [User-Service] Successful connect to Postgre-Client")
 	return &DBObject{pool: pool}, nil
@@ -42,7 +44,12 @@ func (db *DBObject) Close() {
 	log.Println("[DEBUG] [User-Service] Successful close Postgre-Client")
 }
 func (db *DBObject) Ping(ctx context.Context) error {
-	return db.pool.Ping(ctx)
+	err := db.pool.Ping(ctx)
+	if err != nil {
+		log.Printf("[DEBUG] [User-Service] Postgre-Client-Ping error: %v", err)
+		return err
+	}
+	return nil
 }
 func buildConnectionString(cfg configs.DatabaseConfig) string {
 	return fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=%s",

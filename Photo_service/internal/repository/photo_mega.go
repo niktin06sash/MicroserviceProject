@@ -10,25 +10,39 @@ import (
 	"github.com/t3rm1n4l/go-mega"
 )
 
-func (client *MegaClient) UploadFile(ctx context.Context, localfilepath string, photoid string, ext string) *RepositoryResponse {
+type MegaClientRepo struct {
+	megaclient *CloudObject
+}
+
+func NewMegaClientRepo(cl *CloudObject) *MegaClientRepo {
+	return &MegaClientRepo{
+		megaclient: cl,
+	}
+}
+func (client *MegaClientRepo) UploadFile(ctx context.Context, localfilepath string, photoid string, ext string) *RepositoryResponse {
 	const place = UploadFile
+	select {
+	case <-ctx.Done():
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(erro.ContextCanceled)}
+	default:
+	}
 	filename := photoid + ext
 	progresschan := make(chan int)
-	client.wg.Add(1)
+	client.megaclient.wg.Add(1)
 	go func() {
-		defer client.wg.Done()
+		defer client.megaclient.wg.Done()
 		totalbytes := 0
 		for data := range progresschan {
 			totalbytes += data
 		}
-		client.progressChan <- totalbytes
+		client.megaclient.progressChan <- totalbytes
 	}()
-	uploadedFile, err := client.connect.UploadFile(localfilepath, client.mainfolder, filename, &progresschan)
+	uploadedFile, err := client.megaclient.connect.UploadFile(localfilepath, client.megaclient.mainfolder, filename, &progresschan)
 	if err != nil {
 		fmterr := fmt.Sprintf("File upload with id = %s error: %v", photoid, err)
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmterr), Place: place}
 	}
-	link, err := client.connect.Link(uploadedFile, true)
+	link, err := client.megaclient.connect.Link(uploadedFile, true)
 	if err != nil {
 		fmterr := fmt.Sprintf("Error getting a public link to file with id = %s: %v", photoid, err)
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmterr), Place: place}
@@ -36,7 +50,7 @@ func (client *MegaClient) UploadFile(ctx context.Context, localfilepath string, 
 	select {
 	case <-ctx.Done():
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(erro.ContextCanceled)}
-	case tb := <-client.progressChan:
+	case tb := <-client.megaclient.progressChan:
 		return &RepositoryResponse{Success: true,
 			Data:           Data{Photo: &model.Photo{ID: photoid, ContentType: ext, Size: uploadedFile.GetSize(), CreatedAt: time.Now(), URL: link}},
 			Place:          place,
@@ -44,15 +58,20 @@ func (client *MegaClient) UploadFile(ctx context.Context, localfilepath string, 
 		}
 	}
 }
-func (client *MegaClient) DeleteFile(ctx context.Context, id, ext string) *RepositoryResponse {
+func (client *MegaClientRepo) DeleteFile(ctx context.Context, id, ext string) *RepositoryResponse {
 	const place = DeleteFile
 	filename := id + ext
-	file, err := client.findFileByName(client.mainfolder, filename)
+	file, err := client.findFileByName(ctx, client.megaclient.mainfolder, filename)
 	if err != nil {
 		fmterr := fmt.Sprintf("Error when receiving a file with id = %s: %v", id, err)
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmterr), Place: place}
 	}
-	err = client.connect.Delete(file, true)
+	select {
+	case <-ctx.Done():
+		return &RepositoryResponse{Success: false, Errors: erro.ServerError(erro.ContextCanceled)}
+	default:
+	}
+	err = client.megaclient.connect.Delete(file, true)
 	if err != nil {
 		fmterr := fmt.Sprintf("Error file deleted with id = %s: %v", id, err)
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmterr), Place: place}
@@ -64,8 +83,13 @@ func (client *MegaClient) DeleteFile(ctx context.Context, id, ext string) *Repos
 		return &RepositoryResponse{Success: true, SuccessMessage: "Photo was successfully deleted from cloud", Place: place}
 	}
 }
-func (client *MegaClient) findFileByName(node *mega.Node, name string) (*mega.Node, error) {
-	children, err := client.connect.FS.GetChildren(node)
+func (client *MegaClientRepo) findFileByName(ctx context.Context, node *mega.Node, name string) (*mega.Node, error) {
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf(erro.ContextCanceled)
+	default:
+	}
+	children, err := client.megaclient.connect.FS.GetChildren(node)
 	if err != nil {
 		return nil, err
 	}
