@@ -12,7 +12,7 @@ import (
 const UploadFile = "Repository-UploadFile"
 const DeleteFile = "Repository-DeleteFile"
 
-type MegaClient struct {
+type CloudObject struct {
 	connect      *mega.Mega
 	mainfolder   *mega.Node
 	wg           *sync.WaitGroup
@@ -21,7 +21,7 @@ type MegaClient struct {
 	cancel       context.CancelFunc
 }
 
-func NewMegaClient(config configs.MegaConfig) (*MegaClient, error) {
+func NewCloudConnection(config configs.MegaConfig) (*CloudObject, error) {
 	client := mega.New()
 	err := client.Login(config.Email, config.Password)
 	if err != nil {
@@ -46,7 +46,7 @@ func NewMegaClient(config configs.MegaConfig) (*MegaClient, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &MegaClient{
+	return &CloudObject{
 		connect:      client,
 		progressChan: make(chan int),
 		wg:           &sync.WaitGroup{},
@@ -55,7 +55,7 @@ func NewMegaClient(config configs.MegaConfig) (*MegaClient, error) {
 		cancel:       cancel,
 	}, nil
 }
-func (m *MegaClient) Close() {
+func (m *CloudObject) Close() {
 	m.cancel()
 	close(m.progressChan)
 	m.wg.Wait()
