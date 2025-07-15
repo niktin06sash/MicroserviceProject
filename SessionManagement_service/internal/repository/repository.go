@@ -1,13 +1,11 @@
 package repository
 
-import "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
-
 //go:generate mockgen -source=repository.go -destination=mocks/mock.go
 type RepositoryResponse struct {
 	Success        bool
 	SuccessMessage string
 	Data           Data
-	Errors         *erro.CustomError
+	Errors         error
 	Place          string
 }
 type Data struct {

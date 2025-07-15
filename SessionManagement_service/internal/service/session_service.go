@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -72,15 +73,18 @@ func (s *SessionServiceImplementation) DeleteSession(ctx context.Context, sessio
 }
 func (s *SessionServiceImplementation) requestToRepository(response *repository.RepositoryResponse, traceid string) (*repository.RepositoryResponse, *ServiceResponse) {
 	if !response.Success && response.Errors != nil {
-		switch response.Errors.Type {
-		case erro.ServerErrorType:
-			s.Logproducer.NewSessionLog(kafka.LogLevelError, response.Place, traceid, response.Errors.Message)
-			response.Errors.Message = erro.SessionServiceUnavalaible
-			return response, &ServiceResponse{Success: false, Errors: response.Errors}
+		var customError *erro.CustomError
+		if errors.As(response.Errors, &customError) {
+			switch customError.Type {
+			case erro.ServerErrorType:
+				s.Logproducer.NewSessionLog(kafka.LogLevelError, response.Place, traceid, customError.Message)
+				customError.Message = erro.SessionServiceUnavalaible
+				return response, &ServiceResponse{Success: false, Errors: customError}
 
-		case erro.ClientErrorType:
-			s.Logproducer.NewSessionLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors.Message)
-			return response, &ServiceResponse{Success: false, Errors: response.Errors}
+			case erro.ClientErrorType:
+				s.Logproducer.NewSessionLog(kafka.LogLevelWarn, response.Place, traceid, customError.Message)
+				return response, &ServiceResponse{Success: false, Errors: customError}
+			}
 		}
 	}
 	s.Logproducer.NewSessionLog(kafka.LogLevelInfo, response.Place, traceid, response.SuccessMessage)

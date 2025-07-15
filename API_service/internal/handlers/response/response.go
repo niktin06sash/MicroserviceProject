@@ -13,9 +13,9 @@ import (
 
 // swagger:model HTTPResponse
 type HTTPResponse struct {
-	Success bool              `json:"success"`
-	Errors  *erro.CustomError `json:"errors,omitempty"`
-	Data    map[string]any    `json:"data,omitempty"`
+	Success bool           `json:"success"`
+	Errors  error          `json:"errors,omitempty"`
+	Data    map[string]any `json:"data,omitempty"`
 }
 
 // swagger:model PersonReg
@@ -55,7 +55,7 @@ const KeyPhotos = "photos"
 func OkResponse(c *gin.Context, status int, data map[string]any, traceid, place string, logproducer LogProducer) {
 	sendResponse(c, status, HTTPResponse{Data: data, Success: true}, traceid, place, logproducer)
 }
-func BadResponse(c *gin.Context, status int, err *erro.CustomError, traceid string, place string, logproducer LogProducer) {
+func BadResponse(c *gin.Context, status int, err error, traceid string, place string, logproducer LogProducer) {
 	sendResponse(c, status, HTTPResponse{Success: false, Errors: err}, traceid, place, logproducer)
 }
 func sendResponse(c *gin.Context, status int, response HTTPResponse, traceid string, place string, logproducer LogProducer) {

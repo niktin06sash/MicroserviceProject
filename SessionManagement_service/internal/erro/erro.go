@@ -47,3 +47,6 @@ func ServerError(reason string) *CustomError {
 func ClientError(reason string) *CustomError {
 	return &CustomError{Message: reason, Type: ClientErrorType}
 }
+func (c *CustomError) Error() string {
+	return c.Message
+}
