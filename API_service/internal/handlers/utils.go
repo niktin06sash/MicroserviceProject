@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,28 +17,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (h *Handler) badGrpcResponse(c *gin.Context, traceID, place string, err error) {
-	st, _ := status.FromError(err)
-	switch st.Code() {
-	case codes.Canceled, codes.Unavailable:
-		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.PhotoServiceUnavalaible), traceID, place, h.logproducer)
-	case codes.Internal:
-		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(st.Message()), traceID, place, h.logproducer)
-	default:
-		response.BadResponse(c, http.StatusBadRequest, erro.ClientError(st.Message()), traceID, place, h.logproducer)
-	}
-}
-func (h *Handler) badHttpResponse(c *gin.Context, traceID, place string, userresponse response.HTTPResponse) bool {
-	if !userresponse.Success {
-		if userresponse.Errors.Type == erro.ServerErrorType {
-			response.BadResponse(c, http.StatusInternalServerError, userresponse.Errors, traceID, place, h.logproducer)
-		} else {
-			response.BadResponse(c, http.StatusBadRequest, userresponse.Errors, traceID, place, h.logproducer)
-		}
-		return true
-	}
-	return false
-}
 func (h *Handler) asyncHTTPRequest(c *gin.Context, target string, place string, httpresponseChan chan response.HTTPResponse) error {
 	traceID := c.MustGet("traceID").(string)
 	userid := c.MustGet("userID").(string)
@@ -89,10 +68,29 @@ func asyncgRPCRequest[T any](context context.Context, operation func(context.Con
 	protoresponseChan <- protoresponse
 	return nil
 }
-func (h *Handler) asyncBadResponse(c *gin.Context, traceID string, place string, err error) {
-	if _, ok := status.FromError(err); ok {
-		h.badGrpcResponse(c, traceID, place, err)
-		return
+func (h *Handler) handleGrpcError(c *gin.Context, traceID, place string, err error) {
+	st, _ := status.FromError(err)
+	switch st.Code() {
+	case codes.Canceled, codes.Unavailable:
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(erro.PhotoServiceUnavalaible), traceID, place, h.logproducer)
+	case codes.Internal:
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(st.Message()), traceID, place, h.logproducer)
+	default:
+		response.BadResponse(c, http.StatusBadRequest, erro.ClientError(st.Message()), traceID, place, h.logproducer)
 	}
-	response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(err.Error()), traceID, place, h.logproducer)
+}
+func (h *Handler) badHttpResponse(c *gin.Context, traceID, place string, userresponse response.HTTPResponse) bool {
+	if !userresponse.Success {
+		var customError *erro.CustomError
+		if errors.As(userresponse.Errors, &customError) {
+			switch customError.Type {
+			case erro.ServerErrorType:
+				response.BadResponse(c, http.StatusInternalServerError, userresponse.Errors, traceID, place, h.logproducer)
+			case erro.ClientErrorType:
+				response.BadResponse(c, http.StatusBadRequest, userresponse.Errors, traceID, place, h.logproducer)
+			}
+		}
+		return true
+	}
+	return false
 }

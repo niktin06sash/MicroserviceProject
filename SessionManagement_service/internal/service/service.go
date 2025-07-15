@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 
-	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/SessionManagement_service/internal/repository"
 )
@@ -25,7 +24,7 @@ const DeleteSession = "UseCase-DeleteSession"
 type ServiceResponse struct {
 	Success bool
 	Data    Data
-	Errors  *erro.CustomError
+	Errors  error
 }
 type Data struct {
 	SessionID      string

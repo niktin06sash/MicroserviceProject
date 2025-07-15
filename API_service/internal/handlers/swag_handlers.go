@@ -16,6 +16,7 @@ import (
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // @Summary Register a new user
@@ -136,7 +137,11 @@ func (h *Handler) GetMyProfile(c *gin.Context) {
 		}, protoresponseChan)
 	})
 	if err := g.Wait(); err != nil {
-		h.asyncBadResponse(c, traceID, place, err)
+		if _, ok := status.FromError(err); ok {
+			h.handleGrpcError(c, traceID, place, err)
+			return
+		}
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(err.Error()), traceID, place, h.logproducer)
 		return
 	}
 	userresponse := <-httpresponseChan
@@ -192,7 +197,11 @@ func (h *Handler) GetUserProfileById(c *gin.Context) {
 		}, protoresponseChan)
 	})
 	if err := g.Wait(); err != nil {
-		h.asyncBadResponse(c, traceID, place, err)
+		if _, ok := status.FromError(err); ok {
+			h.handleGrpcError(c, traceID, place, err)
+			return
+		}
+		response.BadResponse(c, http.StatusInternalServerError, erro.ServerError(err.Error()), traceID, place, h.logproducer)
 		return
 	}
 	userresponse := <-httpresponseChan
@@ -236,7 +245,7 @@ func (h *Handler) GetPhotoById(c *gin.Context) {
 		response.OkResponse(c, http.StatusOK, map[string]any{response.KeyPhoto: protoresponse.Photo}, traceID, place, h.logproducer)
 		return
 	}
-	h.badGrpcResponse(c, traceID, place, err)
+	h.handleGrpcError(c, traceID, place, err)
 }
 
 // @Summary Delete photo by ID's in path parameters
@@ -268,7 +277,7 @@ func (h *Handler) DeletePhoto(c *gin.Context) {
 		response.OkResponse(c, http.StatusOK, map[string]any{response.KeyMessage: protoresponse.Message}, traceID, place, h.logproducer)
 		return
 	}
-	h.badGrpcResponse(c, traceID, place, err)
+	h.handleGrpcError(c, traceID, place, err)
 }
 
 // @Summary Upload user photo
@@ -314,7 +323,7 @@ func (h *Handler) LoadPhoto(c *gin.Context) {
 		response.OkResponse(c, http.StatusOK, map[string]any{response.KeyMessage: protoresponse.Message, response.KeyPhotoID: protoresponse.PhotoId}, traceID, place, h.logproducer)
 		return
 	}
-	h.badGrpcResponse(c, traceID, place, err)
+	h.handleGrpcError(c, traceID, place, err)
 }
 
 // @Summary Find own photo by ID's in path parameters
@@ -346,5 +355,5 @@ func (h *Handler) GetMyPhotoById(c *gin.Context) {
 		response.OkResponse(c, http.StatusOK, map[string]any{response.KeyPhoto: protoresponse.Photo}, traceID, place, h.logproducer)
 		return
 	}
-	h.badGrpcResponse(c, traceID, place, err)
+	h.handleGrpcError(c, traceID, place, err)
 }

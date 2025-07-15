@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -36,10 +37,7 @@ func (s *SessionAPI) CreateSession(ctx context.Context, req *pb.CreateSessionReq
 		s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("For person with id %s has successfully created session", req.UserID))
 		return &pb.CreateSessionResponse{Success: true, SessionID: resp.Data.SessionID, ExpiryTime: resp.Data.ExpirationTime}, nil
 	}
-	if resp.Errors.Type == erro.ServerErrorType {
-		return nil, status.Error(codes.Internal, resp.Errors.Message)
-	}
-	return nil, status.Error(codes.InvalidArgument, resp.Errors.Message)
+	return nil, handleGrpcError(resp.Errors)
 }
 
 func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessionRequest) (*pb.ValidateSessionResponse, error) {
@@ -57,10 +55,7 @@ func (s *SessionAPI) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 		s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("For person with id %s has successfully validated session", resp.Data.UserID))
 		return &pb.ValidateSessionResponse{Success: true, UserID: resp.Data.UserID}, nil
 	}
-	if resp.Errors.Type == erro.ServerErrorType {
-		return nil, status.Error(codes.Internal, resp.Errors.Message)
-	}
-	return nil, status.Error(codes.InvalidArgument, resp.Errors.Message)
+	return nil, handleGrpcError(resp.Errors)
 }
 func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionRequest) (*pb.DeleteSessionResponse, error) {
 	const place = DeleteSession
@@ -73,10 +68,7 @@ func (s *SessionAPI) DeleteSession(ctx context.Context, req *pb.DeleteSessionReq
 		s.logproducer.NewSessionLog(kafka.LogLevelInfo, place, traceID, fmt.Sprintf("Session with id %v has successfully deleted", req.SessionID))
 		return &pb.DeleteSessionResponse{Success: true}, nil
 	}
-	if resp.Errors.Type == erro.ServerErrorType {
-		return nil, status.Error(codes.Internal, resp.Errors.Message)
-	}
-	return nil, status.Error(codes.InvalidArgument, resp.Errors.Message)
+	return nil, handleGrpcError(resp.Errors)
 }
 func (s *SessionAPI) getTraceIdFromMetadata(ctx context.Context, place string) string {
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -105,4 +97,16 @@ func (s *SessionAPI) getFlagValidate(ctx context.Context, place string, traceID 
 		return ""
 	}
 	return flagvalidates[0]
+}
+func handleGrpcError(err error) error {
+	var customErr *erro.CustomError
+	if errors.As(err, &customErr) {
+		switch customErr.Type {
+		case erro.ClientErrorType:
+			return status.Error(codes.InvalidArgument, customErr.Message)
+		case erro.ServerErrorType:
+			return status.Error(codes.Internal, customErr.Message)
+		}
+	}
+	return status.Error(codes.Internal, erro.SessionServiceUnavalaible)
 }
