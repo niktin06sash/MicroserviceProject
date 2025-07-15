@@ -35,5 +35,5 @@ type RepositoryResponse struct {
 	SuccessMessage string
 	Place          string
 	Data           map[string]any
-	Errors         *erro.CustomError
+	Errors         error
 }

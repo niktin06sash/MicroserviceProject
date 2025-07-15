@@ -93,7 +93,7 @@ func (as *UserService) rollbackTransaction(ctx context.Context, tx pgx.Tx, trace
 }
 func (as *UserService) commitTransaction(ctx context.Context, tx pgx.Tx, traceid string, place string) error {
 	if tx == nil {
-		return fmt.Errorf("Transaction is not active")
+		return fmt.Errorf(erro.UserServiceUnavalaible)
 	}
 	maxAttempts := 3
 	attempt := 0
@@ -120,7 +120,7 @@ func (as *UserService) commitTransaction(ctx context.Context, tx pgx.Tx, traceid
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	return fmt.Errorf("Failed to commit transaction after all attempts")
+	return fmt.Errorf(erro.UserServiceUnavalaible)
 }
 func checkContext(ctx context.Context, place string, traceID string, kafkaprod LogProducer) *ServiceResponse {
 	select {
@@ -172,20 +172,22 @@ func retryOperationGrpc[T any](ctx context.Context, operation func(context.Conte
 
 func (as *UserService) requestToDB(response *repository.RepositoryResponse, traceid string) (*repository.RepositoryResponse, *ServiceResponse) {
 	if !response.Success && response.Errors != nil {
-		switch response.Errors.Type {
-		case erro.ServerErrorType:
-			metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
-			as.LogProducer.NewUserLog(kafka.LogLevelError, response.Place, traceid, response.Errors.Message)
-			response.Errors.Message = erro.UserServiceUnavalaible
-			return response, &ServiceResponse{Success: false, Errors: response.Errors}
+		var ce *erro.CustomError
+		if errors.As(response.Errors, &ce) {
+			switch ce.Type {
+			case erro.ServerErrorType:
+				metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
+				as.LogProducer.NewUserLog(kafka.LogLevelError, response.Place, traceid, ce.Message)
+				ce.Message = erro.UserServiceUnavalaible
+				return response, &ServiceResponse{Success: false, Errors: ce}
 
-		case erro.ClientErrorType:
-			metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
-			as.LogProducer.NewUserLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors.Message)
-			return response, &ServiceResponse{Success: false, Errors: response.Errors}
+			case erro.ClientErrorType:
+				metrics.UserErrorsTotal.WithLabelValues(erro.ClientErrorType).Inc()
+				as.LogProducer.NewUserLog(kafka.LogLevelWarn, response.Place, traceid, ce.Message)
+				return response, &ServiceResponse{Success: false, Errors: response.Errors}
+			}
 		}
 	}
-
 	as.LogProducer.NewUserLog(kafka.LogLevelInfo, response.Place, traceid, response.SuccessMessage)
 	return response, nil
 }

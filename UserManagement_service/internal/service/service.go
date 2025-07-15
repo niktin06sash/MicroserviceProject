@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	pb "github.com/niktin06sash/MicroserviceProject/SessionManagement_service/proto"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
 )
@@ -25,7 +24,7 @@ const KeySessionID = "sessionid"
 type ServiceResponse struct {
 	Success bool
 	Data    map[string]any
-	Errors  *erro.CustomError
+	Errors  error
 }
 
 //go:generate mockgen -source=service.go -destination=mocks/mock.go
