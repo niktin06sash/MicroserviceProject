@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -16,15 +17,18 @@ import (
 
 func (use *PhotoServiceImplement) requestToRepository(response *repository.RepositoryResponse, traceid string) (*repository.RepositoryResponse, *ServiceResponse) {
 	if !response.Success && response.Errors != nil {
-		switch response.Errors.Type {
-		case erro.ServerErrorType:
-			use.Logproducer.NewPhotoLog(kafka.LogLevelError, response.Place, traceid, response.Errors.Message)
-			response.Errors.Message = erro.PhotoServiceUnavalaible
-			return response, &ServiceResponse{Success: false, Errors: response.Errors}
+		var customError *erro.CustomError
+		if errors.As(response.Errors, &customError) {
+			switch customError.Type {
+			case erro.ServerErrorType:
+				use.Logproducer.NewPhotoLog(kafka.LogLevelError, response.Place, traceid, customError.Message)
+				customError.Message = erro.PhotoServiceUnavalaible
+				return response, &ServiceResponse{Success: false, Errors: customError}
 
-		case erro.ClientErrorType:
-			use.Logproducer.NewPhotoLog(kafka.LogLevelWarn, response.Place, traceid, response.Errors.Message)
-			return response, &ServiceResponse{Success: false, Errors: response.Errors}
+			case erro.ClientErrorType:
+				use.Logproducer.NewPhotoLog(kafka.LogLevelWarn, response.Place, traceid, customError.Message)
+				return response, &ServiceResponse{Success: false, Errors: response.Errors}
+			}
 		}
 	}
 	use.Logproducer.NewPhotoLog(kafka.LogLevelInfo, response.Place, traceid, response.SuccessMessage)
@@ -46,21 +50,29 @@ func (use *PhotoServiceImplement) unloadPhotoCloud(ctx context.Context, file []b
 	}()
 	cloudresponse := use.Cloud.UploadFile(ctx, tempFile, photoid, ext)
 	if !cloudresponse.Success && cloudresponse.Errors != nil {
-		use.Logproducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, cloudresponse.Errors.Message)
-		return
+		var customError *erro.CustomError
+		if errors.As(cloudresponse.Errors, &customError) {
+			use.Logproducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, customError.Message)
+		}
 	}
 	use.Logproducer.NewPhotoLog(kafka.LogLevelInfo, cloudresponse.Place, traceid, cloudresponse.SuccessMessage)
 	photo := cloudresponse.Data.Photo
 	photo.UserID = userid
 	bdresponse := use.Photorepo.LoadPhoto(ctx, photo)
 	if !bdresponse.Success && bdresponse.Errors != nil {
-		use.Logproducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, bdresponse.Errors.Message)
+		var customError *erro.CustomError
+		if errors.As(bdresponse.Errors, &customError) {
+			use.Logproducer.NewPhotoLog(kafka.LogLevelError, bdresponse.Place, traceid, customError.Message)
+		}
 		return
 	}
 	use.Logproducer.NewPhotoLog(kafka.LogLevelInfo, bdresponse.Place, traceid, bdresponse.SuccessMessage)
 	cacheresponse := use.Cache.DeletePhotosCache(ctx, userid)
 	if !cacheresponse.Success && cacheresponse.Errors != nil {
-		use.Logproducer.NewPhotoLog(kafka.LogLevelError, cacheresponse.Place, traceid, cacheresponse.Errors.Message)
+		var customError *erro.CustomError
+		if errors.As(cacheresponse.Errors, &customError) {
+			use.Logproducer.NewPhotoLog(kafka.LogLevelError, cacheresponse.Place, traceid, customError.Message)
+		}
 		return
 	}
 	use.Logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceid, cacheresponse.SuccessMessage)
@@ -72,7 +84,10 @@ func (use *PhotoServiceImplement) deletePhotoCloud(ctx context.Context, photoid 
 	const place = DeletePhotoCloud
 	cloudresponse := use.Cloud.DeleteFile(ctx, photoid, ext)
 	if !cloudresponse.Success && cloudresponse.Errors != nil {
-		use.Logproducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, cloudresponse.Errors.Message)
+		var customError *erro.CustomError
+		if errors.As(cloudresponse.Errors, &customError) {
+			use.Logproducer.NewPhotoLog(kafka.LogLevelError, cloudresponse.Place, traceid, customError.Message)
+		}
 		return
 	}
 	use.Logproducer.NewPhotoLog(kafka.LogLevelInfo, place, traceid, fmt.Sprintf("The photo(id = %s) has been successfully deleted from cloud and database", photoid))

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/model"
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
 )
@@ -11,7 +10,7 @@ type RepositoryResponse struct {
 	SuccessMessage string
 	Place          string
 	Data           Data
-	Errors         *erro.CustomError
+	Errors         error
 }
 type Data struct {
 	ContentType string
