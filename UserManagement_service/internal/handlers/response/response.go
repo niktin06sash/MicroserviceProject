@@ -12,9 +12,9 @@ import (
 )
 
 type HTTPResponse struct {
-	Success bool              `json:"success"`
-	Errors  *erro.CustomError `json:"errors,omitempty"`
-	Data    map[string]any    `json:"data,omitempty"`
+	Success bool           `json:"success"`
+	Errors  error          `json:"errors,omitempty"`
+	Data    map[string]any `json:"data,omitempty"`
 }
 type LogProducer interface {
 	NewUserLog(level, place, traceid, msg string)
@@ -26,7 +26,7 @@ const KeyMessage = "message"
 func OkResponse(r *http.Request, w http.ResponseWriter, status int, data map[string]any, traceid, place string, logproducer LogProducer) {
 	sendResponse(r, w, status, HTTPResponse{Data: data, Success: true}, traceid, place, logproducer)
 }
-func BadResponse(r *http.Request, w http.ResponseWriter, status int, err *erro.CustomError, traceid string, place string, logproducer LogProducer) {
+func BadResponse(r *http.Request, w http.ResponseWriter, status int, err error, traceid string, place string, logproducer LogProducer) {
 	sendResponse(r, w, status, HTTPResponse{Success: false, Errors: err}, traceid, place, logproducer)
 }
 func sendResponse(r *http.Request, w http.ResponseWriter, status int, resp HTTPResponse, traceid string, place string, logproducer LogProducer) {

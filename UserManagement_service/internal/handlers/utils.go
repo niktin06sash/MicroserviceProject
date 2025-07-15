@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -63,12 +64,15 @@ func (h *Handler) getPersonality(r *http.Request, w http.ResponseWriter, traceID
 	return true
 }
 func (h *Handler) serviceResponse(resp *service.ServiceResponse, r *http.Request, w http.ResponseWriter, traceID string, place string) bool {
-	if !resp.Success {
-		switch resp.Errors.Type {
-		case erro.ClientErrorType:
-			response.BadResponse(r, w, http.StatusBadRequest, resp.Errors, traceID, place, h.LogProducer)
-		case erro.ServerErrorType:
-			response.BadResponse(r, w, http.StatusInternalServerError, resp.Errors, traceID, place, h.LogProducer)
+	if !resp.Success && resp.Errors != nil {
+		var ce *erro.CustomError
+		if errors.As(resp.Errors, &ce) {
+			switch ce.Type {
+			case erro.ClientErrorType:
+				response.BadResponse(r, w, http.StatusBadRequest, resp.Errors, traceID, place, h.LogProducer)
+			case erro.ServerErrorType:
+				response.BadResponse(r, w, http.StatusInternalServerError, resp.Errors, traceID, place, h.LogProducer)
+			}
 		}
 		return false
 	}
