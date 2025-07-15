@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/erro"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/model"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
 	pb "github.com/niktin06sash/MicroserviceProject/Photo_service/proto"
@@ -47,7 +46,7 @@ const UseCase_GetPhoto = "UseCase-GetPhoto"
 type ServiceResponse struct {
 	Success bool
 	Data    Data
-	Errors  *erro.CustomError
+	Errors  error
 }
 type Data struct {
 	PhotoID string
