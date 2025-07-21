@@ -11,33 +11,33 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type SessionRedis struct {
-	Client *RedisObject
+type SessionDatabase struct {
+	databaseclient *DatabaseObject
 }
 
-func NewSessionRepos(client *RedisObject) *SessionRedis {
-	return &SessionRedis{Client: client}
+func NewSessionRepos(client *DatabaseObject) *SessionDatabase {
+	return &SessionDatabase{databaseclient: client}
 }
 
-func (redisrepo *SessionRedis) SetSession(ctx context.Context, session *model.Session) *RepositoryResponse {
+func (redisrepo *SessionDatabase) SetSession(ctx context.Context, session *model.Session) *RepositoryResponse {
 	const place = SetSession
 	jsondata, err := json.Marshal(session)
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorMarshal, err)), Place: place}
 	}
-	err = redisrepo.Client.RedisClient.Set(ctx, session.SessionID, jsondata, 1*time.Hour).Err()
+	err = redisrepo.databaseclient.connect.Set(ctx, session.SessionID, jsondata, 1*time.Hour).Err()
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorSet, err)), Place: place}
 	}
 	return &RepositoryResponse{Success: true, SuccessMessage: "Successfull session installation", Place: place}
 }
 
-func (redisrepo *SessionRedis) GetSession(ctx context.Context, sessionID string, flag string) *RepositoryResponse {
+func (redisrepo *SessionDatabase) GetSession(ctx context.Context, sessionID string, flag string) *RepositoryResponse {
 	const place = GetSession
 	return redisrepo.getSessionData(ctx, sessionID, place, flag)
 }
-func (redisrepo *SessionRedis) getSessionData(ctx context.Context, sessionID string, place string, flag string) *RepositoryResponse {
-	result, err := redisrepo.Client.RedisClient.Get(ctx, sessionID).Result()
+func (redisrepo *SessionDatabase) getSessionData(ctx context.Context, sessionID string, place string, flag string) *RepositoryResponse {
+	result, err := redisrepo.databaseclient.connect.Get(ctx, sessionID).Result()
 	if err != nil {
 		if err == redis.Nil {
 			if flag == "true" {
@@ -57,9 +57,9 @@ func (redisrepo *SessionRedis) getSessionData(ctx context.Context, sessionID str
 	}
 	return &RepositoryResponse{Success: true, Data: Data{UserID: session.UserID}, SuccessMessage: "Successfull get session", Place: place}
 }
-func (redisrepo *SessionRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
+func (redisrepo *SessionDatabase) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
 	const place = DeleteSession
-	num, err := redisrepo.Client.RedisClient.Del(ctx, sessionID).Result()
+	num, err := redisrepo.databaseclient.connect.Del(ctx, sessionID).Result()
 	if err != nil {
 		return &RepositoryResponse{Success: false, Errors: erro.ServerError(fmt.Sprintf(erro.ErrorDelSession, err)), Place: place}
 	}

@@ -1,4 +1,4 @@
-package repository
+package database
 
 import (
 	"context"
@@ -12,18 +12,28 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func NewDatabaseConnection(cfg configs.DatabaseConfig) (*DBObject, error) {
+const CreateUser = "Repository-CreateUser"
+const GetUser = "Repository-GetUser"
+const DeleteUser = "Repository-DeleteUser"
+const UpdateName = "Repository-UpdateName"
+const UpdatePassword = "Repository-UpdatePassword"
+const UpdateEmail = "Repository-UpdateEmail"
+const GetMyProfile = "Repository-GetMyProfile"
+const GetProfileById = "Repository-GetProfileById"
+const UpdateUserData = "Repository-UpdateUserData"
+
+func NewPostgresConnection(cfg configs.DatabaseConfig) (*DBObject, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	connectionString := buildConnectionString(cfg)
 	poolConfig, err := pgxpool.ParseConfig(connectionString)
 	if err != nil {
-		log.Printf("[DEBUG] [User-Service] Failed to parse Postgreconnection string: %v", err)
+		log.Printf("[DEBUG] [User-Service] Failed to parse Postgres-connection string: %v", err)
 		return nil, err
 	}
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
-		log.Printf("[DEBUG] [User-Service] Failed to create Postgre-connection pool: %v", err)
+		log.Printf("[DEBUG] [User-Service] Failed to create Postgres-connection pool: %v", err)
 		return nil, err
 	}
 	err = pool.Ping(ctx)
@@ -31,7 +41,7 @@ func NewDatabaseConnection(cfg configs.DatabaseConfig) (*DBObject, error) {
 		pool.Close()
 		return nil, err
 	}
-	log.Println("[DEBUG] [User-Service] Successful connect to Postgre-Client")
+	log.Println("[DEBUG] [User-Service] Successful connect to Postgres-Client")
 	return &DBObject{pool: pool}, nil
 }
 

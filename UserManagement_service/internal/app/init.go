@@ -16,7 +16,8 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/handlers/middleware"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/metrics"
-	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/cache"
+	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/repository/database"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/server"
 	"github.com/niktin06sash/MicroserviceProject/UserManagement_service/internal/service"
 )
@@ -37,19 +38,19 @@ func (a *UserApplication) Start() error {
 		log.Printf("[DEBUG] [User-Service] Count of active goroutines: %v", runtime.NumGoroutine())
 		log.Printf("[DEBUG] [User-Service] Active goroutines:\n%s", buf[:n])
 	}()
-	db, err := repository.NewDatabaseConnection(a.config.Database)
+	pg, err := database.NewPostgresConnection(a.config.Database)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	redis, err := repository.NewRedisConnection(a.config.Redis)
+	defer pg.Close()
+	redis, err := cache.NewRedisConnection(a.config.Redis)
 	if err != nil {
 		return err
 	}
 	defer redis.Close()
-	tx := repository.NewTxManagerRepo(db)
-	redisdb := repository.NewUserRedisRepo(redis)
-	postgredb := repository.NewUserPostgresRepo(db)
+	tx := database.NewUserTxManager(pg)
+	cache := cache.NewUserCache(redis)
+	database := database.NewUserDatabase(pg)
 	metrics.Start()
 	defer metrics.Stop()
 	kafkaProducer := kafka.NewKafkaProducer(a.config.Kafka)
@@ -65,7 +66,7 @@ func (a *UserApplication) Start() error {
 		return err
 	}
 	defer grpcclient.Close()
-	service := service.NewUserService(postgredb, tx, redisdb, kafkaProducer, rabbitproducer, grpcclient)
+	service := service.NewUserService(database, tx, cache, kafkaProducer, rabbitproducer, grpcclient)
 	middleware := middleware.NewMiddleware(kafkaProducer)
 	handlers := handlers.NewHandler(service, middleware, kafkaProducer)
 	a.server = server.NewServer(a.config.Server, handlers.InitRoutes())
