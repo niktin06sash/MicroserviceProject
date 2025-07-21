@@ -9,8 +9,13 @@ import (
 )
 
 type Config struct {
-	Kafka  KafkaConfig  `mapstructure:"kafka"`
-	Logger LoggerConfig `mapstructure:"logger"`
+	Kafka   KafkaConfig   `mapstructure:"kafka"`
+	Logger  LoggerConfig  `mapstructure:"logger"`
+	Elastic ElasticConfig `mapstruture:"elasticsearch"`
+}
+type ElasticConfig struct {
+	Host  string `mapstructure:"host"`
+	Index string `mapstructure:"index"`
 }
 type KafkaConfig struct {
 	BootstrapServers string        `mapstructure:"bootstrap_servers"`
@@ -117,5 +122,7 @@ func LoadConfig() Config {
 }
 func LoadDockerConfig(config *Config) {
 	kafka := os.Getenv("KAFKA_BOOTSTRAP_SERVERS")
+	el := os.Getenv("ELASTICSEARCH_HOST")
 	config.Kafka.BootstrapServers = kafka
+	config.Elastic.Host = el
 }

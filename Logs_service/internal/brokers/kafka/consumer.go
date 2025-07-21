@@ -17,7 +17,7 @@ const (
 )
 
 type Logger interface {
-	Log(topic string, message string) error
+	NewLog(msg kafka.Message)
 }
 type KafkaConsumerGroup struct {
 	reader  *kafka.Reader

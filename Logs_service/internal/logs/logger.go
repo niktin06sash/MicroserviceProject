@@ -1,31 +1,42 @@
 package logs
 
 import (
-	"fmt"
+	"context"
 	"io"
 	"log"
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/configs"
+	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 type Logger struct {
-	mux     sync.RWMutex
-	cores   map[string]zapcore.Core
-	encoder zapcore.Encoder
+	mux       sync.RWMutex
+	cores     map[string]zapcore.Core
+	encoder   zapcore.Encoder
+	store     StorageLog
+	ctx       context.Context
+	cancel    context.CancelFunc
+	logchan   chan kafka.Message
+	semaphore chan struct{}
+	wg        *sync.WaitGroup
+}
+type StorageLog interface {
+	LogElastic(ctx context.Context, val string, level string)
 }
 
-func NewLogger(config configs.LoggerConfig, topics configs.KafkaTopics) (*Logger, error) {
+func NewLogger(config configs.LoggerConfig, topics configs.KafkaTopics, store StorageLog) (*Logger, error) {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoder := zapcore.NewJSONEncoder(encoderConfig)
 	mapa := config.GetTopicFileMap(topics)
-	l := &Logger{cores: make(map[string]zapcore.Core), encoder: encoder}
+	ctx, cancel := context.WithCancel(context.Background())
+	l := &Logger{cores: make(map[string]zapcore.Core),
+		encoder: encoder, store: store, ctx: ctx, cancel: cancel, logchan: make(chan kafka.Message, 10000), semaphore: make(chan struct{}, 10), wg: &sync.WaitGroup{}}
 	for topic, filepath := range mapa {
 		file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -44,34 +55,21 @@ func NewLogger(config configs.LoggerConfig, topics configs.KafkaTopics) (*Logger
 		core := zapcore.NewCore(l.encoder, zapcore.AddSync(file), levelEnabler)
 		l.cores[topic] = core
 	}
+	for i := 0; i < 100; i++ {
+		l.wg.Add(1)
+		go l.logWorker()
+	}
 	log.Println("[DEBUG] [Logs-Service] Successful connect to Logger")
 	return l, nil
 }
 
-func (l *Logger) Log(topic string, message string) error {
-	l.mux.RLock()
-	core, exists := l.cores[topic]
-	l.mux.RUnlock()
-	if !exists {
-		return fmt.Errorf("logger for topic %s not initialized", topic)
-	}
-	parts := strings.Split(topic, "-")
-	if len(parts) < 2 {
-		return fmt.Errorf("invalid topic format: %s", topic)
-	}
-	level := parts[1]
-	zapLevel, err := zapcore.ParseLevel(strings.ToUpper(level))
-	if err != nil {
-		return fmt.Errorf("invalid log level %s: %w", level, err)
-	}
-	entry := zapcore.Entry{Level: zapLevel, Time: time.Now(), Message: message}
-	core.Write(entry, nil)
-	return nil
-}
-func (m *Logger) Sync() {
-	m.mux.Lock()
-	defer m.mux.Unlock()
-	for _, core := range m.cores {
+func (l *Logger) Sync() {
+	l.cancel()
+	close(l.logchan)
+	l.wg.Wait()
+	l.mux.Lock()
+	defer l.mux.Unlock()
+	for _, core := range l.cores {
 		if closer, ok := core.(io.Closer); ok {
 			_ = closer.Close()
 		}
