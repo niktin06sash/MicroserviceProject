@@ -1,24 +1,16 @@
-package elastic
+package searcher
 
 import (
-	"context"
 	"log"
 	"strings"
-	"sync"
 
 	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/configs"
-	"github.com/segmentio/kafka-go"
 )
 
 type ElasticClient struct {
-	client   *elasticsearch.Client
-	logchan  chan kafka.Message
-	semaphor chan struct{}
-	wg       *sync.WaitGroup
-	ctx      context.Context
-	cancel   context.CancelFunc
-	index    string
+	client *elasticsearch.Client
+	index  string
 }
 
 func NewElasticClient(c configs.ElasticConfig) (*ElasticClient, error) {
@@ -35,29 +27,12 @@ func NewElasticClient(c configs.ElasticConfig) (*ElasticClient, error) {
 	if err := createIndexIfNotExists(client, c.Index); err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
 	el := &ElasticClient{
-		client:   client,
-		logchan:  make(chan kafka.Message, 1000),
-		ctx:      ctx,
-		cancel:   cancel,
-		wg:       &sync.WaitGroup{},
-		semaphor: make(chan struct{}, 10),
-		index:    c.Index,
-	}
-	for i := 0; i < 100; i++ {
-		el.wg.Add(1)
-		go el.elasticWorker()
+		client: client,
+		index:  c.Index,
 	}
 	log.Println("[DEBUG] [Logs-Service] Successful connect to Elasticsearch")
 	return el, nil
-}
-
-func (ec *ElasticClient) Close() {
-	ec.cancel()
-	close(ec.logchan)
-	ec.wg.Wait()
-	log.Println("[DEBUG] [Logs-Service] Successful close Elasticsearch")
 }
 func createIndexIfNotExists(client *elasticsearch.Client, index string) error {
 	res, err := client.Indices.Exists([]string{index})
