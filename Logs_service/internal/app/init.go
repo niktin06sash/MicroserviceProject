@@ -10,7 +10,7 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/logs"
-	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/storage/elastic"
+	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/repository/searcher"
 )
 
 type LogsApplication struct {
@@ -27,12 +27,11 @@ func (a *LogsApplication) Start() error {
 		log.Printf("[DEBUG] [Logs-Service] Count of active goroutines: %v", runtime.NumGoroutine())
 		log.Printf("[DEBUG] [Logs-Service] Active goroutines:\n%s", buf[:n])
 	}()
-	elastic, err := elastic.NewElasticClient(a.config.Elastic)
+	searcher, err := searcher.NewElasticClient(a.config.Elastic)
 	if err != nil {
 		return err
 	}
-	defer elastic.Close()
-	logger, err := logs.NewLogger(a.config.Logger, a.config.Kafka.Topics, elastic)
+	logger, err := logs.NewLogger(a.config.Logger, a.config.Kafka.Topics, searcher)
 	if err != nil {
 		return err
 	}
