@@ -1,4 +1,4 @@
-package repository
+package cloud
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type CloudObject struct {
 	cancel       context.CancelFunc
 }
 
-func NewCloudConnection(config configs.MegaConfig) (*CloudObject, error) {
+func NewMegaConnection(config configs.MegaConfig) (*CloudObject, error) {
 	client := mega.New()
 	err := client.Login(config.Email, config.Password)
 	if err != nil {
