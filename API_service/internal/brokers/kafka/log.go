@@ -91,6 +91,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 				metrics.APIKafkaProducerErrorsTotal.WithLabelValues(topic).Inc()
 				metrics.APIErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			}
+			cancel()
 		}
 	}
 }

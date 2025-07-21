@@ -20,11 +20,12 @@ func NewServer(config configs.ServerConfig, handler http.Handler) *Server {
 		MaxHeaderBytes: config.MaxHeaderBytes,
 		ReadTimeout:    config.ReadTimeout,
 		WriteTimeout:   config.WriteTimeout,
+		IdleTimeout:    config.IdleTimeout,
 	}
 	return server
 }
 func (s *Server) Run() error {
-	log.Printf("[DEBUG] [User-Service] Starting server on port: %s", s.httpServer.Addr)
+	log.Printf("[DEBUG] [User-Service] Starting server on port %s", s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()
 }
 

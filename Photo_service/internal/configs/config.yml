@@ -2,7 +2,7 @@ server:
   port: "50053"
   max_recv_msg_size: 4194304
   max_send_msg_size: 4194304
-  graceful_shutdown: "10s"
+  graceful_shutdown: "30s"
 database:
   driver: postgres
   host: localhost

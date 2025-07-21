@@ -44,6 +44,7 @@ func NewLogger(config configs.LoggerConfig, topics configs.KafkaTopics) (*Logger
 		core := zapcore.NewCore(l.encoder, zapcore.AddSync(file), levelEnabler)
 		l.cores[topic] = core
 	}
+	log.Println("[DEBUG] [Logs-Service] Successful connect to Logger")
 	return l, nil
 }
 
@@ -75,4 +76,5 @@ func (m *Logger) Sync() {
 			_ = closer.Close()
 		}
 	}
+	log.Println("[DEBUG] [Logs-Service] Successful close Logger")
 }

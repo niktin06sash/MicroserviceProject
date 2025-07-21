@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -80,7 +79,6 @@ func (use *PhotoServiceImplement) unloadPhotoCloud(ctx context.Context, file []b
 
 }
 func (use *PhotoServiceImplement) deletePhotoCloud(ctx context.Context, photoid string, ext string, traceid string) {
-	log.Println(ext)
 	const place = DeletePhotoCloud
 	cloudresponse := use.Cloud.DeleteFile(ctx, photoid, ext)
 	if !cloudresponse.Success && cloudresponse.Errors != nil {

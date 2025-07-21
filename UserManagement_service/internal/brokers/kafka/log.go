@@ -84,6 +84,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 				metrics.UserKafkaProducerErrorsTotal.WithLabelValues(topic).Inc()
 				metrics.UserErrorsTotal.WithLabelValues(erro.ServerErrorType).Inc()
 			}
+			cancel()
 		}
 	}
 }

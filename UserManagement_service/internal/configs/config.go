@@ -22,6 +22,7 @@ type ServerConfig struct {
 	MaxHeaderBytes   int           `mapstructure:"max_header_bytes"`
 	ReadTimeout      time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout     time.Duration `mapstructure:"write_timeout"`
+	IdleTimeout      time.Duration `mapstructure:"idle_timeout"`
 	GracefulShutdown time.Duration `mapstructure:"graceful_shutdown"`
 }
 type DatabaseConfig struct {

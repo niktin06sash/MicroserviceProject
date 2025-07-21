@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"log"
-	"sync"
 
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/configs"
 	"github.com/t3rm1n4l/go-mega"
@@ -15,7 +14,6 @@ const DeleteFile = "Repository-DeleteFile"
 type CloudObject struct {
 	connect      *mega.Mega
 	mainfolder   *mega.Node
-	wg           *sync.WaitGroup
 	progressChan chan int
 	ctx          context.Context
 	cancel       context.CancelFunc
@@ -49,7 +47,6 @@ func NewCloudConnection(config configs.MegaConfig) (*CloudObject, error) {
 	return &CloudObject{
 		connect:      client,
 		progressChan: make(chan int),
-		wg:           &sync.WaitGroup{},
 		mainfolder:   targetFolder,
 		ctx:          ctx,
 		cancel:       cancel,
@@ -58,6 +55,5 @@ func NewCloudConnection(config configs.MegaConfig) (*CloudObject, error) {
 func (m *CloudObject) Close() {
 	m.cancel()
 	close(m.progressChan)
-	m.wg.Wait()
 	log.Println("[DEBUG] [Photo-Service] Successful close Mega-Client")
 }

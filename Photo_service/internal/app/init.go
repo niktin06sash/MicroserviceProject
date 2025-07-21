@@ -87,7 +87,7 @@ func (a *PhotoApplication) Start() error {
 func (a *PhotoApplication) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), a.config.Server.GracefulShutdown)
 	defer cancel()
-	log.Println("Server is shutting down...")
+	log.Println("[DEBUG] [Photo-Service] Server is shutting down...")
 	if err := a.server.Shutdown(ctx); err != nil {
 		log.Printf("[DEBUG] [Photo-Service] Server shutdown error: %v", err)
 		return err
