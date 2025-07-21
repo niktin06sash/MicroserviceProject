@@ -77,6 +77,7 @@ func (kf *KafkaProducer) sendLogs(num int) {
 			if err != nil {
 				log.Printf("[ERROR] [Session-Service] [Worker: %v] Failed to send log after all retries: %v, (%v)", num, err, logg)
 			}
+			cancel()
 		}
 	}
 }

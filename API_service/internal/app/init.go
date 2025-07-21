@@ -50,6 +50,7 @@ func (a *APIApplication) Start() error {
 	defer kafkaprod.Close()
 	defer kafkaprod.LogClose()
 	middleware := middleware.NewMiddleware(sessionclient, kafkaprod)
+	defer middleware.Stop()
 	handler := handlers.NewHandler(middleware, photoclient, kafkaprod, a.config.Routes)
 	srv := server.NewServer(a.config.Server, handler.InitRoutes())
 	kafkaprod.LogStart()
@@ -75,7 +76,7 @@ func (a *APIApplication) Start() error {
 func (a *APIApplication) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), a.config.Server.GracefulShutdown)
 	defer cancel()
-	log.Println("Server is shutting down...")
+	log.Println("[DEBUG] [API-Service] Server is shutting down...")
 	if err := a.server.Shutdown(ctx); err != nil {
 		log.Printf("[DEBUG] [API-Service] Server shutdown error: %v", err)
 		return err

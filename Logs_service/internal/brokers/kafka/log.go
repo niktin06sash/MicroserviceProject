@@ -32,6 +32,7 @@ func (kf *KafkaConsumerGroup) readLogs() {
 			if err := kf.reader.CommitMessages(ctx, msg); err != nil {
 				log.Printf("[ERROR] [Logs-Service] Failed to commit offset: %v", err)
 			}
+			cancel()
 		}
 	}
 }

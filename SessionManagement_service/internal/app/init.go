@@ -67,7 +67,7 @@ func (a *SessionApplication) Start() error {
 func (a *SessionApplication) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), a.config.Server.GracefulShutdown)
 	defer cancel()
-	log.Println("Server is shutting down...")
+	log.Println("[DEBUG] [Session-Service] Server is shutting down...")
 	if err := a.server.Shutdown(ctx); err != nil {
 		log.Printf("[DEBUG] [Session-Service] Server shutdown error: %v", err)
 		return err

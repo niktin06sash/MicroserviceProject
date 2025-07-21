@@ -2,7 +2,7 @@ server:
   port: "50052"
   max_recv_msg_size: 4194304
   max_send_msg_size: 4194304
-  graceful_shutdown: "10s"
+  graceful_shutdown: "30s"
 redis:  
   host: localhost
   port: 6379        

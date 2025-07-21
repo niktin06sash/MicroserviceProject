@@ -24,6 +24,7 @@ type ServerConfig struct {
 	ReadTimeout      time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout     time.Duration `mapstructure:"write_timeout"`
 	GracefulShutdown time.Duration `mapstructure:"graceful_shutdown"`
+	IdleTimeout      time.Duration `mapstructure:"idle_timeout"`
 }
 type SessionServiceConfig struct {
 	GrpcAddress string `mapstructure:"grpc_address"`

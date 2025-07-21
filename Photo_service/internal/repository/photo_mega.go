@@ -28,9 +28,7 @@ func (client *MegaClientRepo) UploadFile(ctx context.Context, localfilepath stri
 	}
 	filename := photoid + ext
 	progresschan := make(chan int)
-	client.megaclient.wg.Add(1)
 	go func() {
-		defer client.megaclient.wg.Done()
 		totalbytes := 0
 		for data := range progresschan {
 			totalbytes += data

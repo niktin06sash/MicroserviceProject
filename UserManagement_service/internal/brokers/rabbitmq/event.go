@@ -22,7 +22,6 @@ const (
 )
 
 func (rp *RabbitProducer) NewUserEvent(ctx context.Context, routingKey string, userid string, place string, traceid string) error {
-	confirmchan := rp.channel.NotifyPublish(make(chan amqp.Confirmation, 1))
 	body, err := json.Marshal(&UserEvent{Userid: userid, Traceid: traceid})
 	if err != nil {
 		rp.logProducer.NewUserLog(kafka.LogLevelError, place, traceid, fmt.Sprintf("Failed to marshal message: %v", err))
@@ -49,14 +48,14 @@ func (rp *RabbitProducer) NewUserEvent(ctx context.Context, routingKey string, u
 			)
 			if err == nil {
 				select {
-				case confirmed := <-confirmchan:
+				case confirmed := <-rp.confirmchan:
 					if confirmed.Ack {
 						rp.logProducer.NewUserLog(kafka.LogLevelInfo, place, traceid, fmt.Sprintf("User Event with routing key: %s was published on attempt %d", routingKey, attempt))
 						metrics.UserRabbitProducerEventsSent.WithLabelValues(routingKey)
 						return nil
 					}
 					rp.logProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("Attempt %d failed to confirm message", attempt))
-				case <-time.After(3 * time.Second):
+				case <-time.After(5 * time.Second):
 					rp.logProducer.NewUserLog(kafka.LogLevelWarn, place, traceid, fmt.Sprintf("Confirmation timeout (attempt %d)", attempt))
 					metrics.UserRabbitProducerErrorsTotal.WithLabelValues(routingKey).Inc()
 				case <-ctx.Done():
