@@ -26,7 +26,7 @@ const (
 	ErrorNotRequiredSessionIDConst    = "SessionID in request is not-required!"
 	ErrorNotEmailConst                = "This email format is not supported"
 	ErrorInternalServerConst          = "Internal Server Error"
-	ErrorEmailNotRegisterConst        = "Not registered has been entered"
+	ErrorEmailNotRegisterConst        = "Not registered email has been entered"
 	ErrorFoundUserConst               = "Person not found"
 	ErrorInvalidPasswordConst         = "Invalid Password"
 	ErrorDbRepositoryErrorConst       = "DB-Repository Error"
