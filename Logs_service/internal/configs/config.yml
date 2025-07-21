@@ -38,3 +38,6 @@ logger:
     compress: true         
   format:          
     time_format: "ISO8601"
+elasticsearch:
+  host: http://localhost:9200
+  index: logs

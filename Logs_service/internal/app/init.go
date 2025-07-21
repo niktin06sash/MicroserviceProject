@@ -10,12 +10,11 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/brokers/kafka"
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/logs"
+	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/repository/searcher"
 )
 
 type LogsApplication struct {
-	config        configs.Config
-	kafkaConsumer *kafka.KafkaConsumerGroup
-	logger        *logs.Logger
+	config configs.Config
 }
 
 func NewLogsApplication(config configs.Config) *LogsApplication {
@@ -28,14 +27,17 @@ func (a *LogsApplication) Start() error {
 		log.Printf("[DEBUG] [Logs-Service] Count of active goroutines: %v", runtime.NumGoroutine())
 		log.Printf("[DEBUG] [Logs-Service] Active goroutines:\n%s", buf[:n])
 	}()
-	var err error
-	a.logger, err = logs.NewLogger(a.config.Logger, a.config.Kafka.Topics)
+	searcher, err := searcher.NewElasticClient(a.config.Elastic)
 	if err != nil {
 		return err
 	}
-	defer a.logger.Sync()
-	a.kafkaConsumer = kafka.NewKafkaConsumerGroup(a.config.Kafka, a.logger)
-	defer a.kafkaConsumer.Close()
+	logger, err := logs.NewLogger(a.config.Logger, a.config.Kafka.Topics, searcher)
+	if err != nil {
+		return err
+	}
+	defer logger.Sync()
+	kafkaConsumer := kafka.NewKafkaConsumerGroup(a.config.Kafka, logger)
+	defer kafkaConsumer.Close()
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-quit
