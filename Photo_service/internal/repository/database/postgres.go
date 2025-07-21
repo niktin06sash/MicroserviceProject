@@ -1,4 +1,4 @@
-package repository
+package database
 
 import (
 	"database/sql"
@@ -9,7 +9,14 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/configs"
 )
 
-func NewDatabaseConnection(cfg configs.DatabaseConfig) (*DBObject, error) {
+const LoadPhoto = "Repository-LoadPhoto"
+const DeletePhoto = "Repository-DeletePhoto"
+const GetPhotos = "Repository-GetPhotos"
+const GetPhoto = "Repository-GetPhoto"
+const DeleteUserData = "Repository-DeleteUserData"
+const AddUserId = "Repository-AddUserId"
+
+func NewPostgresConnection(cfg configs.DatabaseConfig) (*DBObject, error) {
 	dbObject := &DBObject{}
 	connectionString := buildConnectionString(cfg)
 	err := dbObject.Open(cfg.Driver, connectionString)

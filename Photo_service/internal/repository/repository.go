@@ -20,16 +20,10 @@ type Data struct {
 	GrpcPhotos  []*pb.Photo
 }
 
-const LoadPhoto = "Repository-LoadPhoto"
-const DeletePhoto = "Repository-DeletePhoto"
-const GetPhotos = "Repository-GetPhotos"
-const GetPhoto = "Repository-GetPhoto"
-const DeleteUserData = "Repository-DeleteUserData"
-const AddUserId = "Repository-AddUserId"
-const AddPhotoCache = "Repository-AddPhotoCache"
-const AddPhotosCache = "Repository-AddPhotosCache"
-const GetPhotoCache = "Repository-GetPhotoCache"
-const GetPhotosCache = "Repository-GetPhotosCache"
-const DeletePhotosCache = "Repository-DeletePhotosCache"
-const DeletePhotoCache = "Repository-DeletePhotoCache"
-const DeleteAllPhotosCache = "Repository-DeleteAllPhotosCache"
+func BadResponse(err error, place string) *RepositoryResponse {
+	return &RepositoryResponse{
+		Success: false,
+		Errors:  err,
+		Place:   place,
+	}
+}

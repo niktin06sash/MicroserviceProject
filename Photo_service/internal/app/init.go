@@ -12,7 +12,9 @@ import (
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/brokers/rabbitmq"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/configs"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/handlers"
-	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository"
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository/cache"
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository/cloud"
+	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/repository/database"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/server"
 	"github.com/niktin06sash/MicroserviceProject/Photo_service/internal/service"
 )
@@ -33,28 +35,28 @@ func (a *PhotoApplication) Start() error {
 		log.Printf("[DEBUG] [Photo-Service] Count of active goroutines: %v", runtime.NumGoroutine())
 		log.Printf("[DEBUG] [Photo-Service] Active goroutines:\n%s", buf[:n])
 	}()
-	db, err := repository.NewDatabaseConnection(a.config.Database)
+	pg, err := database.NewPostgresConnection(a.config.Database)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	cloud, err := repository.NewCloudConnection(a.config.Mega)
+	defer pg.Close()
+	mega, err := cloud.NewMegaConnection(a.config.Mega)
 	if err != nil {
 		return err
 	}
-	defer cloud.Close()
-	cache, err := repository.NewRedisConnection(a.config.Redis)
+	defer mega.Close()
+	redis, err := cache.NewRedisConnection(a.config.Redis)
 	if err != nil {
 		return err
 	}
-	defer cache.Close()
+	defer redis.Close()
 	kafkaProducer := kafka.NewKafkaProducer(a.config.Kafka)
 	defer kafkaProducer.Close()
 	defer kafkaProducer.LogClose()
-	postgresRepo := repository.NewPhotoPostgresRepo(db)
-	redisRepo := repository.NewPhotoRedisRepo(cache)
-	mega := repository.NewMegaClientRepo(cloud)
-	photoService := service.NewPhotoServiceImplement(postgresRepo, mega, redisRepo, kafkaProducer)
+	database := database.NewPhotoDatabase(pg)
+	cache := cache.NewPhotoCache(redis)
+	cloud := cloud.NewPhotoCloud(mega)
+	photoService := service.NewPhotoServiceImplement(database, cloud, cache, kafkaProducer)
 	defer photoService.Stop()
 	rabbitConsumer, err := rabbitmq.NewRabbitConsumer(a.config.RabbitMQ, kafkaProducer, photoService)
 	if err != nil {
