@@ -280,5 +280,6 @@ volumes:
     prometheus_data:
     session_data:
     profile_data:
+    es_data:
     #logs_data:
     photocache_data:

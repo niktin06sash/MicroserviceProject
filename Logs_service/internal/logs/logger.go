@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/niktin06sash/MicroserviceProject/Logs_service/internal/configs"
+	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -18,14 +19,18 @@ type Logger struct {
 	mux     sync.RWMutex
 	cores   map[string]zapcore.Core
 	encoder zapcore.Encoder
+	store   StorageLog
+}
+type StorageLog interface {
+	NewStorageLog(msg kafka.Message)
 }
 
-func NewLogger(config configs.LoggerConfig, topics configs.KafkaTopics) (*Logger, error) {
+func NewLogger(config configs.LoggerConfig, topics configs.KafkaTopics, store StorageLog) (*Logger, error) {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoder := zapcore.NewJSONEncoder(encoderConfig)
 	mapa := config.GetTopicFileMap(topics)
-	l := &Logger{cores: make(map[string]zapcore.Core), encoder: encoder}
+	l := &Logger{cores: make(map[string]zapcore.Core), encoder: encoder, store: store}
 	for topic, filepath := range mapa {
 		file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -48,7 +53,8 @@ func NewLogger(config configs.LoggerConfig, topics configs.KafkaTopics) (*Logger
 	return l, nil
 }
 
-func (l *Logger) Log(topic string, message string) error {
+func (l *Logger) Log(msg kafka.Message) error {
+	topic, val := msg.Topic, msg.Value
 	l.mux.RLock()
 	core, exists := l.cores[topic]
 	l.mux.RUnlock()
@@ -64,7 +70,8 @@ func (l *Logger) Log(topic string, message string) error {
 	if err != nil {
 		return fmt.Errorf("invalid log level %s: %w", level, err)
 	}
-	entry := zapcore.Entry{Level: zapLevel, Time: time.Now(), Message: message}
+	l.store.NewStorageLog(msg)
+	entry := zapcore.Entry{Level: zapLevel, Time: time.Now(), Message: string(val)}
 	core.Write(entry, nil)
 	return nil
 }

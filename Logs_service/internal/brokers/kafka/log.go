@@ -26,7 +26,7 @@ func (kf *KafkaConsumerGroup) readLogs() {
 				continue
 			}
 			atomic.AddInt64(&kf.counter, 1)
-			if err := kf.logger.Log(msg.Topic, string(msg.Value)); err != nil {
+			if err := kf.logger.Log(msg); err != nil {
 				log.Printf("[ERROR] [Logs-Service] Failed to send log from topic %s: %v", msg.Topic, err)
 			}
 			if err := kf.reader.CommitMessages(ctx, msg); err != nil {
